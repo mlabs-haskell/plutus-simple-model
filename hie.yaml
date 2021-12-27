@@ -1,0 +1,8 @@
+cradle:
+  cabal:
+    - path: "./src"
+      component: "lib:gero-gov"
+    - path: "./test"
+      component: "test:gero-gov-test"
+    - path: "./examples"
+      component: "lib:gero-gov-examples"
