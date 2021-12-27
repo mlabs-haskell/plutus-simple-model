@@ -162,8 +162,7 @@ import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import Ledger.Crypto (PubKey (..), Signature (..), pubKeyHash)
 import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.Tx.CardanoAPI qualified as Cardano
--- import Plutus.Test.Model.CardanoAPI qualified as LocalCardano
-import Paths_gero_gov
+import Paths_plutus_simple_model
 
 class HasAddress a where
   toAddress :: a -> Address
@@ -233,7 +232,7 @@ defaultSlotConfig =
 -- | Loads default config for the blockchain. Uses presaved era history and protocol parameters.
 readDefaultBchConfig :: IO BchConfig
 readDefaultBchConfig = do
-  paramsFile <- getDataFileName "plutus-simple-model/data/protocol-params.json"
+  paramsFile <- getDataFileName "data/protocol-params.json"
   readBchConfig paramsFile
 
 -- | Default blockchain config.
