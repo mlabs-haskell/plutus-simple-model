@@ -13,6 +13,27 @@ and estimate usage of resources. What are benefits for this framework. It's:
 * pure
 * good for unit testing of onchain code
 
+
+### Install
+
+To add library to your project add it with niv:
+
+```
+niv add mlabs-haskell/plutus-simple-model -r <library-commit-hash>
+```
+
+And add it to caba.project:
+
+```
+-- library for unit tests of plutus scripts                                                                                       
+source-repository-package
+   type: git                                                                                                                         
+   location: https://github.com/mlabs-haskell/plutus-simple-model
+   tag: <same-library-commit-hash=as-for-niv>                                                                              
+```
+
+### Quick start guide
+
 We can create simple blockchain data structure and update within context of State monad.
 Update happens as a pure function and along TX-confirmation we have useful stats to estimate usage of resources.
 
