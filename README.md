@@ -29,7 +29,7 @@ And add it to caba.project:
 source-repository-package
    type: git                                                                                                                         
    location: https://github.com/mlabs-haskell/plutus-simple-model
-   tag: <same-library-commit-hash=as-for-niv>                                                                              
+   tag: <same-library-commit-hash-as-for-niv>                                                                              
 ```
 
 ### Quick start guide
