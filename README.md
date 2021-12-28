@@ -593,7 +593,7 @@ spendBox tv redeemer box
 
 The most generic function is `modifyBox`:
 
-```hasell
+```haskell
 modifyBox :: (ToData (DatumType a), ToData (RedeemerType a))
   => TypedValidator a
   -> TxBox (DatumType a)
