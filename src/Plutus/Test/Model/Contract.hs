@@ -364,9 +364,9 @@ txBoxValue :: TxBox a -> Value
 txBoxValue = txOutValue . txBoxOut
 
 -- | Read UTXOs with datums.
-boxAt :: FromData a => Address -> Run [TxBox a]
+boxAt :: (HasAddress addr, FromData a) => addr -> Run [TxBox a]
 boxAt addr = do
-  utxos <- utxoAt addr
+  utxos <- utxoAt (toAddress addr)
   fmap catMaybes $ mapM (\(ref, tout) -> fmap (\dat -> TxBox ref tout dat) <$> datumAt ref) utxos
 
 -- | Reads the Box for the script.

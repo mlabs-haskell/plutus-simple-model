@@ -804,6 +804,7 @@ testnetBlockLimits = mainnetBlockLimits
 ----------------------------------------------------------------
 -- logs
 
+-- | Blockchain events to log.
 data BchEvent
   = BchTx TxStat           -- ^ Sucessful TXs
   | BchInfo String         -- ^ Info messages
@@ -829,6 +830,7 @@ failLog (Log xs) = Log $ Seq.filter (not . isTx . snd) xs
 filterSlot :: (Slot -> Bool) -> Log a -> Log a
 filterSlot f (Log xs) = Log (Seq.filter (f . fst) xs)
 
+-- | Reads the log.
 getLog :: Blockchain -> Log BchEvent
 getLog Blockchain{..} =
   mconcat [BchInfo <$> bchInfo, BchTx <$> bchTxs, BchFail <$> bchFails]

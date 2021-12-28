@@ -532,3 +532,87 @@ It's good to implement complete set of unit tests first and then add limits test
 So that every transformation to optimise on resources is checked by ordinary unit tests.
 On unit tests we can skip limit checks with `skipLimits :: BchConfig -> BchConfig`.
 
+### Box - a typed TxOut
+
+Often when we work with scripts we need to read `TxOut` to get datum hash to
+read the datum next and after that we specify how datum is updated on TX.
+
+Enter the Box - typed `TxOut`. The `Box` is `TxOut` augmented with typed datum. 
+We can read Box for the script with the function:
+
+```haskell
+boxAt :: (HasAddress addr, FromData a) => addr -> Run [TxBox a]
+```
+
+It reads the typed box. We can use it like this: 
+
+```haskell
+gameBox <- head <$> boxAt @GameDatum gameScript
+```
+
+There is type safe variant that derives type of the datum from the type of the `TypedValidator`:
+
+```haskell
+scriptBoxAt :: FromData (DatumType a) => TypedValidator a -> Run [TxBox (DatumType a)]
+```
+
+Sometimes it's useful to read the box by NFT, since often scripts are identified by unque NFTs:
+
+```haskell
+nftAt :: FromData (DatumType a) => TypedValidator a -> Run (TxBox (DatumType a))
+nftAt tv = ...
+```
+
+So let's look at the box:
+
+```haskell
+-- | Typed txOut that contains decoded datum
+data TxBox a = TxBox
+  { txBoxRef   :: TxOutRef   -- ^ tx out reference
+  , txBoxOut   :: TxOut      -- ^ tx out
+  , txBoxDatum :: a          -- ^ datum
+  }
+
+txBoxValue :: TxBox a -> Value
+```
+
+It has everything that TxOut has but also we have our typed datum.
+There are functions that provide typical script usage. 
+
+We can just spend boxes as scripts:
+
+```haskell
+spendBox ::
+  (ToData (DatumType a), ToData (RedeemerType a)) =>
+  TypedValidator a ->
+  RedeemerType a ->
+  TxBox (DatumType a) ->
+  Tx
+spendBox tv redeemer box
+```
+
+The most generic function is `modifyBox`:
+
+```hasell
+modifyBox :: (ToData (DatumType a), ToData (RedeemerType a))
+  => TypedValidator a
+  -> TxBox (DatumType a)
+  -> RedeemerType a
+  -> (DatumType a -> DatumType a)
+  -> (Value -> Value)
+  -> Tx
+modifyBox tv box redeemer updateDatum updateValue
+```
+
+It specifies how we update the box datum and value. 
+Also often we use boxes as oracles:
+
+```haskell
+readOnlyBox :: (ToData (DatumType a), ToData (RedeemerType a))
+  => TypedValidator a
+  -> TxBox (DatumType a)
+  -> RedeemerType a
+  -> Tx
+```
+
+It keeps the datum and value the same.
