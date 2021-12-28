@@ -281,6 +281,7 @@ spendBox ::
 spendBox tv red TxBox{..} =
   spendScript tv txBoxRef red txBoxDatum
 
+-- | Specify that box is used as oracle (read-only). Spends value to itself and uses the same datum.
 readOnlyBox :: (ToData (DatumType a), ToData (RedeemerType a))
   => TypedValidator a
   -> TxBox (DatumType a)
@@ -288,6 +289,7 @@ readOnlyBox :: (ToData (DatumType a), ToData (RedeemerType a))
   -> Tx
 readOnlyBox tv box act = modifyBox tv box act id id
 
+-- | Modifies the box. We specify how script box datum and value are updated.
 modifyBox :: (ToData (DatumType a), ToData (RedeemerType a))
   => TypedValidator a
   -> TxBox (DatumType a)
@@ -351,12 +353,13 @@ validateIn times tx = do
 
 -- | Typed txOut that contains decoded datum
 data TxBox a = TxBox
-  { txBoxRef   :: TxOutRef
-  , txBoxOut   :: TxOut
-  , txBoxDatum :: a
+  { txBoxRef   :: TxOutRef   -- ^ tx out reference
+  , txBoxOut   :: TxOut      -- ^ tx out
+  , txBoxDatum :: a          -- ^ datum
   }
   deriving (Show, Eq)
 
+-- | Get value at the box.
 txBoxValue :: TxBox a -> Value
 txBoxValue = txOutValue . txBoxOut
 
@@ -366,6 +369,7 @@ boxAt addr = do
   utxos <- utxoAt addr
   fmap catMaybes $ mapM (\(ref, tout) -> fmap (\dat -> TxBox ref tout dat) <$> datumAt ref) utxos
 
+-- | Reads the Box for the script.
 scriptBoxAt :: FromData (DatumType a) => TypedValidator a -> Run [TxBox (DatumType a)]
 scriptBoxAt tv = boxAt (validatorAddress tv)
 
@@ -420,6 +424,8 @@ mustFailWith msg act = do
   where
     noNewErrors a b = length a == length b
 
+-- | Checks that script runs without errors and returns pretty printed failure
+-- if something bad happens.
 checkErrors :: Run (Maybe String)
 checkErrors = do
   failures <- fromLog <$> getFails
@@ -444,6 +450,7 @@ testLimits initFunds cfg msg tfmLog act =
 ----------------------------------------------------------------------
 -- balance diff
 
+-- | Balance difference. If user/script spends value it is negative if gains it is positive.
 newtype BalanceDiff = BalanceDiff (Map Address Value)
 
 instance Semigroup BalanceDiff where
