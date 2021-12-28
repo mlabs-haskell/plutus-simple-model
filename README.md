@@ -46,7 +46,7 @@ and load it with function:
 readDefaultBchConfig :: IO BchConfig
 ```
 
-It reads config from files stored in the directory `data`. It's yhe only non-pure function that we need to use.
+It reads config from files stored in the directory `data`. It's the only non-pure function that we have to use.
 
 Once we have config available we can create initial state for blockchain with function:
 
@@ -56,9 +56,9 @@ initBch config adminValue = ...
 ```
 
 It creates blockchain that has only one UTXO that belongs to the admin user. The value is how many coins
-we are goint to give to the admin. Admin can distribute values to test users from his reserves.
+we are going to give to the admin. Admin can distribute values to test users from admin's reserves.
 
-The reset of the code happens within `Run` monad which is thin wrapper on State over Blockchain under the hood.
+The rest of the code happens within `Run` monad which is a thin wrapper on State over Blockchain under the hood.
 We have scenarios of script usages as actions in the `Run` monad. When we are done we can get the result:
 
 
@@ -76,13 +76,13 @@ setupUsers :: Run [PubKeyHash]
 setupUsers = replicateM 3 $ newUser $ adaValue 1000
 ```
 
-We can create new user and send values from admin to the user with function:
+We can create new user and send values from admin to the user with the function:
 
 ```haskell
 newUser :: Value -> Run PubKeyHash
 ```
 
-Users are identified by thier pub key hashes. Note that admin should have the value that we want to share
+Users are identified by their pub key hashes. Note that admin should have the value that we want to share
 with new user. Otherwise we will get run-time exception.
 
 Users can send values to each other with function:
@@ -110,7 +110,7 @@ simpleSpend = do
 
 This example shows how we can create simple tests with library.
 We create three users and exchange the values between the users.
-in the test we check that there are no errors (all TXs were accepted to blockchain) and
+In the test we check that there are no errors (all TXs were accepted to blockchain) and
 that users have expected values.
 
 To check for TX errors we use:
@@ -124,12 +124,12 @@ Blockchain logs all failed transactions to te list `bchFails`. We check that thi
 To read total value for the user we use:
 
 ```haskell
-valueAt :: HasAddress addre => addr -> Run Value
+valueAt :: HasAddress addr => addr -> Run Value
 ```
 
 Complete working example of user exchange can be found at test suites (see `Suites.Plutus.Model.User`)
 
-So now we know how to send values to users let's learn how to work with scripts.
+So now we know how to send values to users. Let's learn how to work with scripts.
 
 When we use function `sendValue` it creates TX and submits it to blockchain.
 TX defines which UTXOs are used as inputs and what UTXOs we want to produce as outputs.
@@ -192,19 +192,19 @@ spend :: PubKeyHash -> Value -> Run UserSpend
 ```
 
 For a given user and value it returns a value of `UserSpend` which holds
-a set of input UTXOs that cover value that we want spend and also it has change to spend back to user.
-In the UTXO model we can not split the input if it's bigger than we need we need to destroy it
-and create one UTXO that is given to somebody else and another one that is spent back to user.
+a set of input UTXOs that cover the value that we want spend and also it has change to spend back to user.
+In the UTXO model we can not split the input if it's bigger than we need. We have to destroy it
+and create one UTXO that is given to someone else and another one that is spent back to user.
 We can think about the latter UTXO as a change.
 
-Note that it going to produce run-time exception if there are not enough funds to spend.
+Note that it is going to produce run-time exception if there are not enough funds to spend.
 To avoid run-time errors there is safer variant called `spend'`.
 
 When we know what inputs to spend we need to make a TX. We do it with function `initGameTx`. We will dicuss it soon.
-After that we should sign TX with the key of the sender. we use functio `signTx` for that.
+After that we should sign TX with the key of the sender. We use function `signTx` for that.
 As the last step we post TX and hope that it will execute fine (`sendTx`).
 
-Let's discuss how to create TX. Here is the solution:
+Let's discuss how to create TX:
 
 ```haskell
 initGameTx :: UserSpend -> Value -> BuiltinByteString -> Tx
@@ -216,7 +216,7 @@ initGameTx usp val answer =
 ```
 
 We create transaction by accumulation of monoidal parts. As plutus Tx is monoid it's convenient
-to assemble it from little parts. For our task there are just two parts:
+to assemble it from tiny parts. For our task there are just two parts:
 
 * for inputs and outputs for user spend
 * pay prize to the script and form right datum for it.
@@ -236,8 +236,8 @@ payToScript :: TypedValidator a -> DatumType a -> Value -> Tx
 So it uses validator, datum for it (of proper type) and value to protect with the contract.
 As simple as that.
 
-Let's create another Tx to post solution to the puzzle. It seems to be more involved but don't be scary
-we will take it bit by bit:
+Let's create another Tx to post solution to the puzzle. It seems to be more involved but don't be scary.
+We will take it bit by bit:
 
 ```haskell
 guess :: PubKeyHash -> BuiltinByteString -> Run Bool
@@ -259,7 +259,7 @@ we can form the right TX, sign it with our key and post it to blockchain.
 Functions that query blockchain are often defined on addresses or `TxOutRef`'s:
 
 ```haskell
-utxoAt  :: Address  -> Run [(TxOutRef, TxOut)]
+utxoAt  :: HasAddress addr => addr -> Run [(TxOutRef, TxOut)]
 datumAt :: TxOutRef -> Run (Maybe a)
 ```
 
@@ -286,17 +286,16 @@ To spend script we use function:
 spendScript :: TypedValidator a -> TxOutRef -> RedeemerType a -> DatumType a -> Tx
 ```
 
-We provide validator definition, reference to the UTXO of the script, and it's redeemer and datum type.
-We provide datum again because they are not stored on blockchain (only hashes are stored to save the space).
+We provide validator definition, reference to the UTXO of the script, and its redeemer and datum type.
 
 The next thing is that we want to take the prize. For that we create output that holds the prize and
-protected by our own pub key. we do it with the function:
+protected by our own pub key. We do it with the function:
 
 ```haskell
 payToPubKey :: PubKeyHash -> Value -> Tx
 ```
 
-* How to work with time
+### How to work with time
 
 Note that every time we submit block successfully one slot passes.
 By default one slot lasts for 1 second. Sometimes we want to check for TX that should
@@ -310,7 +309,7 @@ wait       :: POSIXTime -> Run ()
 waitUntil  :: POSIXTime -> Run ()
 ```
 
-`waitNSlots` waits in slots while `wait` and `waitUntil` wait in POSIXTime (counted in milliseconds).
+`waitNSlots` waits in slots while `wait` and `waitUntil` wait in `POSIXTime` (counted in milliseconds).
 Also we can query current time with functions:
 
 ```haskell
@@ -322,23 +321,26 @@ By default we always start at the beginning of UNIX epoch. Start of blockchain i
 Closely related is function `validateIn`. It sets the valid range for TX:
 
 ```haskell
-validateIn :: POSIXTime -> Tx -> Run Tx
+validateIn :: POSIXTimeRange -> Tx -> Run Tx
 ```
 
-Note that if current time of blockchain is not included in the Tx it is will be rejected.
+The result is wrapped in the Run-monad because we convert 
+`POSIXTime` to `Slot`'s under the hood and conversion depends on blockchain config.
+
+Note that if current time of blockchain is not included in the Tx it will be rejected.
 So we can not submit TX that is going to be valid in the future. We rely on property
 thhat all TXs are validated right away. It means  that current time should be included in valid range for TX.
-By default it's `always`, it means any time and should work.
+By default it's `always`, it means "any time" and should work. 
 
-Also note that because Plutus uses POSIXTime while the Cardano network uses Slots, the inherent
-difference in precision between Slot and POSIXTime may cause unexpected validation failures.
-For example, if we try to build a transaction using the POSIXRange (1100,3400), it will be converted to
-SlotRange (1,4) to go through the Cardano network, and when it is converted back to Plutus, the POSIXRange
-will have been extended to cover the whole slot range, becoming (1000,4000) and maybe trespassing
+Also note that because Plutus uses `POSIXTime` while the Cardano network uses Slots, the inherent
+difference in precision between Slot and `POSIXTime` may cause unexpected validation failures.
+For example, if we try to build a transaction using the `POSIXTimeRange` `(1100,3400)`, it will be converted to
+`SlotRange` `(1,4)` to go through the Cardano network, and when it is converted back to Plutus, the POSIXRange
+will have been extended to cover the whole slot range, becoming `(1000,4000)` and maybe trespassing
 the allowed limits set by the validator.
 
 POSIXTime is counted in milliseconds.
-To count in human readable format we have convinient functions: days, hours, minutes, seconds:
+To count in human readable format we have convinient functions: `days`, `hours`, `minutes`, `seconds`:
 
 ```haskell
 wait $ hours 4
@@ -396,9 +398,9 @@ logErrors :: String -> Run ()
 ```
 
 Errors are saved to log of errors. This way we can report our own errors based on conditions.
-If values are wrong or certain NFt was not created etc.
+If values are wrong or certain NFT was not created etc.
 
-also we can log information with:
+Also we can log information with:
 
 ```haskell
 logInfo :: String -> Run ()
@@ -429,7 +431,7 @@ We have type `BalanceDiff` and we can construct it with function:
 owns  :: HasAddress addr => addr -> Value -> BalanceDiff
 ```
 
-It states that address gained so many coins. we have useful function to check the move of values
+It states that address gained so many coins. We have useful function to check the move of values
 from one address to another
 
 ```haskell
@@ -453,13 +455,14 @@ For example we can check that sendValue indeed transfers value from one user to 
 checkBalance (gives u1 val u2) $ sendValue u1 val u2
 ```
 
+If we want to check that user or script preserved the value we can set it up with `(owns user mempty)`.
 Because TypedValidator has instance of the HasAddress we can also check payments to/from scripts:
 
 ```haskell
 checkBalance (gives pkh prize gameScript) $ do { ... }
 ```
 
-See more examples at tests for Game and Counter scripts.
+See more examples at tests for `Game` and `Counter` scripts.
 
 ### How to use in unit tests
 
@@ -479,10 +482,14 @@ If we want to check only logic but not resource usage we can use:
 skipLimits :: BchConfig -> BchConfig
 ```
 
+Also there is function `warnLimits` that logs errors of resources usage
+but does not fail TX for submission. So if logic is correct script will run but
+errors of resources will be logged to error log.
+
 ### How to check TX resource usage
 
 Sometimes we write too mcuh code in the validators and it starts to exceed execution limits.
-TXs like this can not be executed on chain. To watch out for that we have specail functions:
+TXs like this can not be executed on chain. To watch out for that we have special function:
 
 ```haskell
 testLimits ::
@@ -505,6 +512,12 @@ To see the logs even on sucessful run we can add fake error:
 ```haskell
 (script >> logError "Show stats")
 ```
+
+The results are shown in the percentage to the mainnet limit. We need to care
+that all of them are below 100%. Also note that we'd better have some headroom 
+and keep it not close to 100% because number of inputs in TX is unpredictable.
+we can aggregate input values for the scripts from many UTXOs. So we'd better have 
+the free room available for extra UTXOs.
 
 Filter of the log can be usefl to filter out some non-related events. for example setup of the blockchain
 users. We typically cn use it like this:
