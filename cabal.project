@@ -1,4 +1,4 @@
-index-state: 2021-10-20T00:00:00Z
+index-state: 2022-01-19T00:00:00Z
 
 packages: ./.
 
@@ -9,66 +9,4 @@ write-ghc-environment-files: never
 tests: true
 benchmarks: true
 
-
--- The following sections are copied from the 'plutus' repository cabal.project at the revision
--- given above.
--- This is necessary because the  plutus' libraries depend on a number of other libraries which are
--- not on Hackage, and so need to be pulled in as `source-repository-package`s themselves. Make sure to
--- re-update this section from the template when you do an upgrade.
-
----------- *replace here* ----------------------------------------------------------------------
-
--- This is also needed so evenful-sql-common will build with a
--- newer version of persistent. See stack.yaml for the mirrored
--- configuration.
-package eventful-sql-common
-  ghc-options: -XDerivingStrategies -XStandaloneDeriving -XUndecidableInstances -XDataKinds -XFlexibleInstances -XMultiParamTypeClasses
-
--- See the note on nix/pkgs/default.nix:agdaPackages for why this is here.
--- (NOTE this will change to ieee754 in newer versions of nixpkgs).
-extra-packages: ieee, filemanip
-
-
-allow-newer:
-           -- Copied from plutus-apps
-           size-based:template-haskell
-           , ouroboros-consensus-byron:formatting
-           , beam-core:aeson
-           , beam-sqlite:aeson
-           , beam-sqlite:dlist
-           , beam-migrate:aeson
-
--- Copied from plutus-apps
-constraints:
-  -- big breaking change here, inline-r doens't have an upper bound
-  singletons < 3.0
-  -- bizarre issue: in earlier versions they define their own 'GEq', in newer
-  -- ones they reuse the one from 'some', but there isn't e.g. a proper version
-  -- constraint from dependent-sum-template (which is the library we actually use).
-  , dependent-sum > 0.6.2.0
-  -- Newer Hashable have instances for Set, which breaks beam-migrate
-  -- which declares its own instances of Hashable Set
-  , hashable < 1.3.4.0
-
--- These packages appear in our dependency tree and are very slow to build.
--- Empirically, turning off optimization shaves off ~50% build time.
--- It also mildly improves recompilation avoidance.
--- For deve work we don't care about performance so much, so this is okay.
-package cardano-ledger-alonzo
-  optimization: False
-package ouroboros-consensus-shelley
-  optimization: False
-package ouroboros-consensus-cardano
-  optimization: False
-package cardano-api
-  optimization: False
-package cardano-wallet
-  optimization: False
-package cardano-wallet-core
-  optimization: False
-package cardano-wallet-cli
-  optimization: False
-package cardano-wallet-launcher
-  optimization: False
-package cardano-wallet-core-integration
-  optimization: False
+allow-newer: size-based:template-haskell

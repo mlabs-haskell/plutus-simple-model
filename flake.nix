@@ -5,7 +5,7 @@
     haskell-nix.url = "github:L-as/haskell.nix/ac825b91c202947ec59b1a477003564cc018fcec";
     haskell-nix.inputs.nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
 
-    nixpkgs.follows = "haskell-nix/nixpkgs-2105";
+    nixpkgs.follows = "haskell-nix/nixpkgs";
 
     iohk-nix.url = "github:input-output-hk/iohk-nix";
 
@@ -17,12 +17,17 @@
     # all inputs below here are for pinning with haskell.nix
     cardano-addresses = {
       url =
-        "github:input-output-hk/cardano-addresses/d2f86caa085402a953920c6714a0de6a50b655ec";
+        "github:input-output-hk/cardano-addresses/71006f9eb956b0004022e80aadd4ad50d837b621";
       flake = false;
     };
     cardano-base = {
       url =
-        "github:input-output-hk/cardano-base/654f5b7c76f7cc57900b4ddc664a82fc3b925fb0";
+        "github:input-output-hk/cardano-base/41545ba3ac6b3095966316a99883d678b5ab8da8";
+      flake = false;
+    };
+    cardano-config = {
+      url =
+        "github:input-output-hk/cardano-config/e9de7a2cf70796f6ff26eac9f9540184ded0e4e6";
       flake = false;
     };
     cardano-crypto = {
@@ -32,12 +37,12 @@
     };
     cardano-ledger = {
       url =
-        "github:input-output-hk/cardano-ledger/bf008ce028751cae9fb0b53c3bef20f07c06e333";
+        "github:input-output-hk/cardano-ledger/1a9ec4ae9e0b09d54e49b2a40c4ead37edadcce5";
       flake = false;
     };
     cardano-node = {
       url =
-        "github:input-output-hk/cardano-node/4f65fb9a27aa7e3a1873ab4211e412af780a3648";
+        "github:input-output-hk/cardano-node/814df2c146f5d56f8c35a681fe75e85b905aed5d";
       flake = false;
     };
     cardano-prelude = {
@@ -47,7 +52,7 @@
     };
     cardano-wallet = {
       url =
-        "github:j-mueller/cardano-wallet/760140e238a5fbca61d1b286d7a80ece058dc729";
+        "github:j-mueller/cardano-wallet/a5085acbd2670c24251cf8d76a4e83c77a2679ba";
       flake = false;
     };
     flat = {
@@ -72,27 +77,27 @@
     };
     ouroboros-network = {
       url =
-        "github:input-output-hk/ouroboros-network/d613de3d872ec8b4a5da0c98afb443f322dc4dab";
+        "github:input-output-hk/ouroboros-network/d2d219a86cda42787325bb8c20539a75c2667132";
       flake = false;
     };
     plutus = {
       url =
-        "github:input-output-hk/plutus/65bad0fd53e432974c3c203b1b1999161b6c2dce";
+        "github:input-output-hk/plutus/cc72a56eafb02333c96f662581b57504f8f8992f";
       flake = false;
     };
     plutus-apps = {
       url =
-        "github:input-output-hk/plutus-apps/34fe6eeff441166fee0cd0ceba68c1439f0e93d2";
+        "github:input-output-hk/plutus-apps/7f543e21d4945a2024e46c572303b9c1684a5832";
       flake = false;
     };
     purescript-bridge = {
       url =
-        "github:input-output-hk/purescript-bridge/366fc70b341e2633f3ad0158a577d52e1cd2b138";
+        "github:input-output-hk/purescript-bridge/47a1f11825a0f9445e0f98792f79172efef66c00";
       flake = false;
     };
     servant-purescript = {
       url =
-        "github:input-output-hk/servant-purescript/ebea59c7bdfc0338d83fca772b9a57e28560bcde";
+        "github:input-output-hk/servant-purescript/44e7cacf109f84984cd99cd3faf185d161826963";
       flake = false;
     };
     Win32-network = {
@@ -115,12 +120,15 @@
           inherit system;
         };
 
+      nixpkgsFor' = system: import nixpkgs { inherit system; };
+
       projectFor = system:
         let
           pkgs = nixpkgsFor system;
+          pkgs' = nixpkgsFor' system;
           plutus = import inputs.plutus { inherit system; };
           src = ./.;
-        in import ./nix/haskell.nix { inherit src inputs pkgs system; };
+        in import ./nix/haskell.nix { inherit src inputs pkgs pkgs' system; };
 
     in {
       flake = perSystem (system: (projectFor system).flake { });
@@ -139,7 +147,8 @@
       check = perSystem (system:
         (nixpkgsFor system).runCommand "combined-check" {
           nativeBuildInputs = builtins.attrValues self.checks.${system}
-            ++ builtins.attrValues self.flake.${system}.packages;
+            ++ builtins.attrValues self.flake.${system}.packages
+            ++ [ self.flake.${system}.devShell.inputDerivation ];
         } "touch $out");
 
       # NOTE `nix flake check` will not work at the moment due to use of
