@@ -5,6 +5,8 @@ module Plutus.Test.Model.Contract (
   sendTx,
   sendBlock,
   sendValue,
+  withSpend,
+  submitTx,
   waitNSlots,
   wait,
   waitUntil,
@@ -129,6 +131,18 @@ sendValue fromPkh amt toPkh = do
     Nothing -> logFail (NotEnoughFunds fromPkh amt)
   where
     toTx sp = userSpend sp <> payToPubKey toPkh amt
+
+-- | Spend or fail if there are no funds
+withSpend :: PubKeyHash -> Value -> (UserSpend -> Run ()) -> Run ()
+withSpend pkh val cont = do
+  mUsp <- spend' pkh val
+  case mUsp of
+    Just usp -> cont usp
+    Nothing  -> logError "No funds for user to spend"
+
+-- | Signs transaction and sends it ignoring the result stats.
+submitTx :: PubKeyHash -> Tx -> Run ()
+submitTx pkh tx = void $ sendTx =<< signTx pkh tx
 
 ------------------------------------------------------------------------
 -- query blockchain
