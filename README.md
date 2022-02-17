@@ -401,7 +401,7 @@ sendValue user1 (adaValue 1 <> testValue 5) user2
 We can log our own errors with
 
 ```haskell
-logErrors :: String -> Run ()
+logError :: String -> Run ()
 ```
 
 Errors are saved to log of errors. This way we can report our own errors based on conditions.
@@ -492,6 +492,33 @@ skipLimits :: BchConfig -> BchConfig
 Also there is function `warnLimits` that logs errors of resources usage
 but does not fail TX for submission. So if logic is correct script will run but
 errors of resources will be logged to error log.
+
+### How to write negative tests
+
+Often we need to check for errors also. We have to be sure that some 
+TX fails. Maybe this TX is malicious one and we have to be sure that it can not pass.
+For that we have useful function:
+
+```haskell
+mustFail :: Run a -> Run a
+mustFail action = ...
+```
+
+It saves the current state of blockchain and 
+tries to run the `action` and if the action succeeds it logs an error
+but if action fails it does not log error and retrives the stored previous
+blockchain state. 
+
+This way we can ensure that some scenario fails and we can proceed
+the execution of blockhain actions.
+
+### How to fail with custom conditions
+
+We can also fail on custom conditions with function `logError`:
+
+```haskell
+unless checkCondition $ logError "Some invariant violated"
+```
 
 ### How to check TX resource usage
 
