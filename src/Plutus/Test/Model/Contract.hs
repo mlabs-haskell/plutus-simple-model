@@ -447,8 +447,9 @@ checkErrors = do
       else Just (init . unlines $ fmap (ppFailure names) failures)
 
 testNoErrors :: Value -> BchConfig -> String -> Run a -> TestTree
-testNoErrors initFunds cfg msg act =
-  testCase msg $ fst (runBch (act >> checkErrors) (initBch cfg initFunds)) @?= Nothing
+testNoErrors funds cfg msg act =
+   testCase msg $ maybe (pure ()) assertFailure $
+    fst (runBch (act >> checkErrors) (initBch cfg funds))
 
 -- | check transaction limits
 testLimits :: Value -> BchConfig -> String -> (Log BchEvent -> Log BchEvent) -> Run a -> TestTree
