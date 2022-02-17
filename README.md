@@ -199,6 +199,13 @@ We can think about the latter UTXO as a change.
 
 Note that it is going to produce run-time exception if there are not enough funds to spend.
 To avoid run-time errors there is safer variant called `spend'`.
+Also we can use safer alternative `withSpend`. It logs an error
+if user has no funds to spend and continues execution which can
+be helpful in some test cases:
+
+```haskell
+withSpend :: PubKeyHash -> Value -> (UserSpend -> Run ()) -> Run ()
+```
 
 When we know what inputs to spend we need to make a TX. We do it with function `initGameTx`. We will dicuss it soon.
 After that we should sign TX with the key of the sender. We use function `signTx` for that.
@@ -616,3 +623,36 @@ readOnlyBox :: (ToData (DatumType a), ToData (RedeemerType a))
 ```
 
 It keeps the datum and value the same.
+
+### How to pay to addresses with staking credentials
+
+We can append the information on staking credential to
+anything that is convertible to `Address` by `HasAddress` type class
+with constructor `AppendStaking`. Also we have utility functions
+`appendStakingPubKey` and `appendStakingScript` which
+append `PubKeyHash` and `ValidatorHash` as staking credential.
+
+For example we can append it to the `TypeValidator` of the script:
+
+```haskell
+payToScriptAddress (appendStakingPubKey stakingKey typedValidator) datum value
+```
+
+We use more generic version of `payToScript` which pays to 
+anything convertible to address:
+
+```haskell
+payToScriptAddress :: (HasAddress script, ToData datum) =>
+  script -> datum -> Value -> Tx
+```
+
+The same function exists to pay to pub key hash:
+
+```haskell
+payToPubKeyAddress :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
+```
+
+
+
+
+

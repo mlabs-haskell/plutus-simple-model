@@ -5,6 +5,8 @@ module Plutus.Test.Model.Contract (
   sendTx,
   sendBlock,
   sendValue,
+  withSpend,
+  submitTx,
   waitNSlots,
   wait,
   waitUntil,
@@ -30,6 +32,8 @@ module Plutus.Test.Model.Contract (
   signTx,
   payToPubKey,
   payToScript,
+  payToScriptAddress,
+  payToPubKeyAddress,
   payFee,
   userSpend,
   spendPubKey,
@@ -128,6 +132,18 @@ sendValue fromPkh amt toPkh = do
     Nothing -> logFail (NotEnoughFunds fromPkh amt)
   where
     toTx sp = userSpend sp <> payToPubKey toPkh amt
+
+-- | Spend or fail if there are no funds
+withSpend :: PubKeyHash -> Value -> (UserSpend -> Run ()) -> Run ()
+withSpend pkh val cont = do
+  mUsp <- spend' pkh val
+  case mUsp of
+    Just usp -> cont usp
+    Nothing  -> logError "No funds for user to spend"
+
+-- | Signs transaction and sends it ignoring the result stats.
+submitTx :: PubKeyHash -> Tx -> Run ()
+submitTx pkh tx = void $ sendTx =<< signTx pkh tx
 
 ------------------------------------------------------------------------
 -- query blockchain
@@ -233,11 +249,34 @@ payToPubKey pkh val =
     { txOutputs = [TxOut (pubKeyHashAddress pkh) val Nothing]
     }
 
+-- | Pay value to the owner of PubKeyHash.
+-- We use address to supply staking credential if we need it.
+payToPubKeyAddress :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
+payToPubKeyAddress pkh val =
+  mempty
+    { txOutputs = [TxOut (toAddress pkh) val Nothing]
+    }
+
 -- | Pay to the script.
-payToScript :: ToData (DatumType a) => TypedValidator a -> DatumType a -> Value -> Tx
+-- We can use TypedValidator as argument and it will be checked that the datum is correct.
+payToScript :: ToData (DatumType a) =>
+  TypedValidator a -> DatumType a -> Value -> Tx
 payToScript tv dat val =
   mempty
-    { txOutputs = [TxOut (validatorAddress tv) val (Just dh)]
+    { txOutputs = [TxOut (toAddress tv) val (Just dh)]
+    , txData = M.singleton dh datum
+    }
+  where
+    dh = datumHash datum
+    datum = Datum $ toBuiltinData dat
+
+-- | Pay to the script.
+-- We can use TypedValidator as argument and it will be checked that the datum is correct.
+payToScriptAddress :: (HasAddress script, ToData datum) =>
+  script -> datum -> Value -> Tx
+payToScriptAddress script dat val =
+  mempty
+    { txOutputs = [TxOut (toAddress script) val (Just dh)]
     , txData = M.singleton dh datum
     }
   where
@@ -436,8 +475,9 @@ checkErrors = do
       else Just (init . unlines $ fmap (ppFailure names) failures)
 
 testNoErrors :: Value -> BchConfig -> String -> Run a -> TestTree
-testNoErrors initFunds cfg msg act =
-  testCase msg $ fst (runBch (act >> checkErrors) (initBch cfg initFunds)) @?= Nothing
+testNoErrors funds cfg msg act =
+   testCase msg $ maybe (pure ()) assertFailure $
+    fst (runBch (act >> checkErrors) (initBch cfg funds))
 
 -- | check transaction limits
 testLimits :: Value -> BchConfig -> String -> (Log BchEvent -> Log BchEvent) -> Run a -> TestTree

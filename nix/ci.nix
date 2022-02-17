@@ -12,13 +12,13 @@ in rec {
   # What should CI build?
 
   inherit (project) projectCoverageReport;
-  inherit (project.gero-gov.components) library;
+  inherit (project.plutus-simple-model.components) library;
 
-  inherit (project.gero-gov.components.tests) gero-gov-test;
+  inherit (project.plutus-simple-model.components.tests) plutus-simple-model-test;
 
   # This will run the tests within this build and produce the test logs to stdout
   check = plutus-apps.pkgs.runCommand "run-tests" { } ''
-    ${gero-gov-test}/bin/gero-gov-test
+    ${plutus-simple-model-test}/bin/plutus-simple-model-test
     echo "" > $out
   '';
 
