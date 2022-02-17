@@ -9,7 +9,7 @@ let inherit (plutus-apps) pkgs;
     utils = import ./utils.nix;
 in pkgs.haskell-nix.cabalProject rec {
   src = pkgs.haskell-nix.haskellLib.cleanGit {
-    name = "gero-gov";
+    name = "plutus-simple-model";
     src = ./..;
   };
 
@@ -21,7 +21,7 @@ in pkgs.haskell-nix.cabalProject rec {
   # Update using:
   #   nix-build default.nix 2>&1 | grep -om1 '/nix/store/.*-updateMaterialized' | bash
   # plan-sha256 = "0m56bhk9w3v1zqpig84f9krrp6sqg21w0vxbjiqcxz8n7c39aw54";
-  # materialized = ./materialization/gero-gov.materialized;
+  # materialized = ./materialization/plutus-simple-model.materialized;
 
   modules = [{
     packages = {

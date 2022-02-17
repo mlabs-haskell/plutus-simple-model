@@ -635,13 +635,18 @@ append `PubKeyHash` and `ValidatorHash` as staking credential.
 For example we can append it to the `TypeValidator` of the script:
 
 ```haskell
-payToScript (appendStakingPubKey stakingKey typedValidator) datum value
+payToScriptAddress (appendStakingPubKey stakingKey typedValidator) datum value
 ```
 
-Note that in this case the datum will be checked that it belongs to the
-typed validator. For paying to script the function is generic
-and overloaded by argument but for paying to pub key hash we need
-to use alternative function `payToPubKeyAddreess`:
+We use more generic version of `payToScript` which pays to 
+anything convertible to address:
+
+```haskell
+payToScriptAddress :: (HasAddress script, ToData datum) =>
+  script -> datum -> Value -> Tx
+```
+
+The same function exists to pay to pub key hash:
 
 ```haskell
 payToPubKeyAddress :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx

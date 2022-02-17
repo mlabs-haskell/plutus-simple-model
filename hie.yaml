@@ -1,8 +1,8 @@
 cradle:
   cabal:
     - path: "./src"
-      component: "lib:gero-gov"
+      component: "lib:plutus-simple-model"
     - path: "./test"
-      component: "test:gero-gov-test"
+      component: "test:plutus-simple-model-test"
     - path: "./examples"
-      component: "lib:gero-gov-examples"
+      component: "lib:plutus-simple-model-examples"
