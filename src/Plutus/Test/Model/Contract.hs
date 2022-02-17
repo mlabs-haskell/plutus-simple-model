@@ -30,6 +30,7 @@ module Plutus.Test.Model.Contract (
   signTx,
   payToPubKey,
   payToScript,
+  payToPubKeyAddress,
   payFee,
   userSpend,
   spendPubKey,
@@ -233,11 +234,21 @@ payToPubKey pkh val =
     { txOutputs = [TxOut (pubKeyHashAddress pkh) val Nothing]
     }
 
--- | Pay to the script.
-payToScript :: ToData (DatumType a) => TypedValidator a -> DatumType a -> Value -> Tx
-payToScript tv dat val =
+-- | Pay value to the owner of PubKeyHash.
+-- We use address to supply staking credential if we need it.
+payToPubKeyAddress :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
+payToPubKeyAddress pkh val =
   mempty
-    { txOutputs = [TxOut (validatorAddress tv) val (Just dh)]
+    { txOutputs = [TxOut (toAddress pkh) val Nothing]
+    }
+
+-- | Pay to the script.
+-- We can use TypedValidator as argument and it will be checked that the datum is correct.
+payToScript :: (HasAddress script, ToData (DatumType script)) =>
+  script -> DatumType script -> Value -> Tx
+payToScript script dat val =
+  mempty
+    { txOutputs = [TxOut (toAddress script) val (Just dh)]
     , txData = M.singleton dh datum
     }
   where

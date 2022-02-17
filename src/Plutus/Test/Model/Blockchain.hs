@@ -14,6 +14,10 @@
 module Plutus.Test.Model.Blockchain (
   -- * Address helpers
   HasAddress(..),
+  AppendStaking(..),
+  appendStakingCredential,
+  appendStakingPubKey,
+  appendStakingScript,
   -- * Blockchain model
   Blockchain (..),
   BchConfig (..),
@@ -140,7 +144,7 @@ import Plutus.V1.Ledger.Value (AssetClass)
 import PlutusTx.Prelude qualified as Plutus
 import Basement.Compat.Natural
 import qualified Plutus.V1.Ledger.Ada            as Ada
-import Ledger.Typed.Scripts (TypedValidator, validatorAddress)
+import Ledger.Typed.Scripts (TypedValidator, validatorAddress, ValidatorTypes(..))
 import Ledger (PaymentPubKeyHash(..))
 
 import Ouroboros.Consensus.Block.Abstract (EpochNo (..), EpochSize (..))
@@ -178,6 +182,32 @@ instance HasAddress ValidatorHash where
 
 instance HasAddress (TypedValidator a) where
   toAddress = validatorAddress
+
+-- | Encodes appening of staking address
+data AppendStaking a =
+  AppendStaking StakingCredential a
+
+instance ValidatorTypes (TypedValidator a) where
+   type DatumType    (TypedValidator a) = DatumType a
+   type RedeemerType (TypedValidator a) = RedeemerType a
+
+instance ValidatorTypes (AppendStaking (TypedValidator a)) where
+   type DatumType    (AppendStaking (TypedValidator a)) = DatumType a
+   type RedeemerType (AppendStaking (TypedValidator a)) = RedeemerType a
+
+instance HasAddress a => HasAddress (AppendStaking a) where
+  toAddress (AppendStaking stakeCred a) = appendStake (toAddress a)
+    where
+      appendStake addr = addr { addressStakingCredential = Just stakeCred }
+
+appendStakingCredential :: Credential -> a -> AppendStaking a
+appendStakingCredential cred = AppendStaking (StakingHash cred)
+
+appendStakingPubKey :: PubKeyHash -> a -> AppendStaking a
+appendStakingPubKey pkh = appendStakingCredential (PubKeyCredential pkh)
+
+appendStakingScript :: ValidatorHash -> a -> AppendStaking a
+appendStakingScript vh = appendStakingCredential (ScriptCredential vh)
 
 instance Semigroup ExecutionUnits where
   (<>) (ExecutionUnits a1 b1) (ExecutionUnits a2 b2) =
