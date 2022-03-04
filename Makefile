@@ -46,21 +46,21 @@ endif
 ci:
 	nix-build ./nix/ci.nix
 
-build: requires_nix_shell gero-gov.cabal
+build: requires_nix_shell plutus-simple-model.cabal
 	cabal v2-build $(GHC_FLAGS)
 
-watch: requires_nix_shell gero-gov.cabal
-	while sleep 1; do find gero-gov.cabal src test | entr -cd make build; done
+watch: requires_nix_shell plutus-simple-model.cabal
+	while sleep 1; do find plutus-simple-model.cabal src test | entr -cd make build; done
 
-test: requires_nix_shell gero-gov.cabal
-	cabal v2-test
+test: requires_nix_shell plutus-simple-model.cabal
+	cabal new-test --test-show-details=always --test-options="--color always"
 
-ghci: requires_nix_shell gero-gov.cabal
-	cabal v2-repl $(GHC_FLAGS) gero-gov
+ghci: requires_nix_shell plutus-simple-model.cabal
+	cabal v2-repl $(GHC_FLAGS) plutus-simple-model
 
-examples: requires_nix_shell gero-gov.cabal
-	cabal v2-repl $(GHC_FLAGS) gero-gov-examples
-coverage: gero-gov.cabal
+examples: requires_nix_shell plutus-simple-model.cabal
+	cabal v2-repl $(GHC_FLAGS) plutus-simple-model-examples
+coverage: plutus-simple-model.cabal
 	nix-build --arg doCoverage true -A projectCoverageReport
 
 # Source dirs to run fourmolu on

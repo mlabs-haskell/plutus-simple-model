@@ -199,6 +199,13 @@ We can think about the latter UTXO as a change.
 
 Note that it is going to produce run-time exception if there are not enough funds to spend.
 To avoid run-time errors there is safer variant called `spend'`.
+Also we can use safer alternative `withSpend`. It logs an error
+if user has no funds to spend and continues execution which can
+be helpful in some test cases:
+
+```haskell
+withSpend :: PubKeyHash -> Value -> (UserSpend -> Run ()) -> Run ()
+```
 
 When we know what inputs to spend we need to make a TX. We do it with function `initGameTx`. We will dicuss it soon.
 After that we should sign TX with the key of the sender. We use function `signTx` for that.
@@ -394,7 +401,7 @@ sendValue user1 (adaValue 1 <> testValue 5) user2
 We can log our own errors with
 
 ```haskell
-logErrors :: String -> Run ()
+logError :: String -> Run ()
 ```
 
 Errors are saved to log of errors. This way we can report our own errors based on conditions.
@@ -485,6 +492,33 @@ skipLimits :: BchConfig -> BchConfig
 Also there is function `warnLimits` that logs errors of resources usage
 but does not fail TX for submission. So if logic is correct script will run but
 errors of resources will be logged to error log.
+
+### How to write negative tests
+
+Often we need to check for errors also. We have to be sure that some 
+TX fails. Maybe this TX is malicious one and we have to be sure that it can not pass.
+For that we have useful function:
+
+```haskell
+mustFail :: Run a -> Run a
+mustFail action = ...
+```
+
+It saves the current state of blockchain and 
+tries to run the `action` and if the action succeeds it logs an error
+but if action fails it does not log error and retrives the stored previous
+blockchain state. 
+
+This way we can ensure that some scenario fails and we can proceed
+the execution of blockhain actions.
+
+### How to fail with custom conditions
+
+We can also fail on custom conditions with function `logError`:
+
+```haskell
+unless checkCondition $ logError "Some invariant violated"
+```
 
 ### How to check TX resource usage
 
@@ -616,3 +650,36 @@ readOnlyBox :: (ToData (DatumType a), ToData (RedeemerType a))
 ```
 
 It keeps the datum and value the same.
+
+### How to pay to addresses with staking credentials
+
+We can append the information on staking credential to
+anything that is convertible to `Address` by `HasAddress` type class
+with constructor `AppendStaking`. Also we have utility functions
+`appendStakingPubKey` and `appendStakingScript` which
+append `PubKeyHash` and `ValidatorHash` as staking credential.
+
+For example we can append it to the `TypeValidator` of the script:
+
+```haskell
+payToScriptAddress (appendStakingPubKey stakingKey typedValidator) datum value
+```
+
+We use more generic version of `payToScript` which pays to 
+anything convertible to address:
+
+```haskell
+payToScriptAddress :: (HasAddress script, ToData datum) =>
+  script -> datum -> Value -> Tx
+```
+
+The same function exists to pay to pub key hash:
+
+```haskell
+payToPubKeyAddress :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
+```
+
+
+
+
+
