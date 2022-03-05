@@ -122,7 +122,7 @@ import Cardano.Api.Shelley (
   NetworkId (..),
   ProtocolParameters (..),
   ScriptExecutionError,
-  TransactionValidityIntervalError,
+  TransactionValidityError(..),
   UTxO (..),
   evaluateTransactionBalance,
   evaluateTransactionExecutionUnits,
@@ -411,7 +411,7 @@ data FailReason
   | -- | not enough funds for the user.
     NotEnoughFunds PubKeyHash Value
   | -- | time or vlaid range related errors
-    IntervalError TransactionValidityIntervalError
+    IntervalError TransactionValidityError
   | -- | TX is not balanced. Sum of inputs does not equal to sum of outputs.
     NotBalancedTx
   | -- | no utxo on the address

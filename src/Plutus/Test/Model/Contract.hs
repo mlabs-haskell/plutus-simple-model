@@ -31,6 +31,7 @@ module Plutus.Test.Model.Contract (
   -- * Build TX
   signTx,
   payToPubKey,
+  payWithDatumToPubKey,
   payToScript,
   payToScriptAddress,
   payToPubKeyAddress,
@@ -248,6 +249,16 @@ payToPubKey pkh val =
   mempty
     { txOutputs = [TxOut (pubKeyHashAddress pkh) val Nothing]
     }
+
+payWithDatumToPubKey :: ToData a => PubKeyHash -> a -> Value -> Tx
+payWithDatumToPubKey pkh dat val =
+  mempty
+    { txOutputs = [TxOut (pubKeyHashAddress pkh) val (Just dh)]
+    , txData = M.singleton dh datum
+    }
+  where
+    dh = datumHash datum
+    datum = Datum $ toBuiltinData dat
 
 -- | Pay value to the owner of PubKeyHash.
 -- We use address to supply staking credential if we need it.

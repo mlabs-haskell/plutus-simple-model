@@ -53,7 +53,7 @@ watch: requires_nix_shell plutus-simple-model.cabal
 	while sleep 1; do find plutus-simple-model.cabal src test | entr -cd make build; done
 
 test: requires_nix_shell plutus-simple-model.cabal
-	cabal v2-test
+	cabal new-test --test-show-details=always --test-options="--color always"
 
 ghci: requires_nix_shell plutus-simple-model.cabal
 	cabal v2-repl $(GHC_FLAGS) plutus-simple-model
