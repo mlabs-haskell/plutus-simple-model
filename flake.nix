@@ -90,16 +90,6 @@
         "github:input-output-hk/plutus-apps/7f543e21d4945a2024e46c572303b9c1684a5832";
       flake = false;
     };
-    purescript-bridge = {
-      url =
-        "github:input-output-hk/purescript-bridge/47a1f11825a0f9445e0f98792f79172efef66c00";
-      flake = false;
-    };
-    servant-purescript = {
-      url =
-        "github:input-output-hk/servant-purescript/44e7cacf109f84984cd99cd3faf185d161826963";
-      flake = false;
-    };
     Win32-network = {
       url =
         "github:input-output-hk/Win32-network/3825d3abf75f83f406c1f7161883c438dac7277d";

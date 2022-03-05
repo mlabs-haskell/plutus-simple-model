@@ -34,20 +34,13 @@ pkgs.haskell-nix.cabalProject {
         goblins
         measures
         orphans-deriving-via
-        playground-common
-        plutus-chain-index
         plutus-ledger-constraints
-        plutus-contract
         plutus-core
         plutus-ledger
         plutus-ledger-api
-        plutus-pab
-        plutus-playground-server
         plutus-tx
         plutus-tx-plugin
-        plutus-use-cases
         prettyprinter-configurable
-        quickcheck-dynamic
         Win32-network
         word-array
       ];
@@ -83,12 +76,6 @@ pkgs.haskell-nix.cabalProject {
 
   modules = [{
     packages = {
-      plutus-use-cases.doHaddock = deferPluginErrors;
-      plutus-use-cases.flags.defer-plugin-errors = deferPluginErrors;
-
-      plutus-contract.doHaddock = deferPluginErrors;
-      plutus-contract.flags.defer-plugin-errors = deferPluginErrors;
-
       plutus-ledger.doHaddock = deferPluginErrors;
       plutus-ledger.flags.defer-plugin-errors = deferPluginErrors;
 
@@ -153,7 +140,7 @@ pkgs.haskell-nix.cabalProject {
     }
     {
       src = inputs.cardano-node;
-      subdirs = [ "cardano-api" "cardano-node" "cardano-cli" ];
+      subdirs = [ "cardano-api" "cardano-node" ];
     }
     {
       src = inputs.cardano-config;
@@ -240,28 +227,10 @@ pkgs.haskell-nix.cabalProject {
     {
       src = inputs.plutus-apps;
       subdirs = [
-        "doc"
         "freer-extras"
-        "playground-common"
-        "plutus-chain-index"
-        "plutus-chain-index-core"
-        "plutus-contract"
         "plutus-ledger"
         "plutus-ledger-constraints"
-        "plutus-pab"
-        "plutus-playground-server"
-        "plutus-use-cases"
-        "quickcheck-dynamic"
-        "web-ghc"
       ];
-    }
-    {
-      src = inputs.purescript-bridge;
-      subdirs = [ "." ];
-    }
-    {
-      src = inputs.servant-purescript;
-      subdirs = [ "." ];
     }
     {
       src = inputs.Win32-network;
