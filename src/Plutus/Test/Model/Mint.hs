@@ -27,7 +27,7 @@ fakeCoin (FakeCoin tag) = assetClass sym tok
 fakeMintingPolicy :: BuiltinByteString -> Ledger.MintingPolicy
 fakeMintingPolicy mintParams =
   Ledger.mkMintingPolicyScript $
-    $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . fakeMintingPolicyContract ||])
+    $$(PlutusTx.compile [|| \x -> Scripts.wrapMintingPolicy (fakeMintingPolicyContract x) ||])
       `PlutusTx.applyCode` PlutusTx.liftCode (TokenName mintParams)
 
 -- | Can mint new coins if token name equals to fixed tag.
