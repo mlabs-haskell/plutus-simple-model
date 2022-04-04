@@ -47,12 +47,18 @@ module Plutus.Test.Model.Blockchain (
   StatPercent(..),
   PercentExecutionUnits(..),
   toStatPercent,
+  -- * Plutus TX with extra fields
+  TxExtra(..),
+  Extra(..),
+  setExtra,
 
   -- * core blockchain functions
   getMainUser,
   signTx,
   sendBlock,
   sendTx,
+  sendTx',
+  sendBlock',
   logFail,
   logInfo,
   logError,
@@ -226,6 +232,27 @@ newtype User = User
   { userPubKey :: PubKey
   }
   deriving (Show)
+
+-- | Plutus TX with extra fields for Cardano TX
+data TxExtra = TxExtra
+  { txExtra'extra :: Extra
+  , txExtra'tx    :: Tx
+  }
+
+-- | Extra fields for Cardano TX
+data Extra = Extra
+  { extra'withdrawal   :: [(StakingCredential, Integer)]
+  , extra'certificates :: [DCert]
+  }
+
+instance Semigroup Extra where
+  (<>) (Extra a1 a2) (Extra b1 b2) = Extra (a1 <> b1) (a2 <> b2)
+
+instance Monoid Extra where
+  mempty = Extra [] []
+
+setExtra :: Extra -> Tx -> TxExtra
+setExtra = TxExtra
 
 -- | TX with stats of TX execution onchain.
 data TxStat = TxStat
@@ -588,22 +615,39 @@ logInfo msg = do
 -- | Send block of TXs to blockchain.
 sendBlock :: [Tx] -> Run (Either FailReason [Stat])
 sendBlock txs = do
-  res <- sequence <$> mapM sendSingleTx txs
+  res <- sequence <$> mapM (sendSingleTx id) txs
+  when (isRight res) bumpSlot
+  pure res
+
+-- | Send block of TXs to blockchain.
+sendBlock' :: [TxExtra] -> Run (Either FailReason [Stat])
+sendBlock' txs = do
+  res <- sequence <$> mapM (\(TxExtra ex tx) -> sendSingleTx (fromExtra ex) tx) txs
   when (isRight res) bumpSlot
   pure res
 
 -- | Sends block with single TX to blockchai
 sendTx :: Tx -> Run (Either FailReason Stat)
 sendTx tx = do
-  res <- sendSingleTx tx
+  res <- sendSingleTx id tx
   when (isRight res) bumpSlot
   pure res
+
+-- | Sends block with single TX (that has extra fields) to blockchai
+sendTx' :: TxExtra -> Run (Either FailReason Stat)
+sendTx' (TxExtra extra tx) = do
+  res <- sendSingleTx (fromExtra extra) tx
+  when (isRight res) bumpSlot
+  pure res
+
+fromExtra :: Extra -> Cardano.TxBody AlonzoEra -> Cardano.TxBody AlonzoEra
+fromExtra = undefined
 
 {- | Send single TX to blockchain. It logs failure if TX is invalid
  and pproduces performance stats if TX was ok.
 -}
-sendSingleTx :: Tx -> Run (Either FailReason Stat)
-sendSingleTx tx =
+sendSingleTx :: (Cardano.TxBody AlonzoEra -> Cardano.TxBody AlonzoEra) -> Tx -> Run (Either FailReason Stat)
+sendSingleTx setExtraFields tx =
   withCheckRange $
     withTxBody $ \protocol txBody -> do
       let tid = Cardano.fromCardanoTxId $ Cardano.getTxId txBody
@@ -634,7 +678,7 @@ sendSingleTx tx =
     withTxBody cont = do
       cfg <- gets bchConfig
       case Cardano.toCardanoTxBody (fmap PaymentPubKeyHash pkhs) (Just $ bchConfigProtocol cfg) (bchConfigNetworkId cfg) tx of
-        Right txBody -> cont (bchConfigProtocol cfg) txBody
+        Right txBody -> cont (bchConfigProtocol cfg) (setExtraFields txBody)
         Left err -> leftFail $ FailToCardano err
 
     withCheckBalance protocol utxo txBody cont
