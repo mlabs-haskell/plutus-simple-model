@@ -1,3 +1,4 @@
+{-# Language NamedFieldPuns #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 {- | Simple test model for plutus scripts.
@@ -173,6 +174,8 @@ import Ledger.Crypto (PubKey (..), Signature (..), pubKeyHash)
 import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.Tx.CardanoAPI qualified as Cardano
 import Paths_plutus_simple_model
+
+import Plutus.Test.Model.Fork.CardanoAPI (toCardanoTxBody)
 
 class HasAddress a where
   toAddress :: a -> Address
@@ -677,7 +680,7 @@ sendSingleTx setExtraFields tx =
 
     withTxBody cont = do
       cfg <- gets bchConfig
-      case Cardano.toCardanoTxBody (fmap PaymentPubKeyHash pkhs) (Just $ bchConfigProtocol cfg) (bchConfigNetworkId cfg) tx of
+      case toCardanoTxBody (fmap PaymentPubKeyHash pkhs) (Just $ bchConfigProtocol cfg) (bchConfigNetworkId cfg) tx of
         Right txBody -> cont (bchConfigProtocol cfg) (setExtraFields txBody)
         Left err -> leftFail $ FailToCardano err
 

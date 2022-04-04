@@ -79,6 +79,7 @@ common deps
     , cardano-slotting
     , containers
     , mtl
+    , serialise
     , ouroboros-consensus
     , ouroboros-consensus-shelley
     , prettyprinter
@@ -86,6 +87,7 @@ common deps
     , plutus-ledger-api
     , plutus-tx
     , plutus-tx-plugin
+    , strict-containers
     , time
 
 common test-deps
@@ -104,6 +106,8 @@ library
     Plutus.Test.Model.Contract
     Plutus.Test.Model.Mint
     Plutus.Test.Model.Pretty
+    Plutus.Test.Model.Fork.CardanoAPI
+    Plutus.Test.Model.Fork.CardanoAPITemp
   build-depends:    tasty
                   , tasty-hunit
   other-modules:
