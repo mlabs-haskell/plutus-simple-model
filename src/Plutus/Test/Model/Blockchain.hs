@@ -175,7 +175,8 @@ import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.Tx.CardanoAPI qualified as Cardano
 import Paths_plutus_simple_model
 
-import Plutus.Test.Model.Fork.CardanoAPI (toCardanoTxBody)
+import Plutus.Test.Model.Fork.CardanoAPI qualified as Fork(toCardanoTxBody)
+import Plutus.Test.Model.Fork.TxExtra
 
 class HasAddress a where
   toAddress :: a -> Address
@@ -235,27 +236,6 @@ newtype User = User
   { userPubKey :: PubKey
   }
   deriving (Show)
-
--- | Plutus TX with extra fields for Cardano TX
-data TxExtra = TxExtra
-  { txExtra'extra :: Extra
-  , txExtra'tx    :: Tx
-  }
-
--- | Extra fields for Cardano TX
-data Extra = Extra
-  { extra'withdrawal   :: [(StakingCredential, Integer)]
-  , extra'certificates :: [DCert]
-  }
-
-instance Semigroup Extra where
-  (<>) (Extra a1 a2) (Extra b1 b2) = Extra (a1 <> b1) (a2 <> b2)
-
-instance Monoid Extra where
-  mempty = Extra [] []
-
-setExtra :: Extra -> Tx -> TxExtra
-setExtra = TxExtra
 
 -- | TX with stats of TX execution onchain.
 data TxStat = TxStat
@@ -618,39 +598,58 @@ logInfo msg = do
 -- | Send block of TXs to blockchain.
 sendBlock :: [Tx] -> Run (Either FailReason [Stat])
 sendBlock txs = do
-  res <- sequence <$> mapM (sendSingleTx id) txs
+  res <- sequence <$> mapM (sendSingleTx plainSendTx) txs
   when (isRight res) bumpSlot
   pure res
 
 -- | Send block of TXs to blockchain.
 sendBlock' :: [TxExtra] -> Run (Either FailReason [Stat])
 sendBlock' txs = do
-  res <- sequence <$> mapM (\(TxExtra ex tx) -> sendSingleTx (fromExtra ex) tx) txs
+  res <- sequence <$> mapM (sendSingleTx extraSendTx) txs
   when (isRight res) bumpSlot
   pure res
 
 -- | Sends block with single TX to blockchai
 sendTx :: Tx -> Run (Either FailReason Stat)
 sendTx tx = do
-  res <- sendSingleTx id tx
+  res <- sendSingleTx plainSendTx tx
   when (isRight res) bumpSlot
   pure res
 
 -- | Sends block with single TX (that has extra fields) to blockchai
 sendTx' :: TxExtra -> Run (Either FailReason Stat)
-sendTx' (TxExtra extra tx) = do
-  res <- sendSingleTx (fromExtra extra) tx
+sendTx' tx = do
+  res <- sendSingleTx extraSendTx tx
   when (isRight res) bumpSlot
   pure res
 
-fromExtra :: Extra -> Cardano.TxBody AlonzoEra -> Cardano.TxBody AlonzoEra
-fromExtra = undefined
+data SendTx a = SendTx
+  { sendTx'getTx     :: a -> Tx
+  , sendTx'toCardano ::
+        [PaymentPubKeyHash] -- ^ Required signers of the transaction
+     -> Maybe ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
+     -> Cardano.NetworkId -- ^ Network ID
+     -> a
+     -> Either Cardano.ToCardanoError (Cardano.TxBody Cardano.AlonzoEra)
+  }
+
+plainSendTx :: SendTx Tx
+plainSendTx = SendTx
+  { sendTx'getTx     = id
+  , sendTx'toCardano = Cardano.toCardanoTxBody
+  }
+
+extraSendTx :: SendTx TxExtra
+extraSendTx = SendTx
+  { sendTx'getTx     = txExtra'tx
+  , sendTx'toCardano = Fork.toCardanoTxBody
+  }
 
 {- | Send single TX to blockchain. It logs failure if TX is invalid
  and pproduces performance stats if TX was ok.
 -}
-sendSingleTx :: (Cardano.TxBody AlonzoEra -> Cardano.TxBody AlonzoEra) -> Tx -> Run (Either FailReason Stat)
-sendSingleTx setExtraFields tx =
+sendSingleTx :: SendTx a -> a -> Run (Either FailReason Stat)
+sendSingleTx SendTx{..} genTx =
   withCheckRange $
     withTxBody $ \protocol txBody -> do
       let tid = Cardano.fromCardanoTxId $ Cardano.getTxId txBody
@@ -663,6 +662,7 @@ sendSingleTx setExtraFields tx =
               applyTx stat tid tx
               pure $ Right stat
   where
+    tx = sendTx'getTx genTx
     pkhs = fmap pubKeyHash $ M.keys $ txSignatures tx
 
     withCheckRange cont = do
@@ -680,8 +680,8 @@ sendSingleTx setExtraFields tx =
 
     withTxBody cont = do
       cfg <- gets bchConfig
-      case toCardanoTxBody (fmap PaymentPubKeyHash pkhs) (Just $ bchConfigProtocol cfg) (bchConfigNetworkId cfg) tx of
-        Right txBody -> cont (bchConfigProtocol cfg) (setExtraFields txBody)
+      case sendTx'toCardano (fmap PaymentPubKeyHash pkhs) (Just $ bchConfigProtocol cfg) (bchConfigNetworkId cfg) genTx of
+        Right txBody -> cont (bchConfigProtocol cfg) txBody
         Left err -> leftFail $ FailToCardano err
 
     withCheckBalance protocol utxo txBody cont

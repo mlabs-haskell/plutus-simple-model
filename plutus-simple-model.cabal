@@ -108,6 +108,7 @@ library
     Plutus.Test.Model.Pretty
     Plutus.Test.Model.Fork.CardanoAPI
     Plutus.Test.Model.Fork.CardanoAPITemp
+    Plutus.Test.Model.Fork.TxExtra
   build-depends:    tasty
                   , tasty-hunit
   other-modules:
