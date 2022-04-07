@@ -45,6 +45,14 @@ module Plutus.Test.Model.Contract (
   mintValue,
   addMintRedeemer,
   validateIn,
+  -- ** Staking valdiators primitives
+  --
+  -- | to use them convert vanila Plutus @Tx@ to @TxExtra@ with @toExtra@
+  TxExtra(..),
+  setExtra,
+  toExtra,
+  stakeWithdrawKey,
+  stakeWithdrawScript,
 
   -- * time helpers (converts to POSIXTime milliseconds)
   weeks,
@@ -95,6 +103,7 @@ import Plutus.V1.Ledger.Value
 import PlutusTx.Prelude qualified as Plutus
 
 import Plutus.Test.Model.Blockchain
+import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Pretty
 import Prettyprinter (Doc, vcat, hcat, indent, (<+>), pretty)
 

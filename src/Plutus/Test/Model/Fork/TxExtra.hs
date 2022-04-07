@@ -5,6 +5,7 @@ module Plutus.Test.Model.Fork.TxExtra (
   Withdraw(..),
   toExtra,
   setExtra,
+  -- * Staking valdiators primitives
   stakeWithdrawKey,
   stakeWithdrawScript,
 ) where
@@ -19,6 +20,7 @@ data TxExtra = TxExtra
   , txExtra'tx    :: Tx
   }
 
+-- | Wrap TX to extra fields (empty fields are allocated)
 toExtra :: Tx -> TxExtra
 toExtra = TxExtra mempty
 
@@ -28,10 +30,11 @@ data Extra = Extra
   , extra'certificates   :: [DCert]
   }
 
+-- | Stake withdrawal
 data Withdraw = Withdraw
-  { withdraw'credential :: StakingCredential
-  , withdraw'amount     :: Integer
-  , withdraw'script     :: Maybe (Redeemer, StakeValidator)
+  { withdraw'credential :: StakingCredential                 -- ^ staking credential
+  , withdraw'amount     :: Integer                           -- ^ amount of withdrawal in Lovelace
+  , withdraw'script     :: Maybe (Redeemer, StakeValidator)  -- ^ Just in case of script withdrawal
   }
 
 instance Semigroup Extra where
@@ -44,11 +47,13 @@ instance Monoid Extra where
 setExtra :: Extra -> TxExtra -> TxExtra
 setExtra a (TxExtra e tx) = TxExtra (e <> a) tx
 
+-- | Add staking withdrawal based on pub key hash
 stakeWithdrawKey :: PubKeyHash -> Integer -> TxExtra -> TxExtra
 stakeWithdrawKey key amount = setExtra $ mempty
   { extra'withdraws = [Withdraw (StakingHash $ PubKeyCredential key) amount Nothing]
   }
 
+-- | Add staking withdrawal based on script
 stakeWithdrawScript :: ToData redeemer
   => StakeValidator -> redeemer -> Integer -> TxExtra -> TxExtra
 stakeWithdrawScript validator red amount = setExtra $ mempty
@@ -57,7 +62,4 @@ stakeWithdrawScript validator red amount = setExtra $ mempty
   }
   where
     vh = validatorHash $ Validator $ getStakeValidator validator
-
-
-
 
