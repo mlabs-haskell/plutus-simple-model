@@ -130,6 +130,7 @@ import Cardano.Api.Shelley (
   serialiseToCBOR,
   toCtxUTxOTxOut,
   txOutValueToValue,
+  fromPlutusData,
  )
 import Cardano.Slotting.Slot (SlotNo (..))
 import Cardano.Slotting.Time (RelativeTime (..), SystemStart (..), slotLengthFromMillisec)
@@ -719,7 +720,7 @@ getUTxO tid tx = do
 
     fromTxOut networkId (tin, tout) = do
       cin <- Cardano.toCardanoTxIn $ txInRef tin
-      cout <- fmap toCtxUTxOTxOut $ Cardano.toCardanoTxOut networkId (txData tx) tout
+      cout <- fmap toCtxUTxOTxOut $ Cardano.toCardanoTxOut networkId (lookupDatum' $ txData tx) tout
       pure (cin, cout)
 
     toUtxo :: NetworkId -> [(TxIn, TxOut)] -> Either Cardano.ToCardanoError (UTxO AlonzoEra)
@@ -869,4 +870,19 @@ filterSlot f (Log xs) = Log (Seq.filter (f . fst) xs)
 getLog :: Blockchain -> Log BchEvent
 getLog Blockchain{..} =
   mconcat [BchInfo <$> bchInfo, BchTx <$> bchTxs, BchFail <$> bchFails]
+
+--------------------------------------------------------------
+-- Cardano internals re-exports
+
+lookupDatum' ::
+     Map DatumHash Datum
+  -> Maybe DatumHash
+  -> Either Cardano.ToCardanoError (Cardano.TxOutDatum Cardano.CtxTx Cardano.AlonzoEra)
+lookupDatum' datums datumHash =
+    case flip M.lookup datums =<< datumHash of
+        Just datum -> pure $ Cardano.TxOutDatum Cardano.ScriptDataInAlonzoEra (toCardanoScriptData $ getDatum datum)
+        Nothing    -> Cardano.toCardanoTxOutDatumHash datumHash
+
+toCardanoScriptData :: BuiltinData -> Cardano.ScriptData
+toCardanoScriptData = fromPlutusData . builtinDataToData
 
