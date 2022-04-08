@@ -125,3 +125,7 @@ update_plutus:
 	@echo "Make sure to update the plutus rev in cabal.project with:"
 	@echo "    commit: $(PLUTUS_REV)"
 	@echo "This may require further resolution of dependency versions."
+
+
+run:
+	nix develop

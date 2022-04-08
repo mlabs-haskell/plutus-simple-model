@@ -2,10 +2,8 @@
   description = "plutus-simple-model";
 
   inputs = {
-    haskell-nix.url = "github:L-as/haskell.nix/ac825b91c202947ec59b1a477003564cc018fcec";
-    haskell-nix.inputs.nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
-
-    nixpkgs.follows = "haskell-nix/nixpkgs";
+    haskell-nix.url = "github:mlabs-haskell/haskell.nix?ref=master";
+    nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
 
     iohk-nix.url = "github:input-output-hk/iohk-nix";
 
@@ -87,7 +85,7 @@
     };
     plutus-apps = {
       url =
-        "github:input-output-hk/plutus-apps/c4960ae14b187978bf41832313370d282f648eee";
+        "github:input-output-hk/plutus-apps/63deb7d7ebd1c8c8ddf2640e1873d8f0f49559a1";
       flake = false;
     };
     Win32-network = {
