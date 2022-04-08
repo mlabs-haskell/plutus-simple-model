@@ -20,11 +20,14 @@ module Plutus.Test.Model.Fork.CardanoAPI (
   toCardanoStakeWitness,
 ) where
 
+import Data.Proxy
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
+import Data.Coerce (coerce)
 import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Bifunctor (first)
+import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
 import Ledger.Address qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
@@ -53,6 +56,7 @@ toCardanoTxBody sigs protocolParams networkId (TxExtra extra P.Tx{..}) = do
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
     txExtraKeyWits <- C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInAlonzoEra <$> traverse toCardanoPaymentKeyHash sigs
     withdrawals <- toWithdrawals (extra'withdraws extra)
+    certificates <- toCertificates (extra'certificates extra)
     first (TxBodyError . C.displayError) $ makeTransactionBody' C.TxBodyContent
         { txIns = txIns
         , txInsCollateral = txInsCollateral
@@ -67,7 +71,7 @@ toCardanoTxBody sigs protocolParams networkId (TxExtra extra P.Tx{..}) = do
         , txMetadata = C.TxMetadataNone
         , txAuxScripts = C.TxAuxScriptsNone
         , txWithdrawals = withdrawals
-        , txCertificates = C.TxCertificatesNone
+        , txCertificates = certificates
         , txUpdateProposal = C.TxUpdateProposalNone
         }
     where
@@ -75,16 +79,24 @@ toCardanoTxBody sigs protocolParams networkId (TxExtra extra P.Tx{..}) = do
         [] -> pure C.TxWithdrawalsNone
         xs -> C.TxWithdrawals C.WithdrawalsInAlonzoEra <$> mapM toWithdraw xs
 
+      toCertificates certs = case certs of
+        [] -> pure C.TxCertificatesNone
+        _  -> C.TxCertificates C.CertificatesInAlonzoEra <$> mapM (toCardanoCertificate networkId) dcerts <*> witnessMap
+        where
+          dcerts = certificate'dcert <$> certs
+          witnessMap = fmap (C.BuildTxWith . Map.fromList) $ mapM toWitness $ Map.toList $ getCertificateValidators certs
+
+          toWitness (stakeCred, (redeemer, validator)) = do
+            cred <- toCardanoStakeCredential stakeCred
+            val  <- toCardanoStakeWitness redeemer validator
+            pure (cred, C.ScriptWitness C.ScriptWitnessForStakeAddr val)
+
       toWithdraw Withdraw{..} = do
-        saddr <- C.StakeAddress (C.toShelleyNetwork networkId) <$> (C.toShelleyStakeCredential <$> toStakeCredential withdraw'credential)
+        saddr <- toCardanoStakeAddress networkId withdraw'credential
         witness <- toStakeWitness
         pure (saddr, amt, witness)
         where
           amt     = C.Lovelace withdraw'amount
-
-          toStakeCredential = \case
-            P.StakingHash cred -> toCardanoStakeCredential cred
-            P.StakingPtr _ _ _ -> Left $ TxBodyError "StakingPtr where StakingHash expected"
 
           toStakeWitness = case withdraw'credential of
             P.StakingHash cred -> case cred of
@@ -94,9 +106,51 @@ toCardanoTxBody sigs protocolParams networkId (TxExtra extra P.Tx{..}) = do
                   Nothing                    -> Left $ TxBodyError "No script for stake validator"
             P.StakingPtr _ _ _ -> Left $ TxBodyError "StakingPtr where StakingHash expected"
 
-toCardanoStakeCredential :: P.Credential -> Either ToCardanoError C.StakeCredential
-toCardanoStakeCredential (P.PubKeyCredential pubKeyHash) = C.StakeCredentialByKey <$> toCardanoStakeKeyHash pubKeyHash
-toCardanoStakeCredential (P.ScriptCredential validatorHash) = C.StakeCredentialByScript <$> toCardanoScriptHash validatorHash
+
+toCardanoStakeAddress :: C.NetworkId -> P.StakingCredential -> Either ToCardanoError C.StakeAddress
+toCardanoStakeAddress networkId credential =
+  C.StakeAddress (C.toShelleyNetwork networkId) <$> (C.toShelleyStakeCredential <$> toCardanoStakeCredential credential)
+
+toCardanoStakeCredential :: P.StakingCredential -> Either ToCardanoError C.StakeCredential
+toCardanoStakeCredential = \case
+  P.StakingHash (P.PubKeyCredential pubKeyHash)    -> C.StakeCredentialByKey <$> toCardanoStakeKeyHash pubKeyHash
+  P.StakingHash (P.ScriptCredential validatorHash) -> C.StakeCredentialByScript <$> toCardanoScriptHash validatorHash
+  _                                                -> txError "StakingPtr where StakingHash expected"
+
+toCardanoCertificate :: C.NetworkId -> P.DCert -> Either ToCardanoError C.Certificate
+toCardanoCertificate networkId = \case
+  P.DCertDelegRegKey stakeCred           -> C.StakeAddressRegistrationCertificate <$> toCardanoStakeCredential stakeCred
+  P.DCertDelegDeRegKey stakeCred         -> C.StakeAddressDeregistrationCertificate <$> toCardanoStakeCredential stakeCred
+  P.DCertDelegDelegate stakeCred poolKey -> C.StakeAddressDelegationCertificate <$> toCardanoStakeCredential stakeCred <*> toCardanoPoolId poolKey
+  P.DCertPoolRegister poolKey poolVrf    -> C.StakePoolRegistrationCertificate <$> toStakePoolParameters poolKey poolVrf
+  P.DCertPoolRetire poolKey epoch        -> C.StakePoolRetirementCertificate <$> toCardanoPoolId poolKey <*> (pure $ C.EpochNo $ fromIntegral epoch)
+  P.DCertGenesis                         -> txError "No conversion for DCertGenesis"
+  P.DCertMir                             -> txError "No conversion for DCertMir"
+  where
+    toStakePoolParameters poolKey poolVrf = do
+      poolId    <- toCardanoPoolId poolKey
+      vfrKey    <- toCardanoVrfKey poolVrf
+      stakeAddr <- toCardanoStakeAddress networkId (P.StakingHash $ P.PubKeyCredential poolKey)
+      pure C.StakePoolParameters
+        { stakePoolId            = poolId
+        , stakePoolVRF           = vfrKey
+        , stakePoolCost          = 0
+        , stakePoolMargin        = 0
+        , stakePoolRewardAccount = stakeAddr
+        , stakePoolPledge        = 0
+        , stakePoolOwners        = []
+        , stakePoolRelays        = []
+        , stakePoolMetadata      = Nothing
+        }
+
+txError :: String -> Either ToCardanoError a
+txError = Left . TxBodyError
+
+toCardanoPoolId :: P.PubKeyHash -> Either ToCardanoError C.PoolId
+toCardanoPoolId pkh = fmap coerce <$> toCardanoPaymentKeyHash $ P.PaymentPubKeyHash pkh
+
+toCardanoVrfKey :: P.PubKeyHash -> Either ToCardanoError (C.Hash C.VrfKey)
+toCardanoVrfKey pkh = castHash "VrfKey" =<< (toCardanoPaymentKeyHash $ P.PaymentPubKeyHash pkh)
 
 toCardanoStakeKeyHash :: P.PubKeyHash -> Either ToCardanoError (C.Hash C.StakeKey)
 toCardanoStakeKeyHash (P.PubKeyHash bs) = tag "toCardanoStakeKeyHash" $ deserialiseFromRawBytes (C.AsHash C.AsStakeKey) (PlutusTx.fromBuiltin bs)
@@ -112,6 +166,14 @@ toCardanoStakeWitness redeemer (P.StakeValidator script) = do
         <*> pure C.NoScriptDatumForStake
         <*> pure (C.fromPlutusData $ Api.toData redeemer)
         <*> pure zeroExecutionUnits
+
+castHash :: forall a b. (C.SerialiseAsRawBytes (C.Hash a), C.SerialiseAsRawBytes (C.Hash b))
+  => String -> C.Hash a -> Either ToCardanoError (C.Hash b)
+castHash msg =
+  maybe err Right . C.deserialiseFromRawBytes (C.proxyToAsType (Proxy :: Proxy (C.Hash b))) . C.serialiseToRawBytes
+  where
+    err = txError $ "Failed to convert to " <> msg
+
 
 toCardanoPlutusScript :: P.Script -> Either ToCardanoError (C.PlutusScript C.PlutusScriptV1)
 toCardanoPlutusScript =

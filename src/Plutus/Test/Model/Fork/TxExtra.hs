@@ -5,6 +5,8 @@ module Plutus.Test.Model.Fork.TxExtra (
   Withdraw(..),
   toExtra,
   setExtra,
+  Certificate(..),
+  getCertificateValidators,
   -- * Staking valdiators primitives
   stakeWithdrawKey,
   stakeWithdrawScript,
@@ -13,6 +15,7 @@ module Plutus.Test.Model.Fork.TxExtra (
 import Prelude
 import Ledger
 import Plutus.V1.Ledger.Api
+import qualified Data.Map.Strict as M
 
 -- | Plutus TX with extra fields for Cardano TX
 data TxExtra = TxExtra
@@ -27,8 +30,28 @@ toExtra = TxExtra mempty
 -- | Extra fields for Cardano TX
 data Extra = Extra
   { extra'withdraws      :: [Withdraw]
-  , extra'certificates   :: [DCert]
+  , extra'certificates   :: [Certificate]
   }
+
+data Certificate = Certificate
+  { certificate'dcert  :: DCert
+  , certificate'script :: Maybe (Redeemer, StakeValidator)
+  }
+
+getCertificateValidators :: [Certificate] -> M.Map StakingCredential (Redeemer, StakeValidator)
+getCertificateValidators = foldMap go
+  where
+    go Certificate{..} = case certificate'dcert of
+      DCertDelegRegKey stakeCred            -> fromCred stakeCred
+      DCertDelegDeRegKey stakeCred          -> fromCred stakeCred
+      DCertDelegDelegate stakeCred _poolKey -> fromCred stakeCred
+      DCertPoolRegister _poolKey _poolVrf   -> mempty
+      DCertPoolRetire _poolKey _epoch       -> mempty
+      DCertGenesis                          -> mempty
+      DCertMir                              -> mempty
+      where
+        fromCred cred = maybe mempty (M.singleton cred) certificate'script
+
 
 -- | Stake withdrawal
 data Withdraw = Withdraw
