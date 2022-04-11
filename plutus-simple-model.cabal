@@ -88,7 +88,9 @@ common deps
     , plutus-tx
     , plutus-tx-plugin
     , strict-containers
+    , vector
     , time
+    , deepseq
 
 common test-deps
   import:        deps
@@ -106,6 +108,7 @@ library
     Plutus.Test.Model.Contract
     Plutus.Test.Model.Mint
     Plutus.Test.Model.Pretty
+    Plutus.Test.Model.Stake
     Plutus.Test.Model.Fork.CardanoAPI
     Plutus.Test.Model.Fork.CardanoAPITemp
     Plutus.Test.Model.Fork.TxExtra

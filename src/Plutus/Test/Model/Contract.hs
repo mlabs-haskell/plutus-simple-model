@@ -47,8 +47,8 @@ module Plutus.Test.Model.Contract (
   validateIn,
   -- ** Staking valdiators primitives
   --
-  -- | to use them convert vanila Plutus @Tx@ to @TxExtra@ with @toExtra@
-  TxExtra(..),
+  -- | to use them convert vanila Plutus @Tx@ to @Tx@ with @toExtra@
+  Tx(..),
   setExtra,
   toExtra,
   stakeWithdrawKey,
@@ -98,7 +98,7 @@ import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Interval ()
 import Plutus.V1.Ledger.Slot
-import Plutus.V1.Ledger.Tx
+import Plutus.V1.Ledger.Tx hiding (Tx(Tx))
 import Plutus.V1.Ledger.Value
 import PlutusTx.Prelude qualified as Plutus
 
@@ -254,13 +254,13 @@ spend' pkh expected = do
 
 -- | Pay value to the owner of PubKeyHash.
 payToPubKey :: PubKeyHash -> Value -> Tx
-payToPubKey pkh val =
+payToPubKey pkh val = toExtra $
   mempty
     { txOutputs = [TxOut (pubKeyHashAddress pkh) val Nothing]
     }
 
 payWithDatumToPubKey :: ToData a => PubKeyHash -> a -> Value -> Tx
-payWithDatumToPubKey pkh dat val =
+payWithDatumToPubKey pkh dat val = toExtra $
   mempty
     { txOutputs = [TxOut (pubKeyHashAddress pkh) val (Just dh)]
     , txData = M.singleton dh datum
@@ -272,7 +272,7 @@ payWithDatumToPubKey pkh dat val =
 -- | Pay value to the owner of PubKeyHash.
 -- We use address to supply staking credential if we need it.
 payToPubKeyAddress :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
-payToPubKeyAddress pkh val =
+payToPubKeyAddress pkh val = toExtra $
   mempty
     { txOutputs = [TxOut (toAddress pkh) val Nothing]
     }
@@ -281,7 +281,7 @@ payToPubKeyAddress pkh val =
 -- We can use TypedValidator as argument and it will be checked that the datum is correct.
 payToScript :: ToData (DatumType a) =>
   TypedValidator a -> DatumType a -> Value -> Tx
-payToScript tv dat val =
+payToScript tv dat val = toExtra $
   mempty
     { txOutputs = [TxOut (toAddress tv) val (Just dh)]
     , txData = M.singleton dh datum
@@ -294,7 +294,7 @@ payToScript tv dat val =
 -- We can use TypedValidator as argument and it will be checked that the datum is correct.
 payToScriptAddress :: (HasAddress script, ToData datum) =>
   script -> datum -> Value -> Tx
-payToScriptAddress script dat val =
+payToScriptAddress script dat val = toExtra $
   mempty
     { txOutputs = [TxOut (toAddress script) val (Just dh)]
     , txData = M.singleton dh datum
@@ -305,14 +305,14 @@ payToScriptAddress script dat val =
 
 -- | Pay fee for TX-submission
 payFee :: Value -> Tx
-payFee val =
+payFee val = toExtra $
   mempty
     { txFee = val
     }
 
 -- | Spend @TxOutRef@ that belongs to pub key (user).
 spendPubKey :: TxOutRef -> Tx
-spendPubKey ref =
+spendPubKey ref = toExtra $
   mempty
     { txInputs = S.singleton $ TxIn ref (Just ConsumePublicKeyAddress)
     }
@@ -325,7 +325,7 @@ spendScript ::
   RedeemerType a ->
   DatumType a ->
   Tx
-spendScript tv ref red dat =
+spendScript tv ref red dat = toExtra $
   mempty
     { txInputs = S.singleton $ TxIn ref (Just $ ConsumeScriptAddress (validatorScript tv) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
     }
@@ -363,7 +363,7 @@ modifyBox tv box act modDatum modValue = mconcat
 
 -- | Spend value for the user and also include change in the outputs.
 userSpend :: UserSpend -> Tx
-userSpend (UserSpend ins mChange) =
+userSpend (UserSpend ins mChange) = toExtra $
   mempty
     { txInputs = ins
     , txOutputs = maybe [] pure mChange
@@ -371,7 +371,7 @@ userSpend (UserSpend ins mChange) =
 
 -- | Mints value. To use redeemer see function @addMintRedeemer@.
 mintValue :: MintingPolicy -> Value -> Tx
-mintValue policy val =
+mintValue policy val = toExtra $
   mempty
     { txMint = val
     , txMintScripts = S.singleton policy
@@ -390,17 +390,17 @@ mintValue policy val =
  > tx = addMintRedeemer mp red $ mconcat [mintValue mp val, ... other parts of tx... ]
 -}
 addMintRedeemer :: ToData redeemer => MintingPolicy -> redeemer -> Tx -> Tx
-addMintRedeemer policy red tx =
-  maybe tx (setRedeemer . fst) $ L.find ((== policy) . snd) $ zip [0 ..] $ S.toList $ txMintScripts tx
+addMintRedeemer policy red = liftPlutusTx $ \tx ->
+  maybe tx (setRedeemer tx . fst) $ L.find ((== policy) . snd) $ zip [0 ..] $ S.toList $ txMintScripts tx
   where
-    setRedeemer ix =
+    setRedeemer tx ix =
       tx
         { txRedeemers = M.insert (RedeemerPtr Mint ix) (Redeemer $ toBuiltinData red) $ txRedeemers tx
         }
 
 -- | Set validation time
 validateIn :: POSIXTimeRange -> Tx -> Run Tx
-validateIn times tx = do
+validateIn times = updatePlutusTx $ \tx -> do
   slotCfg <- gets (bchConfigSlotConfig . bchConfig)
   pure $
     tx

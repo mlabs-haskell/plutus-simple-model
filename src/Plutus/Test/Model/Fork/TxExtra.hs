@@ -1,6 +1,6 @@
 module Plutus.Test.Model.Fork.TxExtra (
   -- * Plutus TX with extra fields
-  TxExtra(..),
+  Tx(..),
   Extra(..),
   Withdraw(..),
   toExtra,
@@ -10,33 +10,54 @@ module Plutus.Test.Model.Fork.TxExtra (
   -- * Staking valdiators primitives
   stakeWithdrawKey,
   stakeWithdrawScript,
+  -- * utils
+  updatePlutusTx,
+  liftPlutusTx,
+  keyToStaking,
+  scriptToStaking,
 ) where
 
 import Prelude
-import Ledger
+import Ledger qualified as P
 import Plutus.V1.Ledger.Api
 import qualified Data.Map.Strict as M
 
 -- | Plutus TX with extra fields for Cardano TX
-data TxExtra = TxExtra
-  { txExtra'extra :: Extra
-  , txExtra'tx    :: Tx
+data Tx = Tx
+  { tx'extra  :: Extra
+  , tx'plutus :: P.Tx
   }
+  deriving (Show, Eq)
+
+instance Semigroup Tx where
+  (<>) (Tx a1 a2) (Tx b1 b2) = Tx (a1 <> b1) (a2 <> b2)
+
+instance Monoid Tx where
+  mempty = Tx mempty mempty
 
 -- | Wrap TX to extra fields (empty fields are allocated)
-toExtra :: Tx -> TxExtra
-toExtra = TxExtra mempty
+toExtra :: P.Tx -> Tx
+toExtra = Tx mempty
 
 -- | Extra fields for Cardano TX
 data Extra = Extra
   { extra'withdraws      :: [Withdraw]
   , extra'certificates   :: [Certificate]
   }
+  deriving (Show, Eq)
+
+instance Semigroup Extra where
+  (<>) (Extra a1 a2) (Extra b1 b2) = Extra (a1 <> b1) (a2 <> b2)
+
+instance Monoid Extra where
+  mempty = Extra [] []
+
 
 data Certificate = Certificate
   { certificate'dcert  :: DCert
   , certificate'script :: Maybe (Redeemer, StakeValidator)
   }
+  deriving (Show, Eq)
 
 getCertificateValidators :: [Certificate] -> M.Map StakingCredential (Redeemer, StakeValidator)
 getCertificateValidators = foldMap go
@@ -59,30 +80,37 @@ data Withdraw = Withdraw
   , withdraw'amount     :: Integer                           -- ^ amount of withdrawal in Lovelace
   , withdraw'script     :: Maybe (Redeemer, StakeValidator)  -- ^ Just in case of script withdrawal
   }
+  deriving (Show, Eq)
 
-instance Semigroup Extra where
-  (<>) (Extra a1 a2) (Extra b1 b2) = Extra (a1 <> b1) (a2 <> b2)
-
-instance Monoid Extra where
-  mempty = Extra [] []
-
--- | Adds to TxExtra new settings
-setExtra :: Extra -> TxExtra -> TxExtra
-setExtra a (TxExtra e tx) = TxExtra (e <> a) tx
+-- | Adds to Tx new settings
+setExtra :: Extra -> Tx -> Tx
+setExtra a (Tx e tx) = Tx (e <> a) tx
 
 -- | Add staking withdrawal based on pub key hash
-stakeWithdrawKey :: PubKeyHash -> Integer -> TxExtra -> TxExtra
+stakeWithdrawKey :: PubKeyHash -> Integer -> Tx -> Tx
 stakeWithdrawKey key amount = setExtra $ mempty
-  { extra'withdraws = [Withdraw (StakingHash $ PubKeyCredential key) amount Nothing]
+  { extra'withdraws = [Withdraw (keyToStaking key) amount Nothing]
   }
 
 -- | Add staking withdrawal based on script
 stakeWithdrawScript :: ToData redeemer
-  => StakeValidator -> redeemer -> Integer -> TxExtra -> TxExtra
+  => StakeValidator -> redeemer -> Integer -> Tx -> Tx
 stakeWithdrawScript validator red amount = setExtra $ mempty
   { extra'withdraws = pure $
-    Withdraw (StakingHash $ ScriptCredential vh) amount (Just (Redeemer $ toBuiltinData red, validator))
+    Withdraw (scriptToStaking validator) amount (Just (Redeemer $ toBuiltinData red, validator))
   }
+
+updatePlutusTx :: Functor f => (P.Tx -> f P.Tx) -> Tx -> f Tx
+updatePlutusTx f (Tx extra tx) = Tx extra <$> f tx
+
+liftPlutusTx :: (P.Tx -> P.Tx) -> Tx -> Tx
+liftPlutusTx f (Tx extra tx) = Tx extra (f tx)
+
+keyToStaking :: PubKeyHash -> StakingCredential
+keyToStaking = StakingHash . PubKeyCredential
+
+scriptToStaking :: StakeValidator -> StakingCredential
+scriptToStaking validator = StakingHash $ ScriptCredential vh
   where
-    vh = validatorHash $ Validator $ getStakeValidator validator
+    vh = P.validatorHash $ Validator $ getStakeValidator validator
 

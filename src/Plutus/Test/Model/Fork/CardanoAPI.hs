@@ -45,9 +45,9 @@ toCardanoTxBody
     :: [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
     -> C.NetworkId -- ^ Network ID
-    -> TxExtra
+    -> Tx
     -> Either ToCardanoError (C.TxBody C.AlonzoEra)
-toCardanoTxBody sigs protocolParams networkId (TxExtra extra P.Tx{..}) = do
+toCardanoTxBody sigs protocolParams networkId (Tx extra P.Tx{..}) = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
     txOuts <- traverse (toCardanoTxOut networkId txData) txOutputs
