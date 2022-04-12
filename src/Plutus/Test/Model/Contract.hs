@@ -20,6 +20,10 @@ module Plutus.Test.Model.Contract (
   valueAt,
   utxoAt,
   datumAt,
+  rewardAt,
+  stakesAt,
+  hasPool,
+  hasStake,
   TxBox(..),
   txBoxValue,
   boxAt,
@@ -49,10 +53,18 @@ module Plutus.Test.Model.Contract (
   --
   -- | to use them convert vanila Plutus @Tx@ to @Tx@ with @toExtra@
   Tx(..),
-  setExtra,
   toExtra,
+  HasStakingCredential(..),
   stakeWithdrawKey,
   stakeWithdrawScript,
+  regStakeKey,
+  regStakeScript,
+  deregStakeKey,
+  deregStakeScript,
+  regPool,
+  retirePool,
+  delegateStakeKey,
+  delegateStakeScript,
 
   -- * time helpers (converts to POSIXTime milliseconds)
   weeks,
@@ -563,4 +575,73 @@ owns user val = BalanceDiff $ M.singleton (toAddress user) val
 -- | User A gives value to user B.
 gives :: (HasAddress userA, HasAddress userB) => userA -> Value -> userB -> BalanceDiff
 gives userA val userB = owns userA (Plutus.negate val) <> owns userB val
+
+-----------------------------------------------------------
+-- staking and certificates
+
+withdrawTx :: Withdraw -> Tx
+withdrawTx w = mempty { tx'extra = mempty { extra'withdraws = [w] } }
+
+toRedeemer :: ToData red => red -> Redeemer
+toRedeemer = Redeemer . toBuiltinData
+
+withStakeScript :: ToData red => StakeValidator -> red -> Maybe (Redeemer, StakeValidator)
+withStakeScript script red = Just (toRedeemer red, script)
+
+-- | Add staking withdrawal based on pub key hash
+stakeWithdrawKey :: PubKeyHash -> Integer -> Tx
+stakeWithdrawKey key amount = withdrawTx $
+  Withdraw (keyToStaking key) amount Nothing
+
+-- | Add staking withdrawal based on script
+stakeWithdrawScript :: ToData redeemer
+  => StakeValidator -> redeemer -> Integer -> Tx
+stakeWithdrawScript validator red amount = withdrawTx $
+  Withdraw (scriptToStaking validator) amount (withStakeScript validator red)
+
+certTx :: Certificate -> Tx
+certTx cert = mempty { tx'extra = mempty { extra'certificates = [cert] } }
+
+-- | Register staking credential by key
+regStakeKey :: PubKeyHash -> Tx
+regStakeKey pkh = certTx $
+  Certificate (DCertDelegRegKey $ keyToStaking pkh) Nothing
+
+-- | Register staking credential by stake validator
+regStakeScript :: ToData redeemer =>
+  StakeValidator -> redeemer -> Tx
+regStakeScript script red = certTx $
+  Certificate (DCertDelegRegKey $ scriptToStaking script) (withStakeScript script red)
+
+-- | DeRegister staking credential by key
+deregStakeKey :: PubKeyHash -> Tx
+deregStakeKey pkh = certTx $
+  Certificate (DCertDelegDeRegKey $ keyToStaking pkh) Nothing
+
+-- | DeRegister staking credential by stake validator
+deregStakeScript :: ToData redeemer =>
+  StakeValidator -> redeemer -> Tx
+deregStakeScript script red = certTx $
+  Certificate (DCertDelegDeRegKey $ scriptToStaking script) (withStakeScript script red)
+
+-- | Register staking pool
+regPool :: PubKeyHash -> Tx
+regPool pkh = certTx $
+  Certificate (DCertPoolRegister pkh pkh) Nothing
+
+-- | Retire staking pool
+retirePool :: PubKeyHash -> Tx
+retirePool pkh = certTx $
+  Certificate (DCertPoolRetire pkh 0) Nothing
+
+-- | Delegates staking credential (specified by key) to pool
+delegateStakeKey :: PubKeyHash -> PubKeyHash -> Tx
+delegateStakeKey stakeKey poolKey = certTx $
+  Certificate (DCertDelegDelegate (keyToStaking stakeKey) poolKey) Nothing
+
+-- | Delegates staking credential (specified by stakevalidator) to pool
+delegateStakeScript :: ToData redeemer =>
+  StakeValidator -> redeemer -> PubKeyHash -> Tx
+delegateStakeScript script red poolKey = certTx $
+  Certificate (DCertDelegDelegate (scriptToStaking script) poolKey) (withStakeScript script red)
 

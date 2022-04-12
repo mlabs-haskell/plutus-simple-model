@@ -4,10 +4,12 @@ module Plutus.Test.Model.Stake(
   Pool(..),
   reactDCert,
   DCertError(..),
+  WithdrawError(..),
   checkDCert,
   withdrawStake,
   checkWithdrawStake,
   lookupReward,
+  lookupStakes,
   rewardStake,
 ) where
 
@@ -55,6 +57,11 @@ data DCertError
   | PoolRetireError PubKeyHash
   | CertGenesisNotSupported
   | CertMirNotSupported
+  deriving (Show, Eq)
+
+data WithdrawError
+  = WithdrawError StakingCredential Integer Integer
+  | StakeNotRegistered StakingCredential
   deriving (Show, Eq)
 
 checkDCert :: DCert -> Stake -> Maybe DCertError
@@ -130,13 +137,18 @@ withdrawStake cred st = st
   { stake'stakes = M.adjust (const 0) cred $ stake'stakes st
   }
 
-checkWithdrawStake :: StakingCredential -> Integer -> Stake -> Bool
+checkWithdrawStake :: StakingCredential -> Integer -> Stake -> Maybe WithdrawError
 checkWithdrawStake cred amount st =
-  (maybe False (== amount) $ M.lookup cred $ stake'stakes st) &&
-  amount > 0
+  case M.lookup cred $ stake'stakes st of
+    Just reward | reward == amount && amount > 0 -> Nothing
+    Just reward   -> Just $ WithdrawError cred amount reward
+    Nothing       -> Just $ StakeNotRegistered cred
 
 lookupReward :: StakingCredential -> Stake -> Maybe Integer
 lookupReward cred Stake{..} = M.lookup cred stake'stakes
+
+lookupStakes :: PoolId -> Stake -> [StakingCredential]
+lookupStakes pid Stake{..} = maybe [] pool'stakes $ M.lookup pid stake'pools
 
 rewardStake :: Integer -> Stake -> Maybe Stake
 rewardStake amount st =

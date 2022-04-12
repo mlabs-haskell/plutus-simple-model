@@ -22,7 +22,7 @@ import Plutus.V1.Ledger.Slot
 import Plutus.V1.Ledger.Value (assetClass, flattenValue, toString)
 
 import Plutus.Test.Model.Blockchain
-import Plutus.Test.Model.Stake (DCertError(..))
+import Plutus.Test.Model.Stake (DCertError(..), WithdrawError(..))
 
 -- | Pretty-print for stats experessed in percents
 ppStatPercent :: StatPercent -> String
@@ -162,10 +162,7 @@ instance Pretty FailReason where
       hsep (punctuate comma $ fmap (pretty . displayError) errs)
     TxInvalidRange _ range -> "Not in valid range" <+> pretty range
     TxLimitError ovfs _ -> hsep (punctuate comma (fmap ppOverflow ovfs))
-    TxInvalidWithdraw cred expected actual ->
-      hsep [ "Wrong amount of withdraw for staking credential", pretty cred, "expected", pretty expected
-           , "but actual", pretty actual
-           ]
+    TxInvalidWithdraw err -> pretty err
     TxInvalidCertificate cert -> pretty cert
     GenericFail str -> "Generic fail:" <+> pretty str
     where
@@ -191,3 +188,12 @@ instance Pretty BchEvent where
     BchInfo msg -> "[info]  " <+> pretty msg
     BchTx _     -> "[tx]    " <+> "TODO print tx"
     BchFail fReason   -> "[error] " <+> pretty fReason
+
+instance Pretty WithdrawError where
+  pretty = \case
+    WithdrawError cred expected actual ->
+      hsep [ "Wrong amount of withdraw for staking credential", pretty cred, "expected", pretty expected
+           , "but actual", pretty actual
+           ]
+    StakeNotRegistered cred ->
+      hsep [ "Stake credential", pretty cred, "is not registered for rewards"]

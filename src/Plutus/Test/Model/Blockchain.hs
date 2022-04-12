@@ -14,6 +14,7 @@
 module Plutus.Test.Model.Blockchain (
   -- * Address helpers
   HasAddress(..),
+  HasStakingCredential(..),
   AppendStaking(..),
   appendStakingCredential,
   appendStakingPubKey,
@@ -61,6 +62,10 @@ module Plutus.Test.Model.Blockchain (
   getTxOut,
   utxoAt,
   datumAt,
+  rewardAt,
+  stakesAt,
+  hasPool,
+  hasStake,
   waitNSlots,
   getUserPubKey,
 
@@ -187,6 +192,15 @@ instance HasAddress ValidatorHash where
 
 instance HasAddress (TypedValidator a) where
   toAddress = validatorAddress
+
+class HasStakingCredential a where
+  toStakingCredential :: a -> StakingCredential
+
+instance HasStakingCredential PubKeyHash where
+  toStakingCredential = keyToStaking
+
+instance HasStakingCredential StakeValidator where
+  toStakingCredential = scriptToStaking
 
 -- | Encodes appening of staking address
 data AppendStaking a =
@@ -430,7 +444,7 @@ data FailReason
   | -- | invalid range. TX is submitted with current slot not in valid range
     TxInvalidRange Slot SlotRange
     -- | invalid reward for staking credential, expected and actual values for stake at the moment of reward
-  | TxInvalidWithdraw StakingCredential Integer Integer
+  | TxInvalidWithdraw WithdrawError
     -- | Certificate errors
   | TxInvalidCertificate DCertError
   | TxLimitError [LimitOverflow] StatPercent
@@ -648,9 +662,14 @@ sendSingleTx (Tx extra tx) =
 
     checkWithdraws ws = do
       st <- gets bchStake
-      forM (L.find (not . \w -> checkWithdrawStake (withdraw'credential w) (withdraw'amount w) st) ws) $ \w -> do
-        actual <- fromMaybe 0 <$> rewardAt (withdraw'credential w)
-        pure (TxInvalidWithdraw (withdraw'credential w) (withdraw'amount w) actual)
+      go st ws
+      where
+        go st = \case
+          [] -> pure Nothing
+          Withdraw{..} : rest ->
+            case checkWithdrawStake withdraw'credential withdraw'amount st of
+              Nothing  -> go st rest
+              Just err -> pure $ Just $ TxInvalidWithdraw err
 
     checkCertificates certs = do
       st <- gets bchStake
@@ -865,8 +884,21 @@ datumAt ref = do
   pure $ fromBuiltinData . getDatum =<< (`M.lookup` dhs) =<< mDh
 
 
+-- | Reads current reward amount for a staking credential
 rewardAt :: StakingCredential -> Run (Maybe Integer)
 rewardAt cred = gets (lookupReward cred . bchStake)
+
+-- | Returns all stakes delegatged to a pool
+stakesAt :: PubKeyHash -> Run [StakingCredential]
+stakesAt poolKey = gets (lookupStakes (PoolId poolKey) . bchStake)
+
+-- | Checks that pool is registered
+hasPool :: PubKeyHash -> Run Bool
+hasPool pkh = gets (M.member (PoolId pkh) . stake'pools. bchStake)
+
+-- | Checks that staking credential is registered
+hasStake :: HasStakingCredential a => a -> Run Bool
+hasStake key = gets (M.member (toStakingCredential key) . stake'stakes. bchStake)
 
 ---------------------------------------------------------------------
 -- stat resources limits (Alonzo era)

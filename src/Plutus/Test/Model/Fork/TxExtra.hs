@@ -4,12 +4,8 @@ module Plutus.Test.Model.Fork.TxExtra (
   Extra(..),
   Withdraw(..),
   toExtra,
-  setExtra,
   Certificate(..),
   getCertificateValidators,
-  -- * Staking valdiators primitives
-  stakeWithdrawKey,
-  stakeWithdrawScript,
   -- * utils
   updatePlutusTx,
   liftPlutusTx,
@@ -22,7 +18,8 @@ import Ledger qualified as P
 import Plutus.V1.Ledger.Api
 import qualified Data.Map.Strict as M
 
--- | Plutus TX with extra fields for Cardano TX
+-- | Plutus TX with extra fields for Cardano TX fields that are missing
+-- in native Plutus TX (staking and certificates).
 data Tx = Tx
   { tx'extra  :: Extra
   , tx'plutus :: P.Tx
@@ -81,24 +78,6 @@ data Withdraw = Withdraw
   , withdraw'script     :: Maybe (Redeemer, StakeValidator)  -- ^ Just in case of script withdrawal
   }
   deriving (Show, Eq)
-
--- | Adds to Tx new settings
-setExtra :: Extra -> Tx -> Tx
-setExtra a (Tx e tx) = Tx (e <> a) tx
-
--- | Add staking withdrawal based on pub key hash
-stakeWithdrawKey :: PubKeyHash -> Integer -> Tx -> Tx
-stakeWithdrawKey key amount = setExtra $ mempty
-  { extra'withdraws = [Withdraw (keyToStaking key) amount Nothing]
-  }
-
--- | Add staking withdrawal based on script
-stakeWithdrawScript :: ToData redeemer
-  => StakeValidator -> redeemer -> Integer -> Tx -> Tx
-stakeWithdrawScript validator red amount = setExtra $ mempty
-  { extra'withdraws = pure $
-    Withdraw (scriptToStaking validator) amount (Just (Redeemer $ toBuiltinData red, validator))
-  }
 
 updatePlutusTx :: Functor f => (P.Tx -> f P.Tx) -> Tx -> f Tx
 updatePlutusTx f (Tx extra tx) = Tx extra <$> f tx

@@ -2,10 +2,7 @@ module Suites.Plutus.Model.Script.Test.Staking (
   tests
 ) where
 
--- import Data.Either (isRight)
-import Data.Functor (void)
 import Prelude
-
 import Test.Tasty
 
 import Plutus.Test.Model
@@ -26,18 +23,17 @@ tests cfg =
 stakingTest :: Run ()
 stakingTest = do
   u1 : u2 : _ <- setupUsers
-  void $ sendTx =<< withdrawTx u1 u2
-
-withdrawTx :: PubKeyHash -> PubKeyHash -> Run Tx
-withdrawTx u1 u2 = do
+  let fee = adaValue 10
   sp <- spend u1 fee
-  tx <- signTx u1 $ mconcat
+  submitTx u1 (withdrawTx u1 u2 sp fee)
+
+withdrawTx :: PubKeyHash -> PubKeyHash -> UserSpend -> Value -> Tx
+withdrawTx u1 u2 sp fee =
+  mconcat
     [ userSpend sp
     , payFee fee
     , payToPubKey u1 (adaValue 50)
     , payToPubKey u2 (adaValue 50)
+    , stakeWithdrawScript (stakeValidator $ toAddress u2) () 100
     ]
-  pure $ stakeWithdrawScript (stakeValidator $ toAddress u2) () 100 tx
-  where
-    fee = adaValue 10
 
