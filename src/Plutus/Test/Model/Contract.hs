@@ -20,6 +20,10 @@ module Plutus.Test.Model.Contract (
   valueAt,
   utxoAt,
   datumAt,
+  rewardAt,
+  stakesAt,
+  hasPool,
+  hasStake,
   TxBox(..),
   txBoxValue,
   boxAt,
@@ -45,6 +49,22 @@ module Plutus.Test.Model.Contract (
   mintValue,
   addMintRedeemer,
   validateIn,
+  -- ** Staking valdiators primitives
+  --
+  -- | to use them convert vanila Plutus @Tx@ to @Tx@ with @toExtra@
+  Tx(..),
+  toExtra,
+  HasStakingCredential(..),
+  withdrawStakeKey,
+  withdrawStakeScript,
+  registerStakeKey,
+  registerStakeScript,
+  deregisterStakeKey,
+  deregisterStakeScript,
+  registerPool,
+  retirePool,
+  delegateStakeKey,
+  delegateStakeScript,
 
   -- * time helpers (converts to POSIXTime milliseconds)
   weeks,
@@ -90,11 +110,12 @@ import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Interval ()
 import Plutus.V1.Ledger.Slot
-import Plutus.V1.Ledger.Tx
+import Plutus.V1.Ledger.Tx hiding (Tx(Tx))
 import Plutus.V1.Ledger.Value
 import PlutusTx.Prelude qualified as Plutus
 
 import Plutus.Test.Model.Blockchain
+import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Pretty
 import Prettyprinter (Doc, vcat, hcat, indent, (<+>), pretty)
 
@@ -245,13 +266,13 @@ spend' pkh expected = do
 
 -- | Pay value to the owner of PubKeyHash.
 payToPubKey :: PubKeyHash -> Value -> Tx
-payToPubKey pkh val =
+payToPubKey pkh val = toExtra $
   mempty
     { txOutputs = [TxOut (pubKeyHashAddress pkh) val Nothing]
     }
 
 payWithDatumToPubKey :: ToData a => PubKeyHash -> a -> Value -> Tx
-payWithDatumToPubKey pkh dat val =
+payWithDatumToPubKey pkh dat val = toExtra $
   mempty
     { txOutputs = [TxOut (pubKeyHashAddress pkh) val (Just dh)]
     , txData = M.singleton dh datum
@@ -263,7 +284,7 @@ payWithDatumToPubKey pkh dat val =
 -- | Pay value to the owner of PubKeyHash.
 -- We use address to supply staking credential if we need it.
 payToPubKeyAddress :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
-payToPubKeyAddress pkh val =
+payToPubKeyAddress pkh val = toExtra $
   mempty
     { txOutputs = [TxOut (toAddress pkh) val Nothing]
     }
@@ -272,7 +293,7 @@ payToPubKeyAddress pkh val =
 -- We can use TypedValidator as argument and it will be checked that the datum is correct.
 payToScript :: ToData (DatumType a) =>
   TypedValidator a -> DatumType a -> Value -> Tx
-payToScript tv dat val =
+payToScript tv dat val = toExtra $
   mempty
     { txOutputs = [TxOut (toAddress tv) val (Just dh)]
     , txData = M.singleton dh datum
@@ -285,7 +306,7 @@ payToScript tv dat val =
 -- We can use TypedValidator as argument and it will be checked that the datum is correct.
 payToScriptAddress :: (HasAddress script, ToData datum) =>
   script -> datum -> Value -> Tx
-payToScriptAddress script dat val =
+payToScriptAddress script dat val = toExtra $
   mempty
     { txOutputs = [TxOut (toAddress script) val (Just dh)]
     , txData = M.singleton dh datum
@@ -296,14 +317,14 @@ payToScriptAddress script dat val =
 
 -- | Pay fee for TX-submission
 payFee :: Value -> Tx
-payFee val =
+payFee val = toExtra $
   mempty
     { txFee = val
     }
 
 -- | Spend @TxOutRef@ that belongs to pub key (user).
 spendPubKey :: TxOutRef -> Tx
-spendPubKey ref =
+spendPubKey ref = toExtra $
   mempty
     { txInputs = S.singleton $ TxIn ref (Just ConsumePublicKeyAddress)
     }
@@ -316,7 +337,7 @@ spendScript ::
   RedeemerType a ->
   DatumType a ->
   Tx
-spendScript tv ref red dat =
+spendScript tv ref red dat = toExtra $
   mempty
     { txInputs = S.singleton $ TxIn ref (Just $ ConsumeScriptAddress (validatorScript tv) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
     }
@@ -354,7 +375,7 @@ modifyBox tv box act modDatum modValue = mconcat
 
 -- | Spend value for the user and also include change in the outputs.
 userSpend :: UserSpend -> Tx
-userSpend (UserSpend ins mChange) =
+userSpend (UserSpend ins mChange) = toExtra $
   mempty
     { txInputs = ins
     , txOutputs = maybe [] pure mChange
@@ -362,7 +383,7 @@ userSpend (UserSpend ins mChange) =
 
 -- | Mints value. To use redeemer see function @addMintRedeemer@.
 mintValue :: MintingPolicy -> Value -> Tx
-mintValue policy val =
+mintValue policy val = toExtra $
   mempty
     { txMint = val
     , txMintScripts = S.singleton policy
@@ -381,17 +402,17 @@ mintValue policy val =
  > tx = addMintRedeemer mp red $ mconcat [mintValue mp val, ... other parts of tx... ]
 -}
 addMintRedeemer :: ToData redeemer => MintingPolicy -> redeemer -> Tx -> Tx
-addMintRedeemer policy red tx =
-  maybe tx (setRedeemer . fst) $ L.find ((== policy) . snd) $ zip [0 ..] $ S.toList $ txMintScripts tx
+addMintRedeemer policy red = liftPlutusTx $ \tx ->
+  maybe tx (setRedeemer tx . fst) $ L.find ((== policy) . snd) $ zip [0 ..] $ S.toList $ txMintScripts tx
   where
-    setRedeemer ix =
+    setRedeemer tx ix =
       tx
         { txRedeemers = M.insert (RedeemerPtr Mint ix) (Redeemer $ toBuiltinData red) $ txRedeemers tx
         }
 
 -- | Set validation time
 validateIn :: POSIXTimeRange -> Tx -> Run Tx
-validateIn times tx = do
+validateIn times = updatePlutusTx $ \tx -> do
   slotCfg <- gets (bchConfigSlotConfig . bchConfig)
   pure $
     tx
@@ -554,4 +575,73 @@ owns user val = BalanceDiff $ M.singleton (toAddress user) val
 -- | User A gives value to user B.
 gives :: (HasAddress userA, HasAddress userB) => userA -> Value -> userB -> BalanceDiff
 gives userA val userB = owns userA (Plutus.negate val) <> owns userB val
+
+-----------------------------------------------------------
+-- staking and certificates
+
+withdrawTx :: Withdraw -> Tx
+withdrawTx w = mempty { tx'extra = mempty { extra'withdraws = [w] } }
+
+toRedeemer :: ToData red => red -> Redeemer
+toRedeemer = Redeemer . toBuiltinData
+
+withStakeScript :: ToData red => StakeValidator -> red -> Maybe (Redeemer, StakeValidator)
+withStakeScript script red = Just (toRedeemer red, script)
+
+-- | Add staking withdrawal based on pub key hash
+withdrawStakeKey :: PubKeyHash -> Integer -> Tx
+withdrawStakeKey key amount = withdrawTx $
+  Withdraw (keyToStaking key) amount Nothing
+
+-- | Add staking withdrawal based on script
+withdrawStakeScript :: ToData redeemer
+  => StakeValidator -> redeemer -> Integer -> Tx
+withdrawStakeScript validator red amount = withdrawTx $
+  Withdraw (scriptToStaking validator) amount (withStakeScript validator red)
+
+certTx :: Certificate -> Tx
+certTx cert = mempty { tx'extra = mempty { extra'certificates = [cert] } }
+
+-- | Register staking credential by key
+registerStakeKey :: PubKeyHash -> Tx
+registerStakeKey pkh = certTx $
+  Certificate (DCertDelegRegKey $ keyToStaking pkh) Nothing
+
+-- | Register staking credential by stake validator
+registerStakeScript :: ToData redeemer =>
+  StakeValidator -> redeemer -> Tx
+registerStakeScript script red = certTx $
+  Certificate (DCertDelegRegKey $ scriptToStaking script) (withStakeScript script red)
+
+-- | DeRegister staking credential by key
+deregisterStakeKey :: PubKeyHash -> Tx
+deregisterStakeKey pkh = certTx $
+  Certificate (DCertDelegDeRegKey $ keyToStaking pkh) Nothing
+
+-- | DeRegister staking credential by stake validator
+deregisterStakeScript :: ToData redeemer =>
+  StakeValidator -> redeemer -> Tx
+deregisterStakeScript script red = certTx $
+  Certificate (DCertDelegDeRegKey $ scriptToStaking script) (withStakeScript script red)
+
+-- | Register staking pool
+registerPool :: PoolId -> Tx
+registerPool (PoolId pkh) = certTx $
+  Certificate (DCertPoolRegister pkh pkh) Nothing
+
+-- | Retire staking pool
+retirePool :: PoolId -> Tx
+retirePool (PoolId pkh) = certTx $
+  Certificate (DCertPoolRetire pkh 0) Nothing
+
+-- | Delegates staking credential (specified by key) to pool
+delegateStakeKey :: PubKeyHash -> PoolId -> Tx
+delegateStakeKey stakeKey (PoolId poolKey) = certTx $
+  Certificate (DCertDelegDelegate (keyToStaking stakeKey) poolKey) Nothing
+
+-- | Delegates staking credential (specified by stakevalidator) to pool
+delegateStakeScript :: ToData redeemer =>
+  StakeValidator -> redeemer -> PoolId -> Tx
+delegateStakeScript script red (PoolId poolKey) = certTx $
+  Certificate (DCertDelegDelegate (scriptToStaking script) poolKey) (withStakeScript script red)
 

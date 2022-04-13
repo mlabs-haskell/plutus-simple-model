@@ -11,7 +11,6 @@ import Test.Tasty.HUnit
 
 import Plutus.Test.Model
 import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Tx (Tx)
 import Suites.Plutus.Model.Script.Onchain.Safe
 import Suites.Plutus.Model.Util
 

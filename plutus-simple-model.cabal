@@ -79,6 +79,7 @@ common deps
     , cardano-slotting
     , containers
     , mtl
+    , serialise
     , ouroboros-consensus
     , ouroboros-consensus-shelley
     , prettyprinter
@@ -86,7 +87,10 @@ common deps
     , plutus-ledger-api
     , plutus-tx
     , plutus-tx-plugin
+    , strict-containers
+    , vector
     , time
+    , deepseq
 
 common test-deps
   import:        deps
@@ -104,6 +108,10 @@ library
     Plutus.Test.Model.Contract
     Plutus.Test.Model.Mint
     Plutus.Test.Model.Pretty
+    Plutus.Test.Model.Stake
+    Plutus.Test.Model.Fork.CardanoAPI
+    Plutus.Test.Model.Fork.CardanoAPITemp
+    Plutus.Test.Model.Fork.TxExtra
   build-depends:    tasty
                   , tasty-hunit
   other-modules:
@@ -123,11 +131,13 @@ test-suite plutus-simple-model-test
     Suites.Plutus.Model.Script.Onchain.Game
     Suites.Plutus.Model.Script.Onchain.Nft
     Suites.Plutus.Model.Script.Onchain.Safe
+    Suites.Plutus.Model.Script.Onchain.Staking
     Suites.Plutus.Model.Script.Onchain.Util
     Suites.Plutus.Model.Script.Test.Counter
     Suites.Plutus.Model.Script.Test.Game
     Suites.Plutus.Model.Script.Test.Nft
     Suites.Plutus.Model.Script.Test.Safe
+    Suites.Plutus.Model.Script.Test.Staking
     Suites.Plutus.Model.User
     Suites.Plutus.Model.Util
   build-depends:    plutus-simple-model

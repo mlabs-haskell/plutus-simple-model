@@ -13,7 +13,6 @@ import Test.Tasty
 import Test.Tasty.HUnit
 
 import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Tx
 import Suites.Plutus.Model.Script.Onchain.Counter
 import Suites.Plutus.Model.Util
 

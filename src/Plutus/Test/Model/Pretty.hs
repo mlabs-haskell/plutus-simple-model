@@ -22,6 +22,7 @@ import Plutus.V1.Ledger.Slot
 import Plutus.V1.Ledger.Value (assetClass, flattenValue, toString)
 
 import Plutus.Test.Model.Blockchain
+import Plutus.Test.Model.Stake (DCertError(..), WithdrawError(..))
 
 -- | Pretty-print for stats experessed in percents
 ppStatPercent :: StatPercent -> String
@@ -145,23 +146,25 @@ instance Pretty Blockchain where
       ]
 
 instance Pretty FailReason where
-  pretty (NoUser pkh) =
-    "User with PubKeyHash" <+> pretty (getPubKeyHash pkh) <+> "not found"
-  pretty (NotEnoughFunds pkh val) = vcat
-    [ "User with PubKeyHash" <+> pretty (getPubKeyHash pkh)
-       <+> "doesn't have enough funds to pay:"
-    , indent 5 (ppBalanceWith (BchNames M.empty M.empty M.empty M.empty) val)
-    ]
-  pretty (IntervalError err) = "Time or vlaid range related error:" <+> pretty (displayError err)
-  pretty NotBalancedTx = "Not balanced transaction"
-  pretty FailToReadUtxo = "UTXO not found"
-  pretty (FailToCardano err) =
-    "Failed to convert transaction from Plutus to Cardano:" <+> pretty err
-  pretty (TxScriptFail errs) = "Script execution error:" <+>
-    hsep (punctuate comma $ fmap (pretty . displayError) errs)
-  pretty (TxInvalidRange _ range) =
-    "Not in valid range" <+> pretty range
-  pretty (TxLimitError ovfs _) = hsep (punctuate comma (fmap ppOverflow ovfs))
+  pretty = \case
+    NoUser pkh ->
+      "User with PubKeyHash" <+> pretty (getPubKeyHash pkh) <+> "not found"
+    NotEnoughFunds pkh val -> vcat
+      [ "User with PubKeyHash" <+> pretty (getPubKeyHash pkh)
+        <+> "doesn't have enough funds to pay:"
+      , indent 5 (ppBalanceWith (BchNames M.empty M.empty M.empty M.empty) val)
+      ]
+    IntervalError err -> "Time or vlaid range related error:" <+> pretty (displayError err)
+    NotBalancedTx -> "Not balanced transaction"
+    FailToReadUtxo -> "UTXO not found"
+    FailToCardano err -> "Failed to convert transaction from Plutus to Cardano:" <+> pretty err
+    TxScriptFail errs -> "Script execution error:" <+>
+      hsep (punctuate comma $ fmap (pretty . displayError) errs)
+    TxInvalidRange _ range -> "Not in valid range" <+> pretty range
+    TxLimitError ovfs _ -> hsep (punctuate comma (fmap ppOverflow ovfs))
+    TxInvalidWithdraw err -> pretty err
+    TxInvalidCertificate cert -> pretty cert
+    GenericFail str -> "Generic fail:" <+> pretty str
     where
       ppOverflow (TxSizeError _ pcnt) =
         "Transaction size exceeds the limit by" <+> pretty pcnt
@@ -169,10 +172,29 @@ instance Pretty FailReason where
         "Memory limit exceeds the limit by" <+> pretty pcnt
       ppOverflow (ExStepError _ pcnt) =
         "Execution steps exceed the limit by" <+> pretty pcnt
-  pretty (GenericFail str) = "Generic fail:" <+> pretty str
+
+instance Pretty DCertError where
+  pretty = \case
+    RegStakeError cred      -> "Failed to register staking credential (already exists)" <+> pretty cred
+    DeRegStakeError cred    -> "Failed to deregister staking credential" <+> pretty cred
+    DelegateError cred pkh  -> hsep ["Failed to delegate staking credential", pretty cred, "to pool", pretty pkh]
+    PoolRegError pkh        -> "Failed to register pool" <+> pretty pkh
+    PoolRetireError pkh     -> "Failed to retire pool" <+> pretty pkh
+    CertGenesisNotSupported -> "Genesis certificate not supported"
+    CertMirNotSupported     -> "Mir certificate not supported"
 
 instance Pretty BchEvent where
   pretty = \case
-    BchInfo msg -> "[info]  " <+> pretty msg
-    BchTx _     -> "[tx]    " <+> "TODO print tx"
-    BchFail fReason   -> "[error] " <+> pretty fReason
+    BchInfo msg     -> "[info]  " <+> pretty msg
+    BchTx _         -> "[tx]    " <+> "TODO print tx"
+    BchFail fReason -> "[error] " <+> pretty fReason
+
+instance Pretty WithdrawError where
+  pretty = \case
+    WithdrawError cred expected actual ->
+      hsep [ "Wrong amount of withdraw for staking credential", pretty cred, "expected", pretty expected
+           , "but actual", pretty actual
+           ]
+    WithdrawNotSigned pkh -> hsep ["Reward withdraw by pub key not signed by", pretty pkh]
+    StakeNotRegistered cred ->
+      hsep [ "Stake credential", pretty cred, "is not registered for rewards"]
