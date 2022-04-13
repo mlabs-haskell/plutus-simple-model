@@ -887,16 +887,16 @@ datumAt ref = do
 
 
 -- | Reads current reward amount for a staking credential
-rewardAt :: StakingCredential -> Run (Maybe Integer)
-rewardAt cred = gets (lookupReward cred . bchStake)
+rewardAt :: StakingCredential -> Run Integer
+rewardAt cred = gets (maybe 0 id . lookupReward cred . bchStake)
 
 -- | Returns all stakes delegatged to a pool
-stakesAt :: PubKeyHash -> Run [StakingCredential]
-stakesAt poolKey = gets (lookupStakes (PoolId poolKey) . bchStake)
+stakesAt :: PoolId -> Run [StakingCredential]
+stakesAt (PoolId poolKey) = gets (lookupStakes (PoolId poolKey) . bchStake)
 
 -- | Checks that pool is registered
-hasPool :: PubKeyHash -> Run Bool
-hasPool pkh = gets (M.member (PoolId pkh) . stake'pools. bchStake)
+hasPool :: PoolId -> Run Bool
+hasPool (PoolId pkh) = gets (M.member (PoolId pkh) . stake'pools. bchStake)
 
 -- | Checks that staking credential is registered
 hasStake :: HasStakingCredential a => a -> Run Bool

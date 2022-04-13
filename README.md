@@ -129,6 +129,8 @@ valueAt :: HasAddress addr => addr -> Run Value
 
 Complete working example of user exchange can be found at test suites (see `Suites.Plutus.Model.User`)
 
+### Creation of transactions
+
 So now we know how to send values to users. Let's learn how to work with scripts.
 
 When we use function `sendValue` it creates TX and submits it to blockchain.
@@ -145,11 +147,15 @@ To post TXs to blockchain we have function:
 sendTx :: Tx -> Run (Either FailReason Stats)
 ```
 
-It takes plutus Tx and tries to submit it. If it fails it returns he reason of failure.
+It takes extended plutus Tx and tries to submit it. If it fails it returns he reason of failure.
 If it succeeds it returns statistics of TX execution. It includes TX size if stored on Cardano
 and execution units (execution steps and memory usage). Execution statistics is important to
 know that our transaction is suitable for Cardano network. Cardano has certain limits that we should enforce
 on our TXs.
+
+Note that `Tx` is not a Plutus TX type. It contains Plutus `Tx` and extra info that we may need
+to specify withdrawals of rewards and staking credentials. We need to use the custom type
+because staking/crednetials is not supported by Plutus TX out of the box. 
 
 Note that comparing to EmulatorTrace we don't need to use waitNSlots to force TX submission.
 It's submited right away and slot counter is updated. If we want to submit block of TXs we
@@ -161,6 +167,14 @@ sendBlock :: [Tx] -> Run (Either FailReason [Stats])
 
 The function `sendTx` just submits a block with single TX in it. It's ok for most of the cases but
 if we need to test acceptence of several TXs in the block we can use `sendBlock`.
+
+There is a common pattern for testing to form single TX, sign it with a key and send to network. 
+If we don't need to look at the stats we can use function. If it fails it logs the error.
+
+```haskell
+submitTx :: PubKeyHash -> Tx -> Run ()
+submitTx pkh tx = void $ sendTx =<< signTx pkh tx
+```
 
 Let's create Tx and submit it. We will use example of guess hash game script. See code of contracts in the test suite
 (see `Suites.Plutus.Model.Onchain.Game`). Basic description is that anybody can create a Hash puzzle.
@@ -183,6 +197,16 @@ initGame pkh prize answer = do                   -- arguments: user, value for t
 -- pure function ot create TX
 initGameTx :: Userspend -> Value -> BuiltinByteString -> Tx
 ```
+
+also we can write it with `submitTx`:
+
+```haskell
+initGame :: PubKeyHash -> Value -> BuiltinByteString -> Run ()
+initGame pkh prize answer = do               -- arguments: user, value for the prize, answer for puzzle
+  sp <- spend pkh prize                      -- read users UTXO that we should spend
+  submitTx pkh $ initGameTx sp prize answer  -- create TX and sign it with user's secret key and post TX to blockchain
+```
+
 
 Let's discuss the function bit by bit. To create TX we need to first determine the inputs.
 Input is set of UTXO's that we'd like to spend. For that we use function
@@ -679,7 +703,175 @@ The same function exists to pay to pub key hash:
 payToPubKeyAddress :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
 ```
 
+### Certificates and withdrawals of the rewards
+
+In cardano staking pools are driving force behind confirmation of transactions.
+For the work pool owners receive fees. The fees gets distributed among 
+staking credentials that delegate to pool. 
+
+So we have staking pool operator (SPO) who is chosen for this round to
+confirm TX. And for this work SPO gets the fees. Fees are collected 
+to addresses that are called staking credentials. Users can delegate staking credential
+to the pool owner (SPO). 
+
+So far we have ignored the fees, but in real scenario every transaction should contain fees.
+To pay fee in the transaction we can use function. The fees are fairly distributed among
+all staking credentials that belong to the pool:
+
+```haskell
+-- Pay fee for TX confirmation. The fees are payed in ADA (Lovelace)
+payFee :: Value -> Tx
+```
+
+#### How reward distribution works
+
+For each round of TX confirmation there is a pool called **leader** that confirms
+TX. For that the pool receives fees and fairly distributes them among stake credentials
+that delegate to that pool.
+
+For this testing framework we go over a list of pools one by one and on each TX-confirmation
+we choose the next pool. All staking credentials delegated to the pool receive equal amount of fees.
+When blockchain initialised we have a single pool id and stake credential that 
+belongs to the admin (user who owns all funds on genensis TX). 
+
+So to test some Stake validator we need to register it in the blockchain
+and delegate it to admin's pool. We can get the pool of the admin by calling `(head <$> getPools)`.
+This gives the pool identifier of the only pool that is registered.
+After that we create TX that registers taking credential and delegates it to admin's pool.
+We can provide enough fees for that TX to check the stake validator properties. 
+
+As an example we can use the test-case in the module `Suites.Plutus.Model.Script.Test.Staking`.
+It implements a basic stake validator and checks that it works (see the directory `test` for this repo).
 
 
+#### Certificates
+
+To work with pools and staking credentials we use certificates (`DCert` in plutus).
+We have functions that trigger actions with pools and staking credentials:
+
+First we need to register staking credential by pub key hash (rewards belong to certain key)
+or by the script. For the script there is guarding logic that regulates spending of rewards
+for staking credential. For the key we require that TX is signed by the given key to spend the reward.
+
+```haskell
+registerStakeKey    :: PubKeyHash -> Tx
+registerStakeScript :: ToData redeemer => StakeValidator -> redeemer -> Tx
+```
+
+Also we can deregistrate the staking credential:
+
+```haskell
+deregisterStakeKey    :: PubKeyHash -> Tx
+deregisterStakeScript :: ToData redeemer => StakeValidator -> redeemer -> Tx
+```
+
+A staking credential can get rewards only over a pool. To associate it with pool
+we use the function delegate:
+
+```haskell
+delegateStakeKey    :: PubKeyHash -> PoolId -> Tx
+delegateStakeScript :: ToData redeemer => StakeValidator -> redeemer -> PoolId -> Tx
+```
+
+The type `PoolId` is just a `newtype` wrapper for `PubKeyHash`:
+
+```haskell
+newtype PoolId = PoolId { unPoolId :: PubKeyHash }
+```
+
+As blockchain starts we have only one pool and staking credential associated with it.
+It is guarded by admin's pub key hash.
+
+We can register or deregister (retire) pools with functions:
+
+```haskell
+registerPool :: PoolId -> Tx
+retirePool   :: PoolId -> Tx
+```
+
+For staking validators each of those functions is going to trigger validation with purpose
+`Certifying DCert`. Where `DCert` can be one of the following:
+
+```haskell
+data DCert
+  = DCertDelegRegKey StakingCredential     -- register stake
+  | DCertDelegDeRegKey StakingCredential   -- deregister stake
+  | DCertDelegDelegate                     -- delegate stake to pool
+      StakingCredential
+      -- ^ delegator
+      PubKeyHash
+      -- ^ delegatee
+  | -- | A digest of the PoolParams
+    DCertPoolRegister                     -- register pool
+      PubKeyHash
+      -- ^ poolId
+      PubKeyHash
+      -- ^ pool VFR
+  | -- | The retiremant certificate and the Epoch N
+    DCertPoolRetire PubKeyHash Integer   -- retire the pool 
+                                         -- NB: Should be Word64 but we only have Integer on-chain
+  | -- | A really terse Digest
+    DCertGenesis                         -- not supported for testing yet
+  | -- | Another really terse Digest
+    DCertMir                             -- not supported for testing yet
+```
+
+#### Query staking credentials and pools
+
+We can collect various stats during execution on how many coins we have for rewards
+and where staking credential belongs to.
+
+```haskell
+-- get all pools
+getPools :: Run [PoolId]
+
+-- get staking credential by pool
+stakesAt :: PoolId -> Run [StakingCredential]
+
+-- get rewards for a StakingCredential
+rewardAt :: StakingCredential -> Run Integer
+
+-- query if pool is registered
+hasPool :: PoolId -> Run Bool
+
+-- query if staking credential is registered
+hasStake :: StakingCredential -> Run Bool
+```
+
+#### Utility functions to create staking credentials
+
+We can create staking credential out of pub key hash or stake validator
+with function:
+
+```haskell
+toStakingCredential :: HasStakingCredential a => a -> StakingCredential
+```
+
+#### Withdrawals of the rewards
+
+When staking credential has some rewards we can withdraw it and send
+to some address. To do it we need to spend all rewards so we need to 
+provide exact amount that is stored in the rewards of the staking credential
+at the time of TX confirmation. 
+
+We can query the current amount with function `rewardAt`:
+
+```haskell
+-- get rewards for a StakingCredential
+rewardAt :: StakingCredential -> Run Integer
+```
+
+To get rewards we need to include in transaction this part:
+
+```haskell
+withdrawStakeKey    :: PubKeyHash -> Integer -> Tx
+withdrawStakeScript :: ToData redeemer => StakeValidator -> redeemer -> Integer -> Tx
+```
+
+As with certificates we can withdraw by pub key hash (needs to be signed by that key)
+and also by validator. 
+
+To test withdraws we need to have rewards. We can easily generate rewards by 
+making transactions that contain fees granted with `payFee` function.
 
 
