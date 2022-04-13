@@ -55,13 +55,13 @@ module Plutus.Test.Model.Contract (
   Tx(..),
   toExtra,
   HasStakingCredential(..),
-  stakeWithdrawKey,
-  stakeWithdrawScript,
-  regStakeKey,
-  regStakeScript,
-  deregStakeKey,
-  deregStakeScript,
-  regPool,
+  withdrawStakeKey,
+  withdrawStakeScript,
+  registerStakeKey,
+  registerStakeScript,
+  deregisterStakeKey,
+  deregisterStakeScript,
+  registerPool,
   retirePool,
   delegateStakeKey,
   delegateStakeScript,
@@ -589,44 +589,44 @@ withStakeScript :: ToData red => StakeValidator -> red -> Maybe (Redeemer, Stake
 withStakeScript script red = Just (toRedeemer red, script)
 
 -- | Add staking withdrawal based on pub key hash
-stakeWithdrawKey :: PubKeyHash -> Integer -> Tx
-stakeWithdrawKey key amount = withdrawTx $
+withdrawStakeKey :: PubKeyHash -> Integer -> Tx
+withdrawStakeKey key amount = withdrawTx $
   Withdraw (keyToStaking key) amount Nothing
 
 -- | Add staking withdrawal based on script
-stakeWithdrawScript :: ToData redeemer
+withdrawStakeScript :: ToData redeemer
   => StakeValidator -> redeemer -> Integer -> Tx
-stakeWithdrawScript validator red amount = withdrawTx $
+withdrawStakeScript validator red amount = withdrawTx $
   Withdraw (scriptToStaking validator) amount (withStakeScript validator red)
 
 certTx :: Certificate -> Tx
 certTx cert = mempty { tx'extra = mempty { extra'certificates = [cert] } }
 
 -- | Register staking credential by key
-regStakeKey :: PubKeyHash -> Tx
-regStakeKey pkh = certTx $
+registerStakeKey :: PubKeyHash -> Tx
+registerStakeKey pkh = certTx $
   Certificate (DCertDelegRegKey $ keyToStaking pkh) Nothing
 
 -- | Register staking credential by stake validator
-regStakeScript :: ToData redeemer =>
+registerStakeScript :: ToData redeemer =>
   StakeValidator -> redeemer -> Tx
-regStakeScript script red = certTx $
+registerStakeScript script red = certTx $
   Certificate (DCertDelegRegKey $ scriptToStaking script) (withStakeScript script red)
 
 -- | DeRegister staking credential by key
-deregStakeKey :: PubKeyHash -> Tx
-deregStakeKey pkh = certTx $
+deregisterStakeKey :: PubKeyHash -> Tx
+deregisterStakeKey pkh = certTx $
   Certificate (DCertDelegDeRegKey $ keyToStaking pkh) Nothing
 
 -- | DeRegister staking credential by stake validator
-deregStakeScript :: ToData redeemer =>
+deregisterStakeScript :: ToData redeemer =>
   StakeValidator -> redeemer -> Tx
-deregStakeScript script red = certTx $
+deregisterStakeScript script red = certTx $
   Certificate (DCertDelegDeRegKey $ scriptToStaking script) (withStakeScript script red)
 
 -- | Register staking pool
-regPool :: PoolId -> Tx
-regPool (PoolId pkh) = certTx $
+registerPool :: PoolId -> Tx
+registerPool (PoolId pkh) = certTx $
   Certificate (DCertPoolRegister pkh pkh) Nothing
 
 -- | Retire staking pool

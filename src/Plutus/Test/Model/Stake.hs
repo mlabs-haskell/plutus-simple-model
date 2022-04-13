@@ -14,6 +14,7 @@ module Plutus.Test.Model.Stake(
 ) where
 
 import Prelude
+import Control.Applicative ((<|>))
 import Data.List qualified as L
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
@@ -63,6 +64,7 @@ data DCertError
 
 data WithdrawError
   = WithdrawError StakingCredential Integer Integer
+  | WithdrawNotSigned PubKeyHash
   | StakeNotRegistered StakingCredential
   deriving (Show, Eq)
 
@@ -139,12 +141,21 @@ withdrawStake cred st = st
   { stake'stakes = M.adjust (const 0) cred $ stake'stakes st
   }
 
-checkWithdrawStake :: StakingCredential -> Integer -> Stake -> Maybe WithdrawError
-checkWithdrawStake cred amount st =
-  case M.lookup cred $ stake'stakes st of
-    Just reward | reward == amount && amount > 0 -> Nothing
-    Just reward   -> Just $ WithdrawError cred amount reward
-    Nothing       -> Just $ StakeNotRegistered cred
+checkWithdrawStake :: [PubKeyHash] -> StakingCredential -> Integer -> Stake -> Maybe WithdrawError
+checkWithdrawStake signatures cred amount st =
+  checkAmount <|> checkSign
+  where
+    checkAmount = case M.lookup cred $ stake'stakes st of
+      Just reward | reward == amount && amount > 0 -> Nothing
+      Just reward   -> Just $ WithdrawError cred amount reward
+      Nothing       -> Just $ StakeNotRegistered cred
+
+    checkSign = case cred of
+      StakingHash (PubKeyCredential pkh) ->
+        if elem pkh signatures
+          then Nothing
+          else Just (WithdrawNotSigned pkh)
+      _ -> Nothing
 
 lookupReward :: StakingCredential -> Stake -> Maybe Integer
 lookupReward cred Stake{..} = M.lookup cred stake'stakes

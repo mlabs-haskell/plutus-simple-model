@@ -39,7 +39,7 @@ withdrawTx stakeScript u1 u2 sp fee =
     , payFee fee
     , payToPubKey u1 (adaValue 25)
     , payToPubKey u2 (adaValue 25)
-    , stakeWithdrawScript stakeScript () 50
+    , withdrawStakeScript stakeScript () 50
     ]
 
 registerCredentialTx :: StakeValidator -> PoolId -> UserSpend -> Value -> Tx
@@ -47,7 +47,7 @@ registerCredentialTx stakeScript poolId sp fee =
   mconcat
     [ userSpend sp
     , payFee fee
-    , regStakeScript stakeScript ()
+    , registerStakeScript stakeScript ()
     , delegateStakeScript stakeScript () poolId
     ]
 

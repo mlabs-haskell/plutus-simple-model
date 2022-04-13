@@ -669,7 +669,7 @@ sendSingleTx (Tx extra tx) =
         go st = \case
           [] -> pure Nothing
           Withdraw{..} : rest ->
-            case checkWithdrawStake withdraw'credential withdraw'amount st of
+            case checkWithdrawStake pkhs withdraw'credential withdraw'amount st of
               Nothing  -> go st rest
               Just err -> pure $ Just $ TxInvalidWithdraw err
 

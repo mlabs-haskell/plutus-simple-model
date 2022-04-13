@@ -49,7 +49,6 @@ instance Semigroup Extra where
 instance Monoid Extra where
   mempty = Extra [] []
 
-
 data Certificate = Certificate
   { certificate'dcert  :: DCert
   , certificate'script :: Maybe (Redeemer, StakeValidator)
