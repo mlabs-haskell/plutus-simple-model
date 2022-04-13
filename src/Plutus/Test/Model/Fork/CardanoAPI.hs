@@ -1,11 +1,9 @@
-{-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE GADTs              #-}
 {-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedLists    #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RecordWildCards    #-}
-{-# LANGUAGE ViewPatterns       #-}
 
 {-# OPTIONS_GHC -Wno-orphans        #-}
 
@@ -104,9 +102,9 @@ toCardanoTxBody sigs protocolParams networkId (Tx extra P.Tx{..}) = do
             P.StakingHash cred -> case cred of
                 P.PubKeyCredential _pkh -> pure $ C.BuildTxWith $ C.KeyWitness C.KeyWitnessForStakeAddr
                 P.ScriptCredential _vh -> case withdraw'script of
-                  Just (redeemer, validator) -> (C.BuildTxWith . C.ScriptWitness C.ScriptWitnessForStakeAddr) <$> toCardanoStakeWitness redeemer validator
+                  Just (redeemer, validator) -> C.BuildTxWith . C.ScriptWitness C.ScriptWitnessForStakeAddr <$> toCardanoStakeWitness redeemer validator
                   Nothing                    -> Left $ TxBodyError "No script for stake validator"
-            P.StakingPtr _ _ _ -> Left $ TxBodyError "StakingPtr where StakingHash expected"
+            P.StakingPtr {} -> Left $ TxBodyError "StakingPtr where StakingHash expected"
 
 
 toCardanoStakeAddress :: C.NetworkId -> P.StakingCredential -> Either ToCardanoError C.StakeAddress

@@ -7,3 +7,7 @@
 - ignore: {name: "Redundant if"}
 - ignore: {name: "Use camelCase"}
 - ignore: {name: "Eta reduce"}
+- ignore: {name: "Use if"}
+- ignore: {name: "Move brackets to avoid $"}
+- ignore: {name: "Use infix"}
+- ignore: {name: "Use fromMaybe"}

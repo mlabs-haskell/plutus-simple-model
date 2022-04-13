@@ -93,7 +93,7 @@ hasPool pid st = V.elem pid $ stake'poolIds st
 regPool :: PoolId -> Stake -> Stake
 regPool pid st = st
   { stake'pools = M.insert pid pool $ stake'pools st
-  , stake'poolIds = (stake'poolIds st) `V.snoc` pid
+  , stake'poolIds = stake'poolIds st `V.snoc` pid
   }
   where
     pool = Pool [keyToStaking $ unPoolId pid]
