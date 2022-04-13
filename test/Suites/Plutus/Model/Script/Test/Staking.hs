@@ -23,17 +23,31 @@ tests cfg =
 stakingTest :: Run ()
 stakingTest = do
   u1 : u2 : _ <- setupUsers
-  let fee = adaValue 10
-  sp <- spend u1 fee
-  submitTx u1 (withdrawTx u1 u2 sp fee)
+  let fee1 = adaValue 100
+      stakeScript = stakeValidator $ toAddress u2
+  pool <- head <$> getPools
+  sp1 <- spend u1 fee1
+  submitTx u1 $ registerCredentialTx stakeScript pool sp1 fee1
+  let fee2 = adaValue 10
+  sp2 <- spend u1 fee2
+  submitTx u1 (withdrawTx stakeScript u1 u2 sp2 fee2)
 
-withdrawTx :: PubKeyHash -> PubKeyHash -> UserSpend -> Value -> Tx
-withdrawTx u1 u2 sp fee =
+withdrawTx :: StakeValidator -> PubKeyHash -> PubKeyHash -> UserSpend -> Value -> Tx
+withdrawTx stakeScript u1 u2 sp fee =
   mconcat
     [ userSpend sp
     , payFee fee
-    , payToPubKey u1 (adaValue 50)
-    , payToPubKey u2 (adaValue 50)
-    , stakeWithdrawScript (stakeValidator $ toAddress u2) () 100
+    , payToPubKey u1 (adaValue 25)
+    , payToPubKey u2 (adaValue 25)
+    , stakeWithdrawScript stakeScript () 50
+    ]
+
+registerCredentialTx :: StakeValidator -> PubKeyHash -> UserSpend -> Value -> Tx
+registerCredentialTx stakeScript poolId sp fee =
+  mconcat
+    [ userSpend sp
+    , payFee fee
+    , regStakeScript stakeScript ()
+    , delegateStakeScript stakeScript () poolId
     ]
 

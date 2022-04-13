@@ -66,6 +66,7 @@ module Plutus.Test.Model.Blockchain (
   stakesAt,
   hasPool,
   hasStake,
+  getPools,
   waitNSlots,
   getUserPubKey,
 
@@ -899,6 +900,9 @@ hasPool pkh = gets (M.member (PoolId pkh) . stake'pools. bchStake)
 -- | Checks that staking credential is registered
 hasStake :: HasStakingCredential a => a -> Run Bool
 hasStake key = gets (M.member (toStakingCredential key) . stake'stakes. bchStake)
+
+getPools :: Run [PubKeyHash]
+getPools = gets (fmap unPoolId . V.toList . stake'poolIds . bchStake)
 
 ---------------------------------------------------------------------
 -- stat resources limits (Alonzo era)
