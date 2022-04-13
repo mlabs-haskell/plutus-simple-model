@@ -42,7 +42,7 @@ withdrawTx stakeScript u1 u2 sp fee =
     , stakeWithdrawScript stakeScript () 50
     ]
 
-registerCredentialTx :: StakeValidator -> PubKeyHash -> UserSpend -> Value -> Tx
+registerCredentialTx :: StakeValidator -> PoolId -> UserSpend -> Value -> Tx
 registerCredentialTx stakeScript poolId sp fee =
   mconcat
     [ userSpend sp

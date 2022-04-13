@@ -625,23 +625,23 @@ deregStakeScript script red = certTx $
   Certificate (DCertDelegDeRegKey $ scriptToStaking script) (withStakeScript script red)
 
 -- | Register staking pool
-regPool :: PubKeyHash -> Tx
-regPool pkh = certTx $
+regPool :: PoolId -> Tx
+regPool (PoolId pkh) = certTx $
   Certificate (DCertPoolRegister pkh pkh) Nothing
 
 -- | Retire staking pool
-retirePool :: PubKeyHash -> Tx
-retirePool pkh = certTx $
+retirePool :: PoolId -> Tx
+retirePool (PoolId pkh) = certTx $
   Certificate (DCertPoolRetire pkh 0) Nothing
 
 -- | Delegates staking credential (specified by key) to pool
-delegateStakeKey :: PubKeyHash -> PubKeyHash -> Tx
-delegateStakeKey stakeKey poolKey = certTx $
+delegateStakeKey :: PubKeyHash -> PoolId -> Tx
+delegateStakeKey stakeKey (PoolId poolKey) = certTx $
   Certificate (DCertDelegDelegate (keyToStaking stakeKey) poolKey) Nothing
 
 -- | Delegates staking credential (specified by stakevalidator) to pool
 delegateStakeScript :: ToData redeemer =>
-  StakeValidator -> redeemer -> PubKeyHash -> Tx
-delegateStakeScript script red poolKey = certTx $
+  StakeValidator -> redeemer -> PoolId -> Tx
+delegateStakeScript script red (PoolId poolKey) = certTx $
   Certificate (DCertDelegDelegate (scriptToStaking script) poolKey) (withStakeScript script red)
 

@@ -26,6 +26,7 @@ module Plutus.Test.Model.Blockchain (
   BchNames (..),
   User (..),
   TxStat (..),
+  PoolId(..),
   ExecutionUnits (..),
   Result (..),
   isOkResult,
@@ -901,8 +902,8 @@ hasPool pkh = gets (M.member (PoolId pkh) . stake'pools. bchStake)
 hasStake :: HasStakingCredential a => a -> Run Bool
 hasStake key = gets (M.member (toStakingCredential key) . stake'stakes. bchStake)
 
-getPools :: Run [PubKeyHash]
-getPools = gets (fmap unPoolId . V.toList . stake'poolIds . bchStake)
+getPools :: Run [PoolId]
+getPools = gets (V.toList . stake'poolIds . bchStake)
 
 ---------------------------------------------------------------------
 -- stat resources limits (Alonzo era)

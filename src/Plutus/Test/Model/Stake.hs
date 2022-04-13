@@ -23,6 +23,7 @@ import Data.Vector qualified as V
 import Plutus.V1.Ledger.Api
 import Plutus.Test.Model.Fork.TxExtra (keyToStaking)
 
+-- | Internal stake credentials state
 data Stake = Stake
   { stake'pools      :: !(Map PoolId Pool)
   , stake'poolIds    :: !(Vector PoolId)
@@ -30,6 +31,7 @@ data Stake = Stake
   , stake'nextReward :: !Int
   }
 
+-- | Stake Pool key
 newtype PoolId = PoolId { unPoolId :: PubKeyHash }
   deriving (Show, Eq, Ord)
 

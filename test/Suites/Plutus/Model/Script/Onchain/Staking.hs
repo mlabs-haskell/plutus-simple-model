@@ -12,8 +12,8 @@ import           PlutusTx.Prelude
 {-# INLINABLE mkStakingValidator #-}
 mkStakingValidator :: Address -> () -> ScriptContext -> Bool
 mkStakingValidator addr () ctx = case scriptContextPurpose ctx of
-    Certifying _   -> True
     Rewarding cred -> traceIfFalse "insufficient reward sharing" $ 2 * paidToAddress >= amount cred
+    Certifying _   -> True
     _              -> False
   where
     info :: TxInfo
