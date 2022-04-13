@@ -18,13 +18,14 @@ not accessible from standard Plutus TX
 module Plutus.Test.Model.Fork.CardanoAPI (
   toCardanoTxBody,
   toCardanoStakeWitness,
+  lookupDatum',
 ) where
 
 import Data.Proxy
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
+import Ledger.Tx.CardanoAPI qualified as C
 import Data.Coerce (coerce)
-import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Bifunctor (first)
 import Data.Map.Strict qualified as Map
@@ -50,7 +51,8 @@ toCardanoTxBody
 toCardanoTxBody sigs protocolParams networkId (Tx extra P.Tx{..}) = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
-    txOuts <- traverse (toCardanoTxOut networkId txData) txOutputs
+    let txData' = lookupDatum' txData
+    txOuts <- traverse (toCardanoTxOut networkId txData') txOutputs
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
@@ -150,7 +152,7 @@ toCardanoPoolId :: P.PubKeyHash -> Either ToCardanoError C.PoolId
 toCardanoPoolId pkh = fmap coerce <$> toCardanoPaymentKeyHash $ P.PaymentPubKeyHash pkh
 
 toCardanoVrfKey :: P.PubKeyHash -> Either ToCardanoError (C.Hash C.VrfKey)
-toCardanoVrfKey pkh = castHash "VrfKey" =<< (toCardanoPaymentKeyHash $ P.PaymentPubKeyHash pkh)
+toCardanoVrfKey pkh = castHash =<< (toCardanoPaymentKeyHash $ P.PaymentPubKeyHash pkh)
 
 toCardanoStakeKeyHash :: P.PubKeyHash -> Either ToCardanoError (C.Hash C.StakeKey)
 toCardanoStakeKeyHash (P.PubKeyHash bs) = tag "toCardanoStakeKeyHash" $ deserialiseFromRawBytes (C.AsHash C.AsStakeKey) (PlutusTx.fromBuiltin bs)
@@ -168,12 +170,9 @@ toCardanoStakeWitness redeemer (P.StakeValidator script) = do
         <*> pure zeroExecutionUnits
 
 castHash :: forall a b. (C.SerialiseAsRawBytes (C.Hash a), C.SerialiseAsRawBytes (C.Hash b))
-  => String -> C.Hash a -> Either ToCardanoError (C.Hash b)
-castHash msg =
-  maybe err Right . C.deserialiseFromRawBytes (C.proxyToAsType (Proxy :: Proxy (C.Hash b))) . C.serialiseToRawBytes
-  where
-    err = txError $ "Failed to convert to " <> msg
-
+  => C.Hash a -> Either ToCardanoError (C.Hash b)
+castHash =
+  deserialiseFromRawBytes (C.proxyToAsType (Proxy :: Proxy (C.Hash b))) . C.serialiseToRawBytes
 
 toCardanoPlutusScript :: P.Script -> Either ToCardanoError (C.PlutusScript C.PlutusScriptV1)
 toCardanoPlutusScript =
@@ -183,9 +182,18 @@ toCardanoPlutusScript =
 zeroExecutionUnits :: C.ExecutionUnits
 zeroExecutionUnits = C.ExecutionUnits 0 0
 
-deserialiseFromRawBytes :: C.SerialiseAsRawBytes t => C.AsType t -> ByteString -> Either ToCardanoError t
-deserialiseFromRawBytes asType = maybe (Left DeserialisationError) Right . C.deserialiseFromRawBytes asType
-
 tag :: String -> Either ToCardanoError t -> Either ToCardanoError t
 tag s = first (Tag s)
+
+lookupDatum' ::
+     Map.Map P.DatumHash P.Datum
+  -> Maybe P.DatumHash
+  -> Either C.ToCardanoError (C.TxOutDatum C.CtxTx C.AlonzoEra)
+lookupDatum' datums datumHash =
+    case flip Map.lookup datums =<< datumHash of
+        Just datum -> pure $ C.TxOutDatum C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
+        Nothing    -> C.toCardanoTxOutDatumHash datumHash
+
+toCardanoScriptData :: PlutusTx.BuiltinData -> C.ScriptData
+toCardanoScriptData = C.fromPlutusData . P.builtinDataToData
 
