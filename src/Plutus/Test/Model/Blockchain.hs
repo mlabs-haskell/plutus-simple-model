@@ -107,6 +107,7 @@ import Prelude
 
 import Data.Aeson (decodeFileStrict')
 import Data.ByteString qualified as BS
+import Data.Coerce (coerce)
 import Data.Either
 import Data.Foldable
 import Data.Function (on)
@@ -227,8 +228,8 @@ appendStakingCredential cred = AppendStaking (StakingHash cred)
 appendStakingPubKey :: PubKeyHash -> a -> AppendStaking a
 appendStakingPubKey pkh = appendStakingCredential (PubKeyCredential pkh)
 
-appendStakingScript :: ValidatorHash -> a -> AppendStaking a
-appendStakingScript vh = appendStakingCredential (ScriptCredential vh)
+appendStakingScript :: StakeValidatorHash -> a -> AppendStaking a
+appendStakingScript sh = appendStakingCredential (ScriptCredential $ coerce sh)
 
 instance Semigroup ExecutionUnits where
   (<>) (ExecutionUnits a1 b1) (ExecutionUnits a2 b2) =
