@@ -828,14 +828,14 @@ getPools :: Run [PoolId]
 -- get staking credential by pool
 stakesAt :: PoolId -> Run [StakingCredential]
 
--- get rewards for a StakingCredential
-rewardAt :: StakingCredential -> Run Integer
+-- get rewards for a StakingCredential, PubKeyHash and StakeValidator
+rewardAt :: HasStakingCredential cred => cred -> Run Integer
 
 -- query if pool is registered
 hasPool :: PoolId -> Run Bool
 
 -- query if staking credential is registered
-hasStake :: StakingCredential -> Run Bool
+hasStake :: HasStakingCredential cred => cred -> Run Bool
 ```
 
 #### Utility functions to create staking credentials
