@@ -58,6 +58,9 @@ module Plutus.Test.Model.Blockchain (
   logFail,
   logInfo,
   logError,
+  noLog,
+  noLogTx,
+  noLogInfo,
   pureFail,
   txOutRefAt,
   getTxOut,
@@ -626,6 +629,31 @@ logInfo :: String -> Run ()
 logInfo msg = do
   slot <- gets bchCurrentSlot
   modify' $ \s -> s { bchInfo = appendLog slot msg (bchInfo s) }
+
+-- | Igonres log of TXs and info messages during execution (but not errors)
+noLog :: Run a -> Run a
+noLog act = do
+  txLog <- gets bchTxs
+  infoLog <- gets bchInfo
+  res <- act
+  modify' $ \st -> st { bchTxs = txLog, bchInfo = infoLog }
+  pure res
+
+-- | Igonres log of TXs during execution
+noLogTx :: Run a -> Run a
+noLogTx act = do
+  txLog <- gets bchTxs
+  res <- act
+  modify' $ \st -> st { bchTxs = txLog }
+  pure res
+
+-- | Igonres log of info level messages during execution
+noLogInfo :: Run a -> Run a
+noLogInfo act = do
+  infoLog <- gets bchInfo
+  res <- act
+  modify' $ \st -> st { bchInfo = infoLog }
+  pure res
 
 -- | Send block of TXs to blockchain.
 sendBlock :: [Tx] -> Run (Either FailReason [Stat])
