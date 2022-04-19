@@ -199,6 +199,9 @@ instance HasAddress (TypedValidator a) where
 class HasStakingCredential a where
   toStakingCredential :: a -> StakingCredential
 
+instance HasStakingCredential StakingCredential where
+  toStakingCredential = id
+
 instance HasStakingCredential PubKeyHash where
   toStakingCredential = keyToStaking
 
@@ -888,8 +891,8 @@ datumAt ref = do
 
 
 -- | Reads current reward amount for a staking credential
-rewardAt :: StakingCredential -> Run Integer
-rewardAt cred = gets (maybe 0 id . lookupReward cred . bchStake)
+rewardAt :: HasStakingCredential cred => cred -> Run Integer
+rewardAt cred = gets (maybe 0 id . lookupReward (toStakingCredential cred) . bchStake)
 
 -- | Returns all stakes delegatged to a pool
 stakesAt :: PoolId -> Run [StakingCredential]
