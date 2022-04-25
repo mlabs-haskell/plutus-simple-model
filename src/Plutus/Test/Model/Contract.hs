@@ -92,6 +92,7 @@ module Plutus.Test.Model.Contract (
 import Control.Monad.State.Strict
 import Prelude
 
+import Data.Bifunctor (second)
 import Data.List qualified as L
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
@@ -508,8 +509,12 @@ checkErrors = do
 
 testNoErrors :: Value -> BchConfig -> String -> Run a -> TestTree
 testNoErrors funds cfg msg act =
-   testCase msg $ maybe (pure ()) assertFailure $
-    fst (runBch (act >> checkErrors) (initBch cfg funds))
+    testCase msg $ maybe (pure ()) assertFailure $
+      errors >>= (\e -> pure $ e <> "\n\nLog trace:\n----------\n" <> bchLog)
+  where
+    (errors, bchLog) =
+      second (ppLimitInfo . getLog)
+             (runBch (act >> checkErrors) (initBch cfg funds))
 
 -- | check transaction limits
 testLimits :: Value -> BchConfig -> String -> (Log BchEvent -> Log BchEvent) -> Run a -> TestTree
@@ -644,4 +649,3 @@ delegateStakeScript :: ToData redeemer =>
   StakeValidator -> redeemer -> PoolId -> Tx
 delegateStakeScript script red (PoolId poolKey) = certTx $
   Certificate (DCertDelegDelegate (scriptToStaking script) poolKey) (withStakeScript script red)
-
