@@ -800,6 +800,13 @@ We can register or deregister (retire) pools with functions:
 registerPool :: PoolId -> Tx
 retirePool   :: PoolId -> Tx
 ```
+Alas above functions do not work (need to fix conversion to VrfKey) at the moment.
+Use direct insertion/removal of pools with `insertPool` and `deletePool` to manage stake pools:
+
+```haskell
+insertPool :: PoolId -> Run ()
+deletePool :: PoolId -> Run ()
+```
 
 For staking validators each of those functions is going to trigger validation with purpose
 `Certifying DCert`. Where `DCert` can be one of the following:
