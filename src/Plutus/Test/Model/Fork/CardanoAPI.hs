@@ -147,6 +147,7 @@ txError = Left . TxBodyError
 toCardanoPoolId :: P.PubKeyHash -> Either ToCardanoError C.PoolId
 toCardanoPoolId pkh = fmap coerce <$> toCardanoPaymentKeyHash $ P.PaymentPubKeyHash pkh
 
+-- | TODO: this does not work, implement right coercion from Plutus PubKeyHash to VrfKey
 toCardanoVrfKey :: P.PubKeyHash -> Either ToCardanoError (C.Hash C.VrfKey)
 toCardanoVrfKey pkh = castHash "VrfKey" =<< (toCardanoPaymentKeyHash $ P.PaymentPubKeyHash pkh)
 

@@ -63,6 +63,8 @@ module Plutus.Test.Model.Contract (
   deregisterStakeScript,
   registerPool,
   retirePool,
+  insertPool,
+  deletePool,
   delegateStakeKey,
   delegateStakeScript,
 
@@ -119,6 +121,7 @@ import Plutus.Test.Model.Blockchain
 import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Pretty
 import Prettyprinter (Doc, vcat, hcat, indent, (<+>), pretty)
+import Plutus.Test.Model.Stake qualified as Stake
 
 ------------------------------------------------------------------------
 -- modify blockchain
@@ -630,9 +633,21 @@ deregisterStakeScript script red = certTx $
   Certificate (DCertDelegDeRegKey $ scriptToStaking script) (withStakeScript script red)
 
 -- | Register staking pool
+-- TODO: thois does not work on TX level.
+-- Use insertPool as a workaround.
 registerPool :: PoolId -> Tx
 registerPool (PoolId pkh) = certTx $
   Certificate (DCertPoolRegister pkh pkh) Nothing
+
+-- | Insert pool id to the list of stake pools
+insertPool :: PoolId -> Run ()
+insertPool pid = modify' $ \st ->
+  st { bchStake = Stake.regPool pid $ bchStake st }
+
+-- | delete pool from the list of stake pools
+deletePool :: PoolId -> Run ()
+deletePool pid = modify' $ \st ->
+  st { bchStake = Stake.retirePool pid $ bchStake st }
 
 -- | Retire staking pool
 retirePool :: PoolId -> Tx
