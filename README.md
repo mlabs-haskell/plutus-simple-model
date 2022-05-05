@@ -4,7 +4,7 @@ Plutus simple model
 Unit test library for plutus with estimation of resource usage.
 
 Library defines simple mock model of Blockchain to unit test plutus contracts 
-and estimate usage of resources. What are benefits for this framework. It's:
+and estimate usage of resources. What are the benefits for this framework? It's:
 
 * easy to use
 * easy to think about
@@ -22,7 +22,7 @@ To add library to your project add it with niv:
 niv add mlabs-haskell/plutus-simple-model -r <library-commit-hash>
 ```
 
-And add it to caba.project:
+And add it to cabal.project:
 
 ```
 -- library for unit tests of plutus scripts                                                                                       
@@ -116,7 +116,7 @@ that users have expected values.
 To check for TX errors we use:
 
 ```haskell
-noErros :: Run Bool
+noErrors :: Run Bool
 ```
 
 Blockchain logs all failed transactions to te list `bchFails`. We check that this list is empty.
