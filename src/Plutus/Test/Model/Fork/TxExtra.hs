@@ -13,6 +13,7 @@ module Plutus.Test.Model.Fork.TxExtra (
   scriptToStaking,
 ) where
 
+import Data.Monoid
 import Prelude
 import Ledger qualified as P
 import Plutus.V1.Ledger.Api
@@ -40,14 +41,15 @@ toExtra = Tx mempty
 data Extra = Extra
   { extra'withdraws      :: [Withdraw]
   , extra'certificates   :: [Certificate]
+  , extra'descr          :: Last String
   }
   deriving (Show, Eq)
 
 instance Semigroup Extra where
-  (<>) (Extra a1 a2) (Extra b1 b2) = Extra (a1 <> b1) (a2 <> b2)
+  (<>) (Extra a1 a2 a3) (Extra b1 b2 b3) = Extra (a1 <> b1) (a2 <> b2) (a3 <> b3)
 
 instance Monoid Extra where
-  mempty = Extra [] []
+  mempty = Extra [] [] mempty
 
 data Certificate = Certificate
   { certificate'dcert  :: DCert
@@ -91,4 +93,3 @@ scriptToStaking :: StakeValidator -> StakingCredential
 scriptToStaking validator = StakingHash $ ScriptCredential vh
   where
     vh = P.validatorHash $ Validator $ getStakeValidator validator
-

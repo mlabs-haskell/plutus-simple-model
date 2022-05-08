@@ -1,3 +1,4 @@
+{-# LANGUAGE NamedFieldPuns #-}
 -- | Functions to create TXs and query blockchain model.
 module Plutus.Test.Model.Contract (
   -- * Modify blockchain
@@ -49,6 +50,7 @@ module Plutus.Test.Model.Contract (
   mintValue,
   addMintRedeemer,
   validateIn,
+  traceTxName,
   -- ** Staking valdiators primitives
   --
   -- | to use them convert vanila Plutus @Tx@ to @Tx@ with @toExtra@
@@ -81,7 +83,9 @@ module Plutus.Test.Model.Contract (
   mustFailWith,
   checkErrors,
   testNoErrors,
+  testNoErrorsTrace,
   testLimits,
+  logBchState,
 
   -- * balance checks
   BalanceDiff,
@@ -99,6 +103,7 @@ import Data.List qualified as L
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
 import Data.Maybe
+import Data.Monoid
 import Data.Set (Set)
 import Data.Set qualified as S
 
@@ -414,6 +419,9 @@ addMintRedeemer policy red = liftPlutusTx $ \tx ->
         { txRedeemers = M.insert (RedeemerPtr Mint ix) (Redeemer $ toBuiltinData red) $ txRedeemers tx
         }
 
+traceTxName :: String -> Tx -> Tx
+traceTxName name tx@Tx{ tx'extra  } = tx { tx'extra = tx'extra { extra'descr = Last $ Just name} }
+
 -- | Set validation time
 validateIn :: POSIXTimeRange -> Tx -> Run Tx
 validateIn times = updatePlutusTx $ \tx -> do
@@ -509,6 +517,22 @@ checkErrors = do
     if null failures
       then Nothing
       else Just (init . unlines $ fmap (ppFailure names) failures)
+
+-- | like 'testNoErrors' but prints out blockchain log
+testNoErrorsTrace :: Value -> BchConfig -> String -> Run a -> TestTree
+testNoErrorsTrace funds cfg msg act =
+    testCaseInfo msg $
+      maybe (pure ("\n\nBlockchain log :\n----------------\n" <> bchLog))
+        assertFailure errors
+  where
+    (errors, bch) = runBch (act >> checkErrors) initialBch
+    initialBch = (initBch cfg funds) {stateDump = ppBlockchain}
+    bchLog = ppLimitInfo $ getLog bch
+
+-- | logs blockchain state in the log
+logBchState :: Run ()
+logBchState =
+  modify' $ \s -> s { bchInfo = appendLog (bchCurrentSlot s) (ppBlockchain s) (bchInfo s) }
 
 testNoErrors :: Value -> BchConfig -> String -> Run a -> TestTree
 testNoErrors funds cfg msg act =

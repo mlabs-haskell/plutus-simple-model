@@ -390,6 +390,8 @@ data Blockchain = Blockchain
   , -- | human readable names. Idea is to substitute for them
     -- in pretty printers for error logs, user names, script names.
     bchNames :: !BchNames
+  , -- todo not the best place
+    stateDump :: Blockchain -> String
   }
 
 
@@ -560,6 +562,7 @@ initBch cfg initVal =
                   (M.singleton genesisAddress "Genesis role")
                   M.empty
                   M.empty
+    , stateDump = const mempty
     }
   where
     genesisUserId = pubKeyHash genesisPubKey
@@ -670,7 +673,7 @@ sendTx tx = do
   pure res
 
 {- | Send single TX to blockchain. It logs failure if TX is invalid
- and pproduces performance stats if TX was ok.
+ and produces performance stats if TX was ok.
 -}
 sendSingleTx :: Tx -> Run (Either FailReason Stat)
 sendSingleTx (Tx extra tx) =
@@ -843,20 +846,26 @@ waitNSlots n = modify' $ \s -> s {bchCurrentSlot = bchCurrentSlot s + n}
 
 -- | Applies valid TX to modify blockchain.
 applyTx :: Stat -> TxId -> Tx -> Run ()
-applyTx stat tid (Tx extra tx@P.Tx {..}) = do
+applyTx stat tid etx@(Tx extra P.Tx {..}) = do
   updateUtxos
   updateRewards
   updateCertificates
   updateFees
   saveTx
   saveDatums
+  saveState
   where
+
+    saveState = do
+      s <- get
+      logInfo $ stateDump s s
+
     saveDatums = modify' $ \s -> s {bchDatums = txData <> bchDatums s}
 
     saveTx = do
       t <- gets bchCurrentSlot
       statPercent <- getStatPercent
-      modify' $ \s -> s {bchTxs = appendLog t (TxStat (toExtra tx) t stat statPercent) $ bchTxs s}
+      modify' $ \s -> s {bchTxs = appendLog t (TxStat etx t stat statPercent) $ bchTxs s}
 
     getStatPercent = do
       maxLimits <- gets (bchConfigLimitStats . bchConfig)
@@ -1003,4 +1012,3 @@ filterSlot f (Log xs) = Log (Seq.filter (f . fst) xs)
 getLog :: Blockchain -> Log BchEvent
 getLog Blockchain{..} =
   mconcat [BchInfo <$> bchInfo, BchTx <$> bchTxs, BchFail <$> bchFails]
-

@@ -12,6 +12,8 @@ module Plutus.Test.Model.Pretty(
 import Prelude
 import Data.List qualified as L
 import Data.Map.Strict qualified as M
+import Data.Maybe
+import Data.Monoid
 import Data.Foldable (toList)
 import Text.Printf (printf)
 import Prettyprinter
@@ -22,6 +24,7 @@ import Plutus.V1.Ledger.Slot
 import Plutus.V1.Ledger.Value (assetClass, flattenValue, toString)
 
 import Plutus.Test.Model.Blockchain
+import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Stake (DCertError(..), WithdrawError(..))
 
 -- | Pretty-print for stats experessed in percents
@@ -39,7 +42,9 @@ ppLimitInfo bch =
 
     ppStatEvent = \case
       BchInfo msg -> pretty msg
-      BchTx tx    -> indent 2 $ ppStatWarn (txStatPercent tx)
+      BchTx tx    -> vcat [ pretty $ fromMaybe "unnamed" (getLast $ extra'descr $ tx'extra $ txStatTx tx) <> " tx stat:"
+                          , indent 2 $ ppStatWarn (txStatPercent tx)
+                          ]
       BchFail err ->
         case err of
           TxLimitError _ _ -> mempty
