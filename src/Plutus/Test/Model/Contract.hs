@@ -98,7 +98,6 @@ module Plutus.Test.Model.Contract (
 import Control.Monad.State.Strict
 import Prelude
 
-import Data.Bifunctor (second)
 import Data.List qualified as L
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
@@ -518,30 +517,29 @@ checkErrors = do
       then Nothing
       else Just (init . unlines $ fmap (ppFailure names) failures)
 
--- | like 'testNoErrors' but prints out blockchain log
+-- | like 'testNoErrors' but prints out blockchain log for both
+-- failing and successful tests. The recommended way to choose
+-- between those two is using @tasty@ 'askOption'. To pull in 
+-- parameters use an 'Ingredient' built with 'includingOptions'. 
 testNoErrorsTrace :: Value -> BchConfig -> String -> Run a -> TestTree
 testNoErrorsTrace funds cfg msg act =
     testCaseInfo msg $
-      maybe (pure ("\n\nBlockchain log :\n----------------\n" <> bchLog))
-        assertFailure errors
+      maybe (pure bchLog)
+        assertFailure $ errors >>= \errs -> pure $ errs <> bchLog
   where
-    (errors, bch) = runBch (act >> checkErrors) initialBch
-    initialBch = (initBch cfg funds) {stateDump = ppBlockchain}
-    bchLog = ppLimitInfo $ getLog bch
+    (errors, bch) = runBch (act >> checkErrors) initial
+    initial = (initBch cfg funds) {stateDump = ppBlockchain}
+    bchLog = "\n\nBlockchain log :\n----------------\n" <> (ppLimitInfo $ getLog bch)
 
--- | logs blockchain state in the log
+-- | logs the blockchain state in the log
 logBchState :: Run ()
 logBchState =
   modify' $ \s -> s { bchInfo = appendLog (bchCurrentSlot s) (ppBlockchain s) (bchInfo s) }
 
 testNoErrors :: Value -> BchConfig -> String -> Run a -> TestTree
 testNoErrors funds cfg msg act =
-    testCase msg $ maybe (pure ()) assertFailure $
-      errors >>= (\e -> pure $ e <> "\n\nLog trace:\n----------\n" <> bchLog)
-  where
-    (errors, bchLog) =
-      second (ppLimitInfo . getLog)
-             (runBch (act >> checkErrors) (initBch cfg funds))
+   testCase msg $ maybe (pure ()) assertFailure $
+    fst (runBch (act >> checkErrors) (initBch cfg funds))
 
 -- | check transaction limits
 testLimits :: Value -> BchConfig -> String -> (Log BchEvent -> Log BchEvent) -> Run a -> TestTree
