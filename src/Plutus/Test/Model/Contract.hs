@@ -50,7 +50,7 @@ module Plutus.Test.Model.Contract (
   mintValue,
   addMintRedeemer,
   validateIn,
-  traceTxName,
+
   -- ** Staking valdiators primitives
   --
   -- | to use them convert vanila Plutus @Tx@ to @Tx@ with @toExtra@
@@ -102,7 +102,6 @@ import Data.List qualified as L
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
 import Data.Maybe
-import Data.Monoid
 import Data.Set (Set)
 import Data.Set qualified as S
 
@@ -418,9 +417,6 @@ addMintRedeemer policy red = liftPlutusTx $ \tx ->
         { txRedeemers = M.insert (RedeemerPtr Mint ix) (Redeemer $ toBuiltinData red) $ txRedeemers tx
         }
 
-traceTxName :: String -> Tx -> Tx
-traceTxName name tx@Tx{ tx'extra  } = tx { tx'extra = tx'extra { extra'descr = Last $ Just name} }
-
 -- | Set validation time
 validateIn :: POSIXTimeRange -> Tx -> Run Tx
 validateIn times = updatePlutusTx $ \tx -> do
@@ -519,17 +515,16 @@ checkErrors = do
 
 -- | like 'testNoErrors' but prints out blockchain log for both
 -- failing and successful tests. The recommended way to choose
--- between those two is using @tasty@ 'askOption'. To pull in 
--- parameters use an 'Ingredient' built with 'includingOptions'. 
+-- between those two is using @tasty@ 'askOption'. To pull in
+-- parameters use an 'Ingredient' built with 'includingOptions'.
 testNoErrorsTrace :: Value -> BchConfig -> String -> Run a -> TestTree
 testNoErrorsTrace funds cfg msg act =
     testCaseInfo msg $
       maybe (pure bchLog)
         assertFailure $ errors >>= \errs -> pure $ errs <> bchLog
   where
-    (errors, bch) = runBch (act >> checkErrors) initial
-    initial = (initBch cfg funds) {stateDump = ppBlockchain}
-    bchLog = "\n\nBlockchain log :\n----------------\n" <> (ppLimitInfo $ getLog bch)
+    (errors, bch) = runBch (act >> checkErrors) $ initBch cfg funds
+    bchLog = "\n\nBlockchain log :\n----------------\n" <> (ppLimitInfo (bchNames bch) (getLog bch))
 
 -- | logs the blockchain state in the log
 logBchState :: Run ()
@@ -547,7 +542,7 @@ testLimits initFunds cfg msg tfmLog act =
   testCase msg $ assertBool limitLog isOk
   where
     (isOk, bch) = runBch (act >> noErrors) (initBch (warnLimits cfg) initFunds)
-    limitLog = ppLimitInfo $ tfmLog $ getLog bch
+    limitLog = ppLimitInfo (bchNames bch) $ tfmLog $ getLog bch
 
 ----------------------------------------------------------------------
 -- balance diff

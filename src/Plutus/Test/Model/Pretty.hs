@@ -12,13 +12,12 @@ module Plutus.Test.Model.Pretty(
 import Prelude
 import Data.List qualified as L
 import Data.Map.Strict qualified as M
-import Data.Maybe
-import Data.Monoid
 import Data.Foldable (toList)
 import Text.Printf (printf)
 import Prettyprinter
 
 import Cardano.Api.Shelley (Error (..))
+import Ledger (txId)
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Slot
 import Plutus.V1.Ledger.Value (assetClass, flattenValue, toString)
@@ -34,21 +33,25 @@ ppStatPercent = show . pretty
 ppPercent :: Percent -> String
 ppPercent (Percent x) = printf "%.2f" x <> "%"
 
-ppLimitInfo :: Log BchEvent -> String
-ppLimitInfo bch =
+ppLimitInfo :: BchNames -> Log BchEvent -> String
+ppLimitInfo names bch =
   show $ vcat $ fmap ppGroup $ fromGroupLog bch
   where
     ppGroup (slot, events) = vcat [ pretty slot <> colon, indent 2 (vcat $ fmap ppStatEvent events)]
 
     ppStatEvent = \case
       BchInfo msg -> pretty msg
-      BchTx tx    -> vcat [ pretty $ fromMaybe "unnamed" (getLast $ extra'descr $ tx'extra $ txStatTx tx) <> " tx stat:"
+      BchTx tx    -> vcat [ ppTx $ Ledger.txId $ tx'plutus $ txStatTx tx
                           , indent 2 $ ppStatWarn (txStatPercent tx)
                           ]
       BchFail err ->
         case err of
           TxLimitError _ _ -> mempty
           other            -> pretty other
+
+    ppTx ident = "Tx name/id:" <+> case readTxName names ident of
+      Just name -> pretty name
+      Nothing -> pretty ident
 
     ppStatWarn stat
       | isLimitError stat = vcat ["error: out of limits", indent 2 (pretty stat)]
@@ -157,7 +160,7 @@ instance Pretty FailReason where
     NotEnoughFunds pkh val -> vcat
       [ "User with PubKeyHash" <+> pretty (getPubKeyHash pkh)
         <+> "doesn't have enough funds to pay:"
-      , indent 5 (ppBalanceWith (BchNames M.empty M.empty M.empty M.empty) val)
+      , indent 5 (ppBalanceWith (BchNames M.empty M.empty M.empty M.empty M.empty) val)
       ]
     IntervalError err -> "Time or vlaid range related error:" <+> pretty (displayError err)
     NotBalancedTx -> "Not balanced transaction"

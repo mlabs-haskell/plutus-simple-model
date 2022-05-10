@@ -37,10 +37,12 @@ module Plutus.Test.Model.Blockchain (
   writeAddressName,
   writeAssetClassName,
   writeCurrencySymbolName,
+  writeTxName,
   readUserName,
   readAddressName,
   readAssetClassName,
   readCurrencySymbolName,
+  readTxName,
   Run (..),
   runBch,
   initBch,
@@ -158,7 +160,7 @@ import PlutusTx.Prelude qualified as Plutus
 import Basement.Compat.Natural
 import qualified Plutus.V1.Ledger.Ada            as Ada
 import Ledger.Typed.Scripts (TypedValidator, validatorAddress, ValidatorTypes(..))
-import Ledger (PaymentPubKeyHash(..))
+import Ledger (PaymentPubKeyHash(..), txId)
 
 import Ouroboros.Consensus.Block.Abstract (EpochNo (..), EpochSize (..))
 import Ouroboros.Consensus.HardFork.History.EraParams
@@ -390,10 +392,7 @@ data Blockchain = Blockchain
   , -- | human readable names. Idea is to substitute for them
     -- in pretty printers for error logs, user names, script names.
     bchNames :: !BchNames
-  , -- todo not the best place
-    stateDump :: Blockchain -> String
   }
-
 
 newtype Log a = Log { unLog :: Seq (Slot, a) }
   deriving (Functor)
@@ -485,6 +484,7 @@ data BchNames = BchNames
   , bchNameAddresses :: !(Map Address String)
   , bchNameAssetClasses :: !(Map AssetClass String)
   , bchNameCurrencySymbols :: !(Map CurrencySymbol String)
+  , bchNameTxns :: !(Map TxId String)
   }
 
 -- | Modifies the mappings to human-readable names
@@ -513,6 +513,11 @@ writeCurrencySymbolName :: CurrencySymbol -> String -> Run ()
 writeCurrencySymbolName cs name = modifyBchNames $ \ns ->
   ns {bchNameCurrencySymbols = M.insert cs name (bchNameCurrencySymbols ns)}
 
+-- | Assigns human-readable name to a transaction
+writeTxName :: Tx -> String -> Run ()
+writeTxName (txId . tx'plutus -> ident) name = modifyBchNames $ \ns ->
+  ns {bchNameTxns = M.insert ident name (bchNameTxns ns)}
+
 -- | Gets human-readable name of user
 readUserName :: BchNames -> PubKeyHash -> Maybe String
 readUserName names pkh = M.lookup pkh (bchNameUsers names)
@@ -528,6 +533,10 @@ readAssetClassName names ac = M.lookup ac (bchNameAssetClasses names)
 -- | Gets human-readable name of user
 readCurrencySymbolName :: BchNames -> CurrencySymbol -> Maybe String
 readCurrencySymbolName names cs = M.lookup cs (bchNameCurrencySymbols names)
+
+-- | Gets human-readable name of transaction
+readTxName :: BchNames -> TxId -> Maybe String
+readTxName names cs = M.lookup cs (bchNameTxns names)
 
 --------------------------------------------------------
 -- API
@@ -562,7 +571,7 @@ initBch cfg initVal =
                   (M.singleton genesisAddress "Genesis role")
                   M.empty
                   M.empty
-    , stateDump = const mempty
+                  M.empty
     }
   where
     genesisUserId = pubKeyHash genesisPubKey
@@ -853,12 +862,12 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
   updateFees
   saveTx
   saveDatums
-  saveState
+--  saveState
   where
 
-    saveState = do
-      s <- get
-      logInfo $ stateDump s s
+--    saveState = do
+--      s <- get
+--      logInfo $ stateDump s s
 
     saveDatums = modify' $ \s -> s {bchDatums = txData <> bchDatums s}
 

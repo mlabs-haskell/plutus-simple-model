@@ -41,15 +41,14 @@ toExtra = Tx mempty
 data Extra = Extra
   { extra'withdraws      :: [Withdraw]
   , extra'certificates   :: [Certificate]
-  , extra'descr          :: Last String
   }
   deriving (Show, Eq)
 
 instance Semigroup Extra where
-  (<>) (Extra a1 a2 a3) (Extra b1 b2 b3) = Extra (a1 <> b1) (a2 <> b2) (a3 <> b3)
+  (<>) (Extra a1 a2) (Extra b1 b2) = Extra (a1 <> b1) (a2 <> b2)
 
 instance Monoid Extra where
-  mempty = Extra [] [] mempty
+  mempty = Extra [] []
 
 data Certificate = Certificate
   { certificate'dcert  :: DCert
