@@ -862,13 +862,7 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
   updateFees
   saveTx
   saveDatums
---  saveState
   where
-
---    saveState = do
---      s <- get
---      logInfo $ stateDump s s
-
     saveDatums = modify' $ \s -> s {bchDatums = txData <> bchDatums s}
 
     saveTx = do
