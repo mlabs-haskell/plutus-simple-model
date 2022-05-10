@@ -1,9 +1,9 @@
 Plutus simple model
 ====================================================
 
-Unit test library for plutus with estimation of resource usage.
+Unit test library for Plutus with estimation of resource usage.
 
-Library defines simple mock model of Blockchain to unit test plutus contracts 
+Library defines simple mock model of Blockchain to unit test Plutus contracts 
 and estimate usage of resources. What are benefits for this framework. It's:
 
 * easy to use
@@ -11,7 +11,7 @@ and estimate usage of resources. What are benefits for this framework. It's:
 * fast
 * can estimate usage of resources with real functions used on Cardano node.
 * pure
-* good for unit testing of onchain code
+* good for unit testing of on-chain code
 
 
 ### Install
@@ -19,16 +19,16 @@ and estimate usage of resources. What are benefits for this framework. It's:
 To add library to your project add it with niv:
 
 ```
-niv add mlabs-haskell/plutus-simple-model -r <library-commit-hash>
+niv add mlabs-haskell/Plutus-simple-model -r <library-commit-hash>
 ```
 
-And add it to caba.project:
+And add it to `cabal.project`:
 
 ```
--- library for unit tests of plutus scripts                                                                                       
+-- library for unit tests of Plutus scripts                                                                                       
 source-repository-package
    type: git                                                                                                                         
-   location: https://github.com/mlabs-haskell/plutus-simple-model
+   location: https://github.com/mlabs-haskell/Plutus-simple-model
    tag: <same-library-commit-hash-as-for-niv>                                                                              
 ```
 
@@ -147,7 +147,7 @@ To post TXs to blockchain we have function:
 sendTx :: Tx -> Run (Either FailReason Stats)
 ```
 
-It takes extended plutus Tx and tries to submit it. If it fails it returns he reason of failure.
+It takes extended Plutus Tx and tries to submit it. If it fails it returns the reason of failure.
 If it succeeds it returns statistics of TX execution. It includes TX size if stored on Cardano
 and execution units (execution steps and memory usage). Execution statistics is important to
 know that our transaction is suitable for Cardano network. Cardano has certain limits that we should enforce
@@ -155,10 +155,10 @@ on our TXs.
 
 Note that `Tx` is not a Plutus TX type. It contains Plutus `Tx` and extra info that we may need
 to specify withdrawals of rewards and staking credentials. We need to use the custom type
-because staking/crednetials is not supported by Plutus TX out of the box. 
+because staking/credentials is not supported by Plutus TX out of the box. 
 
 Note that comparing to EmulatorTrace we don't need to use waitNSlots to force TX submission.
-It's submited right away and slot counter is updated. If we want to submit block of TXs we
+It's submitted right away and slot counter is updated. If we want to submit block of TXs we
 can use the function:
 
 ```haskell
@@ -166,7 +166,7 @@ sendBlock :: [Tx] -> Run (Either FailReason [Stats])
 ```
 
 The function `sendTx` just submits a block with single TX in it. It's ok for most of the cases but
-if we need to test acceptence of several TXs in the block we can use `sendBlock`.
+if we need to test acceptance of several TXs in the block we can use `sendBlock`.
 
 There is a common pattern for testing to form single TX, sign it with a key and send to network. 
 If we don't need to look at the stats we can use function. If it fails it logs the error.
@@ -216,14 +216,14 @@ spend :: PubKeyHash -> Value -> Run UserSpend
 ```
 
 For a given user and value it returns a value of `UserSpend` which holds
-a set of input UTXOs that cover the value that we want spend and also it has change to spend back to user.
+a set of input UTXOs that cover the value that we want to spend, and also it has change to spend back to user.
 In the UTXO model we can not split the input if it's bigger than we need. We have to destroy it
 and create one UTXO that is given to someone else and another one that is spent back to user.
 We can think about the latter UTXO as a change.
 
 Note that it is going to produce run-time exception if there are not enough funds to spend.
 To avoid run-time errors there is safer variant called `spend'`.
-Also we can use safer alternative `withSpend`. It logs an error
+Also, we can use safer alternative `withSpend`. It logs an error
 if user has no funds to spend and continues execution which can
 be helpful in some test cases:
 
@@ -231,7 +231,7 @@ be helpful in some test cases:
 withSpend :: PubKeyHash -> Value -> (UserSpend -> Run ()) -> Run ()
 ```
 
-When we know what inputs to spend we need to make a TX. We do it with function `initGameTx`. We will dicuss it soon.
+When we know what inputs to spend we need to make a TX. We do it with function `initGameTx`. We will discuss it soon.
 After that we should sign TX with the key of the sender. We use function `signTx` for that.
 As the last step we post TX and hope that it will execute fine (`sendTx`).
 
@@ -246,7 +246,7 @@ initGameTx usp val answer =
     ]
 ```
 
-We create transaction by accumulation of monoidal parts. As plutus Tx is monoid it's convenient
+We create transaction by accumulation of monoidal parts. As Plutus Tx is monoid it's convenient
 to assemble it from tiny parts. For our task there are just two parts:
 
 * for inputs and outputs for user spend
@@ -284,7 +284,7 @@ guess pkh answer = do
 ```
 
 This function is a bit bigger because now we want to spend not only our funds but also the fund of the script.
-For that we look up the script UTXO (`utxoAt`) and look up it's datum (`datumAt`) and when it all succeeds
+For that we look up the script UTXO (`utxoAt`) and look up its datum (`datumAt`) and when it all succeeds
 we can form the right TX, sign it with our key and post it to blockchain.
 
 Functions that query blockchain are often defined on addresses or `TxOutRef`'s:
@@ -329,7 +329,7 @@ payToPubKey :: PubKeyHash -> Value -> Tx
 ### How to work with time
 
 Note that every time we submit block successfully one slot passes.
-By default one slot lasts for 1 second. Sometimes we want to check for TX that should
+By default, one slot lasts for 1 second. Sometimes we want to check for TX that should
 happen in the future or after some time passes.
 
 For that we can use functions to make blockchain move forward:
@@ -348,7 +348,7 @@ currentSlot :: Run Slot
 currentTime :: Run POSIXTime
 ```
 
-By default we always start at the beginning of UNIX epoch. Start of blockchain is set to 0 posix millis.
+By default, we always start at the beginning of UNIX epoch. Start of blockchain is set to 0 posix millis.
 Closely related is function `validateIn`. It sets the valid range for TX:
 
 ```haskell
@@ -360,8 +360,8 @@ The result is wrapped in the Run-monad because we convert
 
 Note that if current time of blockchain is not included in the Tx it will be rejected.
 So we can not submit TX that is going to be valid in the future. We rely on property
-thhat all TXs are validated right away. It means  that current time should be included in valid range for TX.
-By default it's `always`, it means "any time" and should work. 
+that all TXs are validated right away. It means  that current time should be included in valid range for TX.
+By default, it's `always`, it means "any time" and should work. 
 
 Also note that because Plutus uses `POSIXTime` while the Cardano network uses Slots, the inherent
 difference in precision between Slot and `POSIXTime` may cause unexpected validation failures.
@@ -371,7 +371,7 @@ will have been extended to cover the whole slot range, becoming `(1000,4000)` an
 the allowed limits set by the validator.
 
 POSIXTime is counted in milliseconds.
-To count in human readable format we have convinient functions: `days`, `hours`, `minutes`, `seconds`:
+To count in human-readable format we have convenient functions: `days`, `hours`, `minutes`, `seconds`:
 
 ```haskell
 wait $ hours 4
@@ -420,7 +420,7 @@ So to send 5 test coins from one user to another add some ada to it:
 sendValue user1 (adaValue 1 <> testValue 5) user2
 ```
 
-### Log custom erros
+### Log custom errors
 
 We can log our own errors with
 
@@ -431,7 +431,7 @@ logError :: String -> Run ()
 Errors are saved to log of errors. This way we can report our own errors based on conditions.
 If values are wrong or certain NFT was not created etc.
 
-Also we can log information with:
+Also, we can log information with:
 
 ```haskell
 logInfo :: String -> Run ()
@@ -455,7 +455,7 @@ data BchEvent
 
 #### How to skip messages from the logs
 
-All TXs are logged, sometimes we do auxilliary TX that are irrelevant for testing
+All TXs are logged, sometimes we do auxiliary TX that are irrelevant for testing,
 and we want to skip the logging of them. For this case we can use function
 
 ```haskell
@@ -465,9 +465,15 @@ noLog :: Run a -> Run a
 It executes an action and during execution it omits all logging of TXs and info level messages.
 But errors are logged. If we want more fine-grain control we can use `noLogTx` and `noLogInfo`.
 
+#### Logging blockchain state
+
+The ability to observe what's going on in the blockchain is a great way to understand things.
+To log balances use `logBchState` action, which saves current state as a log entry. To show
+log use `testNoErrorsTrace` helper (see below).
+
 ### How to check balances
 
-There are useful functions to check not absolute balances but blaance transitions.
+There are useful functions to check not absolute balances but balance transitions.
 We have type `BalanceDiff` and we can construct it with function:
 
 ```haskell
@@ -492,14 +498,14 @@ checkBalance :: BalanceDiff -> Run a -> Run a
 It queries balances before application of an action and after application of the action and
 reports any errors. If balances does not match to expected difference.
 
-For example we can check that sendValue indeed transfers value from one user to another:
+For example, we can check that sendValue indeed transfers value from one user to another:
 
 ```haskell
 checkBalance (gives u1 val u2) $ sendValue u1 val u2
 ```
 
 If we want to check that user or script preserved the value we can set it up with `(owns user mempty)`.
-Because TypedValidator has instance of the HasAddress we can also check payments to/from scripts:
+Because TypedValidator has instanced of the HasAddress we can also check payments to/from scripts:
 
 ```haskell
 checkBalance (gives pkh prize gameScript) $ do { ... }
@@ -518,21 +524,28 @@ testNoErrors totalBchFunds bchConfig testMessage script = ...
 
 It checks that given script runs without errors. Note that if we want to use custom
 checks on run-time values we can query checks inside the script and log errors with `logError`.
-By default it also checks for resource usage constraints.
+By default, it also checks for resource usage constraints.
+
+A more verbatim alternative is `testNoErrorsTrace` which is the same, but prints out 
+the blockchain log on both failures and successes. The output might be rather excessive,
+so use it judiciously. Probably it's worth using one of these functions depending on the
+runtime "dump log" parameter value (if you use `tasty` you might want to use an `Ingredient`
+to implement this).
+
 If we want to check only logic but not resource usage we can use:
 
 ```haskell
 skipLimits :: BchConfig -> BchConfig
 ```
 
-Also there is function `warnLimits` that logs errors of resources usage
+Also, there is function `warnLimits` that logs errors of resources usage
 but does not fail TX for submission. So if logic is correct script will run but
 errors of resources will be logged to error log.
 
 ### How to write negative tests
 
 Often we need to check for errors also. We have to be sure that some 
-TX fails. Maybe this TX is malicious one and we have to be sure that it can not pass.
+TX fails. Maybe this TX is malicious one, and we have to be sure that it can not pass.
 For that we have useful function:
 
 ```haskell
@@ -542,11 +555,11 @@ mustFail action = ...
 
 It saves the current state of blockchain and 
 tries to run the `action` and if the action succeeds it logs an error
-but if action fails it does not log error and retrives the stored previous
+but if action fails it does not log error and retrieves the stored previous
 blockchain state. 
 
-This way we can ensure that some scenario fails and we can proceed
-the execution of blockhain actions.
+This way we can ensure that some scenario fails, and we can proceed
+the execution of blockchain actions.
 
 ### How to fail with custom conditions
 
@@ -558,7 +571,7 @@ unless checkCondition $ logError "Some invariant violated"
 
 ### How to check TX resource usage
 
-Sometimes we write too mcuh code in the validators and it starts to exceed execution limits.
+Sometimes we write too much code in the validators, and it starts to exceed execution limits.
 TXs like this can not be executed on chain. To watch out for that we have special function:
 
 ```haskell
@@ -573,11 +586,11 @@ testLimits totalBchFunds bchConfig testMessage logFilter script
 ```
 
 Let's break apart what it does. It runs blockchain with limit check config set to `WarnLimits`.
-This way we proceed to execute TX onblockchain even if TX exceeds the limits but we save the
-error on exceedance of the limits. When script was run if resource usage errors are encountered
+This way we proceed to execute TX on blockchain even if TX exceeds the limits, but we save the
+error once limits exceed. When script was run if resource usage errors are encountered
 they are logged to the user in easy to read way.
 
-To see the logs even on sucessful run we can add fake error:
+To see the logs even on successful run we can add fake error:
 
 ```haskell
 (script >> logError "Show stats")
@@ -589,7 +602,7 @@ and keep it not close to 100% because number of inputs in TX is unpredictable.
 we can aggregate input values for the scripts from many UTXOs. So we'd better have 
 the free room available for extra UTXOs.
 
-Filter of the log can be usefl to filter out some non-related events. for example setup of the blockchain
+Filter of the log can be useful to filter out some non-related events. for example setup of the blockchain
 users. We typically cn use it like this:
 
 ```haskell
@@ -646,7 +659,7 @@ data TxBox a = TxBox
 txBoxValue :: TxBox a -> Value
 ```
 
-It has everything that TxOut has but also we have our typed datum.
+It has everything that TxOut has, but also we have our typed datum.
 There are functions that provide typical script usage. 
 
 We can just spend boxes as scripts:
@@ -675,7 +688,7 @@ modifyBox tv box redeemer updateDatum updateValue
 ```
 
 It specifies how we update the box datum and value. 
-Also often we use boxes as oracles:
+Also, often we use boxes as oracles:
 
 ```haskell
 readOnlyBox :: (ToData (DatumType a), ToData (RedeemerType a))
@@ -687,15 +700,15 @@ readOnlyBox :: (ToData (DatumType a), ToData (RedeemerType a))
 
 It keeps the datum and value the same.
 
-### How to pay to addresses with staking credentials
+### How to pay to the addresses with staking credentials
 
 We can append the information on staking credential to
 anything that is convertible to `Address` by `HasAddress` type class
-with constructor `AppendStaking`. Also we have utility functions
+with constructor `AppendStaking`. Also, we have utility functions
 `appendStakingPubKey` and `appendStakingScript` which
 append `PubKeyHash` and `ValidatorHash` as staking credential.
 
-For example we can append it to the `TypeValidator` of the script:
+For example, we can append it to the `TypeValidator` of the script:
 
 ```haskell
 payToScriptAddress (appendStakingPubKey stakingKey typedValidator) datum value
@@ -718,12 +731,12 @@ payToPubKeyAddress :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
 ### Certificates and withdrawals of the rewards
 
 In cardano staking pools are driving force behind confirmation of transactions.
-For the work pool owners receive fees. The fees gets distributed among 
+For the work pool owners receive fees. The fees get distributed among 
 staking credentials that delegate to pool. 
 
 So we have staking pool operator (SPO) who is chosen for this round to
 confirm TX. And for this work SPO gets the fees. Fees are collected 
-to addresses that are called staking credentials. Users can delegate staking credential
+to the addresses that are called staking credentials. Users can delegate staking credential
 to the pool owner (SPO). 
 
 So far we have ignored the fees, but in real scenario every transaction should contain fees.
@@ -744,7 +757,7 @@ that delegate to that pool.
 For this testing framework we go over a list of pools one by one and on each TX-confirmation
 we choose the next pool. All staking credentials delegated to the pool receive equal amount of fees.
 When blockchain initialised we have a single pool id and stake credential that 
-belongs to the admin (user who owns all funds on genensis TX). 
+belongs to the admin (user who owns all funds on genesis TX). 
 
 So to test some Stake validator we need to register it in the blockchain
 and delegate it to admin's pool. We can get the pool of the admin by calling `(head <$> getPools)`.
@@ -758,7 +771,7 @@ It implements a basic stake validator and checks that it works (see the director
 
 #### Certificates
 
-To work with pools and staking credentials we use certificates (`DCert` in plutus).
+To work with pools and staking credentials we use certificates (`DCert` in Plutus).
 We have functions that trigger actions with pools and staking credentials:
 
 First we need to register staking credential by pub key hash (rewards belong to certain key)
@@ -869,7 +882,7 @@ toStakingCredential :: HasStakingCredential a => a -> StakingCredential
 #### Withdrawals of the rewards
 
 When staking credential has some rewards we can withdraw it and send
-to some address. To do it we need to spend all rewards so we need to 
+to some address. To do it we need to spend all rewards, so we need to 
 provide exact amount that is stored in the rewards of the staking credential
 at the time of TX confirmation. 
 
@@ -892,5 +905,3 @@ and also by validator.
 
 To test withdraws we need to have rewards. We can easily generate rewards by 
 making transactions that contain fees granted with `payFee` function.
-
-
