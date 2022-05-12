@@ -3,6 +3,7 @@
 module Plutus.Test.Model.Pretty(
   ppPercent,
   ppStatPercent,
+  ppBchEvent,
   ppLimitInfo,
   ppBlockchain,
   ppFailure,
@@ -13,7 +14,7 @@ module Plutus.Test.Model.Pretty(
 import Prelude
 import Data.List qualified as L
 import Data.Map.Strict qualified as M
-import Data.Foldable (toList)
+--import Data.Foldable (toList)
 import Text.Printf (printf)
 import Prettyprinter
 
@@ -34,21 +35,29 @@ ppStatPercent = show . pretty
 ppPercent :: Percent -> String
 ppPercent (Percent x) = printf "%.2f" x <> "%"
 
+ppBchEvent :: BchNames -> Log BchEvent -> String
+ppBchEvent _names = show . vcat . fmap ppSlot . fromGroupLog
+  where
+    ppSlot (slot, events) = hardline <> vcat [pretty slot <> colon, indent 2 (vcat $ pretty <$> events)]
+
 ppLimitInfo :: BchNames -> Log BchEvent -> String
 ppLimitInfo names bch =
   show $ vcat $ fmap ppGroup $ fromGroupLog bch
   where
-    ppGroup (slot, events) = vcat [ pretty slot <> colon, indent 2 (vcat $ fmap ppStatEvent events)]
+    ppGroup (slot, events) = vcat [pretty slot <> colon, indent 2 (vcat $ fmap ppStatEvent events)]
 
     ppStatEvent = \case
-      BchInfo msg -> pretty msg
       BchTx tx    -> vcat [ ppTx $ Ledger.txId $ tx'plutus $ txStatTx tx
                           , indent 2 $ ppStatWarn (txStatPercent tx)
                           ]
-      BchFail err ->
-        case err of
-          TxLimitError _ _ -> mempty
-          other            -> pretty other
+      _ -> mempty
+-- FIXME: do we really want to pollute limit info with error/info entries?
+--      BchInfo msg -> pretty msg
+--      BchFail err -> mempty
+--        case err of
+--          TxLimitError _ _ -> mempty
+--          other            -> pretty other
+--      BchMustFailLog _ -> mempty
 
     ppTx ident = "Tx name/id:" <+> case readTxName names ident of
       Just name -> pretty name
@@ -125,12 +134,12 @@ instance Pretty Blockchain where
     , indent 2 . vcat $
         prettyBalances pubKeyAddrs <>
         prettyBalances scriptAddrs
-    , "Current slot:" <+> pretty (getSlot $ bchCurrentSlot bch)
-    , case toList . unLog $ bchFails bch of
-       [] -> mempty
-       xs -> vcat [ "Failures:"
-                  , indent 2 . vcat . map (ppFailureWith names) $ xs
-                  ]
+--    , "Current slot:" <+> pretty (getSlot $ bchCurrentSlot bch)
+--    , case toList . unLog $ bchFails bch of
+--       [] -> mempty
+--       xs -> vcat [ "Failures:"
+--                  , indent 2 . vcat . map (ppFailureWith names) $ xs
+--                  ]
     ]
    where
     names = bchNames bch
@@ -197,9 +206,11 @@ instance Pretty DCertError where
 
 instance Pretty BchEvent where
   pretty = \case
-    BchInfo msg     -> "[info]  " <+> pretty msg
-    BchTx _         -> "[tx]    " <+> "TODO print tx"
-    BchFail fReason -> "[error] " <+> pretty fReason
+    BchInfo msg                              -> "[info] " <+> align (pretty msg)
+    -- TODO plug in prettifier for Tx here once it's ready
+    BchTx _                                  -> "[tx]   " <+> "TODO print tx"
+    BchFail fReason                          -> "[error]" <+> align (pretty fReason)
+    BchMustFailLog (MustFailLog msg fReason) -> "[fail] " <+> align (vcat [pretty msg, pretty fReason])
 
 instance Pretty WithdrawError where
   pretty = \case
@@ -211,5 +222,9 @@ instance Pretty WithdrawError where
     StakeNotRegistered cred ->
       hsep [ "Stake credential", pretty cred, "is not registered for rewards"]
 
+instance Pretty Tx where
+  pretty = viaShow
+
+-- TODO implement with respect to 'Pretty' law
 instance Pretty Tx where
   pretty = viaShow

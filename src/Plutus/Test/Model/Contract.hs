@@ -80,6 +80,7 @@ module Plutus.Test.Model.Contract (
   -- * testing helpers
   mustFail,
   mustFailWith,
+  mustFailWithName,
   checkErrors,
   testNoErrors,
   testNoErrorsTrace,
@@ -97,12 +98,14 @@ module Plutus.Test.Model.Contract (
 import Control.Monad.State.Strict
 import Prelude
 
+import Data.Bifunctor (second)
 import Data.List qualified as L
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
 import Data.Maybe
 import Data.Set (Set)
 import Data.Set qualified as S
+import Data.Sequence qualified as Seq (drop, length)
 
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
@@ -122,7 +125,7 @@ import PlutusTx.Prelude qualified as Plutus
 import Plutus.Test.Model.Blockchain
 import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Pretty
-import Prettyprinter (Doc, vcat, hcat, indent, (<+>), pretty)
+import Prettyprinter (Doc, vcat, indent, (<+>), pretty)
 import Plutus.Test.Model.Stake qualified as Stake
 
 ------------------------------------------------------------------------
@@ -482,24 +485,35 @@ weeks n = days (7 * n)
 ----------------------------------------------------------------------
 -- testing helpers
 
--- | Try to execute action and if it fails restore to the current state.
--- If it succeeds log error as we exepect it to fail.
+-- | Try to execute an action, and if it fails, restore to the current state
+-- while preserving logs. If the action succeeds, logs an error as we expect
+-- it to fail. Use 'mustFailWith' and 'mustFailWithBlock' to provide custom
+-- error message or/and failure action name.
 mustFail :: Run a -> Run ()
-mustFail = mustFailWith "Expected action to fail but it succeeds"
+mustFail = mustFailWith  "Expected action to fail but it succeeds"
 
--- | Try to execute action and if it fails restore to the current state.
--- If it succeeds log error as we exepect it to fail.
+-- | The same as 'mustFail', but takes custom error message.
 mustFailWith :: String -> Run a -> Run ()
-mustFailWith msg act = do
+mustFailWith = mustFailWithName "Unnamed failure action"
+
+-- | The same as 'mustFail', but takes action name and custom error message.
+mustFailWithName :: String -> String -> Run a -> Run ()
+mustFailWithName name msg act = do
   st <- get
-  preFails <- fromLog <$> getFails
+  preFails <- getFails
   void act
-  postFails <- fromLog <$> getFails
+  postFails <- getFails
   if noNewErrors preFails postFails
     then logError msg
-    else put st
+    else do
+      infoLog <- gets bchInfo
+      put st  { bchInfo = infoLog
+             , mustFailLog = mkMustFailLog preFails postFails
+             }
   where
-    noNewErrors a b = length a == length b
+    noNewErrors (fromLog -> a) (fromLog -> b) = length a == length b
+    mkMustFailLog (unLog -> pre) (unLog -> post) =
+      Log $ (second $ MustFailLog name) <$> Seq.drop (Seq.length pre) post
 
 -- | Checks that script runs without errors and returns pretty printed failure
 -- if something bad happens.
@@ -523,7 +537,7 @@ testNoErrorsTrace funds cfg msg act =
         assertFailure $ errors >>= \errs -> pure $ errs <> bchLog
   where
     (errors, bch) = runBch (act >> checkErrors) $ initBch cfg funds
-    bchLog = "\n\nBlockchain log :\n----------------\n" <> ppLimitInfo (bchNames bch) (getLog bch)
+    bchLog = "\n\nBlockchain log :\n----------------\n" <> ppBchEvent (bchNames bch) (getLog bch)
 
 -- | logs the blockchain state in the log
 logBchState :: Run ()
@@ -569,7 +583,7 @@ checkBalance (BalanceDiff diffs) act = do
       names <- gets bchNames
       let addrName = maybe (pretty addr) pretty $ readAddressName names addr
       pure $ vcat
-          [ hcat ["Balance error for", addrName, ":"]
+          [ "Balance error for:" <+> addrName
           , indent 2 $ vcat
               [ "Expected:" <+> ppBalanceWith names expected
               , "Got:" <+> ppBalanceWith names got
