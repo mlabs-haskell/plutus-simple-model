@@ -7,7 +7,6 @@ module Plutus.Test.Model.Pretty(
   ppBlockchain,
   ppFailure,
   ppBalanceWith,
-  ppTransaction,
 ) where
 
 import Prelude
@@ -105,9 +104,6 @@ ppBalanceWith names val = vcat $ fmap
     ) <> colon <+> pretty amt
     )
     (flattenValue val)
-
-ppTransaction :: Tx -> String
-ppTransaction = show . pretty
 
 instance Pretty StatPercent where
   pretty (StatPercent size units) = vcat
@@ -210,6 +206,3 @@ instance Pretty WithdrawError where
     WithdrawNotSigned pkh -> hsep ["Reward withdraw by pub key not signed by", pretty pkh]
     StakeNotRegistered cred ->
       hsep [ "Stake credential", pretty cred, "is not registered for rewards"]
-
-instance Pretty Tx where
-  pretty = viaShow
