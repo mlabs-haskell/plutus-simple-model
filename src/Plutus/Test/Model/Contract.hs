@@ -84,7 +84,7 @@ module Plutus.Test.Model.Contract (
   testNoErrors,
   testNoErrorsTrace,
   testLimits,
-  logBchState,
+  logBalanceSheet,
 
   -- * balance checks
   BalanceDiff,
@@ -122,7 +122,7 @@ import PlutusTx.Prelude qualified as Plutus
 import Plutus.Test.Model.Blockchain
 import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Pretty
-import Prettyprinter (Doc, vcat, hcat, indent, (<+>), pretty)
+import Prettyprinter (Doc, vcat, indent, (<+>), pretty)
 import Plutus.Test.Model.Stake qualified as Stake
 
 ------------------------------------------------------------------------
@@ -523,12 +523,12 @@ testNoErrorsTrace funds cfg msg act =
         assertFailure $ errors >>= \errs -> pure $ errs <> bchLog
   where
     (errors, bch) = runBch (act >> checkErrors) $ initBch cfg funds
-    bchLog = "\n\nBlockchain log :\n----------------\n" <> ppLimitInfo (bchNames bch) (getLog bch)
+    bchLog = "\n\nBlockchain log :\n----------------\n" <> ppBchEvent (bchNames bch) (getLog bch)
 
--- | logs the blockchain state in the log
-logBchState :: Run ()
-logBchState =
-  modify' $ \s -> s { bchInfo = appendLog (bchCurrentSlot s) (ppBlockchain s) (bchInfo s) }
+-- | Logs the blockchain state, i.e. balance sheet in the log
+logBalanceSheet :: Run ()
+logBalanceSheet =
+  modify' $ \s -> s { bchInfo = appendLog (bchCurrentSlot s) (ppBalanceSheet s) (bchInfo s) }
 
 testNoErrors :: Value -> BchConfig -> String -> Run a -> TestTree
 testNoErrors funds cfg msg act =
@@ -569,7 +569,7 @@ checkBalance (BalanceDiff diffs) act = do
       names <- gets bchNames
       let addrName = maybe (pretty addr) pretty $ readAddressName names addr
       pure $ vcat
-          [ hcat ["Balance error for", addrName, ":"]
+          [ "Balance error for:" <+> addrName
           , indent 2 $ vcat
               [ "Expected:" <+> ppBalanceWith names expected
               , "Got:" <+> ppBalanceWith names got
