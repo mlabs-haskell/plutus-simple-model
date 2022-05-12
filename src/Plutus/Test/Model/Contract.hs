@@ -1,4 +1,3 @@
-{-# LANGUAGE NamedFieldPuns #-}
 -- | Functions to create TXs and query blockchain model.
 module Plutus.Test.Model.Contract (
   -- * Modify blockchain
@@ -524,7 +523,7 @@ testNoErrorsTrace funds cfg msg act =
         assertFailure $ errors >>= \errs -> pure $ errs <> bchLog
   where
     (errors, bch) = runBch (act >> checkErrors) $ initBch cfg funds
-    bchLog = "\n\nBlockchain log :\n----------------\n" <> (ppLimitInfo (bchNames bch) (getLog bch))
+    bchLog = "\n\nBlockchain log :\n----------------\n" <> ppLimitInfo (bchNames bch) (getLog bch)
 
 -- | logs the blockchain state in the log
 logBchState :: Run ()
