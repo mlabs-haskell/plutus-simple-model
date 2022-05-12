@@ -18,6 +18,9 @@ import Data.Map.Strict qualified as M
 import Data.Set (Set)
 import Prelude
 import Prettyprinter
+import Data.Foldable (toList)
+import Data.Set (Set)
+import Text.Printf (printf)
 import Text.Printf (printf)
 
 import Cardano.Api.Shelley (Error (..))
