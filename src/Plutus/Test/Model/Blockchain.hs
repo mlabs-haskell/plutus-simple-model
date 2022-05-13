@@ -37,10 +37,12 @@ module Plutus.Test.Model.Blockchain (
   writeAddressName,
   writeAssetClassName,
   writeCurrencySymbolName,
+  writeTxName,
   readUserName,
   readAddressName,
   readAssetClassName,
   readCurrencySymbolName,
+  readTxName,
   Run (..),
   runBch,
   initBch,
@@ -158,7 +160,7 @@ import PlutusTx.Prelude qualified as Plutus
 import Basement.Compat.Natural
 import qualified Plutus.V1.Ledger.Ada            as Ada
 import Ledger.Typed.Scripts (TypedValidator, validatorAddress, ValidatorTypes(..))
-import Ledger (PaymentPubKeyHash(..))
+import Ledger (PaymentPubKeyHash(..), txId)
 
 import Ouroboros.Consensus.Block.Abstract (EpochNo (..), EpochSize (..))
 import Ouroboros.Consensus.HardFork.History.EraParams
@@ -392,7 +394,6 @@ data Blockchain = Blockchain
     bchNames :: !BchNames
   }
 
-
 newtype Log a = Log { unLog :: Seq (Slot, a) }
   deriving (Functor)
 
@@ -483,6 +484,7 @@ data BchNames = BchNames
   , bchNameAddresses :: !(Map Address String)
   , bchNameAssetClasses :: !(Map AssetClass String)
   , bchNameCurrencySymbols :: !(Map CurrencySymbol String)
+  , bchNameTxns :: !(Map TxId String)
   }
 
 -- | Modifies the mappings to human-readable names
@@ -511,6 +513,11 @@ writeCurrencySymbolName :: CurrencySymbol -> String -> Run ()
 writeCurrencySymbolName cs name = modifyBchNames $ \ns ->
   ns {bchNameCurrencySymbols = M.insert cs name (bchNameCurrencySymbols ns)}
 
+-- | Assigns human-readable name to a transaction
+writeTxName :: Tx -> String -> Run ()
+writeTxName (txId . tx'plutus -> ident) name = modifyBchNames $ \ns ->
+  ns {bchNameTxns = M.insert ident name (bchNameTxns ns)}
+
 -- | Gets human-readable name of user
 readUserName :: BchNames -> PubKeyHash -> Maybe String
 readUserName names pkh = M.lookup pkh (bchNameUsers names)
@@ -526,6 +533,10 @@ readAssetClassName names ac = M.lookup ac (bchNameAssetClasses names)
 -- | Gets human-readable name of user
 readCurrencySymbolName :: BchNames -> CurrencySymbol -> Maybe String
 readCurrencySymbolName names cs = M.lookup cs (bchNameCurrencySymbols names)
+
+-- | Gets human-readable name of transaction
+readTxName :: BchNames -> TxId -> Maybe String
+readTxName names cs = M.lookup cs (bchNameTxns names)
 
 --------------------------------------------------------
 -- API
@@ -558,6 +569,7 @@ initBch cfg initVal =
     , bchNames = BchNames
                   (M.singleton genesisUserId "Genesis role")
                   (M.singleton genesisAddress "Genesis role")
+                  M.empty
                   M.empty
                   M.empty
     }
@@ -670,7 +682,7 @@ sendTx tx = do
   pure res
 
 {- | Send single TX to blockchain. It logs failure if TX is invalid
- and pproduces performance stats if TX was ok.
+ and produces performance stats if TX was ok.
 -}
 sendSingleTx :: Tx -> Run (Either FailReason Stat)
 sendSingleTx (Tx extra tx) =
@@ -843,7 +855,7 @@ waitNSlots n = modify' $ \s -> s {bchCurrentSlot = bchCurrentSlot s + n}
 
 -- | Applies valid TX to modify blockchain.
 applyTx :: Stat -> TxId -> Tx -> Run ()
-applyTx stat tid (Tx extra tx@P.Tx {..}) = do
+applyTx stat tid etx@(Tx extra P.Tx {..}) = do
   updateUtxos
   updateRewards
   updateCertificates
@@ -856,7 +868,7 @@ applyTx stat tid (Tx extra tx@P.Tx {..}) = do
     saveTx = do
       t <- gets bchCurrentSlot
       statPercent <- getStatPercent
-      modify' $ \s -> s {bchTxs = appendLog t (TxStat (toExtra tx) t stat statPercent) $ bchTxs s}
+      modify' $ \s -> s {bchTxs = appendLog t (TxStat etx t stat statPercent) $ bchTxs s}
 
     getStatPercent = do
       maxLimits <- gets (bchConfigLimitStats . bchConfig)
@@ -1003,4 +1015,3 @@ filterSlot f (Log xs) = Log (Seq.filter (f . fst) xs)
 getLog :: Blockchain -> Log BchEvent
 getLog Blockchain{..} =
   mconcat [BchInfo <$> bchInfo, BchTx <$> bchTxs, BchFail <$> bchFails]
-

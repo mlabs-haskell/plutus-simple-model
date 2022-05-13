@@ -13,6 +13,7 @@ module Plutus.Test.Model.Fork.TxExtra (
   scriptToStaking,
 ) where
 
+import Data.Monoid
 import Prelude
 import Ledger qualified as P
 import Plutus.V1.Ledger.Api
@@ -91,4 +92,3 @@ scriptToStaking :: StakeValidator -> StakingCredential
 scriptToStaking validator = StakingHash $ ScriptCredential vh
   where
     vh = P.validatorHash $ Validator $ getStakeValidator validator
-

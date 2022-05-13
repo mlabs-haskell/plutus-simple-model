@@ -49,6 +49,7 @@ module Plutus.Test.Model.Contract (
   mintValue,
   addMintRedeemer,
   validateIn,
+
   -- ** Staking valdiators primitives
   --
   -- | to use them convert vanila Plutus @Tx@ to @Tx@ with @toExtra@
@@ -81,7 +82,9 @@ module Plutus.Test.Model.Contract (
   mustFailWith,
   checkErrors,
   testNoErrors,
+  testNoErrorsTrace,
   testLimits,
+  logBalanceSheet,
 
   -- * balance checks
   BalanceDiff,
@@ -119,7 +122,7 @@ import PlutusTx.Prelude qualified as Plutus
 import Plutus.Test.Model.Blockchain
 import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Pretty
-import Prettyprinter (Doc, vcat, hcat, indent, (<+>), pretty)
+import Prettyprinter (Doc, vcat, indent, (<+>), pretty)
 import Plutus.Test.Model.Stake qualified as Stake
 
 ------------------------------------------------------------------------
@@ -509,6 +512,24 @@ checkErrors = do
       then Nothing
       else Just (init . unlines $ fmap (ppFailure names) failures)
 
+-- | like 'testNoErrors' but prints out blockchain log for both
+-- failing and successful tests. The recommended way to choose
+-- between those two is using @tasty@ 'askOption'. To pull in
+-- parameters use an 'Ingredient' built with 'includingOptions'.
+testNoErrorsTrace :: Value -> BchConfig -> String -> Run a -> TestTree
+testNoErrorsTrace funds cfg msg act =
+    testCaseInfo msg $
+      maybe (pure bchLog)
+        assertFailure $ errors >>= \errs -> pure $ errs <> bchLog
+  where
+    (errors, bch) = runBch (act >> checkErrors) $ initBch cfg funds
+    bchLog = "\n\nBlockchain log :\n----------------\n" <> ppBchEvent (bchNames bch) (getLog bch)
+
+-- | Logs the blockchain state, i.e. balance sheet in the log
+logBalanceSheet :: Run ()
+logBalanceSheet =
+  modify' $ \s -> s { bchInfo = appendLog (bchCurrentSlot s) (ppBalanceSheet s) (bchInfo s) }
+
 testNoErrors :: Value -> BchConfig -> String -> Run a -> TestTree
 testNoErrors funds cfg msg act =
    testCase msg $ maybe (pure ()) assertFailure $
@@ -520,7 +541,7 @@ testLimits initFunds cfg msg tfmLog act =
   testCase msg $ assertBool limitLog isOk
   where
     (isOk, bch) = runBch (act >> noErrors) (initBch (warnLimits cfg) initFunds)
-    limitLog = ppLimitInfo $ tfmLog $ getLog bch
+    limitLog = ppLimitInfo (bchNames bch) $ tfmLog $ getLog bch
 
 ----------------------------------------------------------------------
 -- balance diff
@@ -548,7 +569,7 @@ checkBalance (BalanceDiff diffs) act = do
       names <- gets bchNames
       let addrName = maybe (pretty addr) pretty $ readAddressName names addr
       pure $ vcat
-          [ hcat ["Balance error for", addrName, ":"]
+          [ "Balance error for:" <+> addrName
           , indent 2 $ vcat
               [ "Expected:" <+> ppBalanceWith names expected
               , "Got:" <+> ppBalanceWith names got
@@ -659,4 +680,3 @@ delegateStakeScript :: ToData redeemer =>
   StakeValidator -> redeemer -> PoolId -> Tx
 delegateStakeScript script red (PoolId poolKey) = certTx $
   Certificate (DCertDelegDelegate (scriptToStaking script) poolKey) (withStakeScript script red)
-
