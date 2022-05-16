@@ -12,13 +12,13 @@ module Plutus.Test.Model.Pretty(
   ppTransaction,
 ) where
 
-import Prelude
+import Data.Foldable (toList)
 import Data.List qualified as L
 import Data.Map.Strict qualified as M
-import Data.Foldable (toList)
 import Data.Set (Set)
-import Text.Printf (printf)
+import Prelude
 import Prettyprinter
+import Text.Printf (printf)
 
 import Cardano.Api.Shelley (Error (..))
 import Ledger (txId)
@@ -227,9 +227,11 @@ instance Pretty DCertError where
 
 instance Pretty BchEvent where
   pretty = \case
-    BchInfo msg     -> "[info]  " <+> pretty msg
-    BchTx _         -> "[tx]    " <+> "TODO print tx"
-    BchFail fReason -> "[error] " <+> pretty fReason
+    BchInfo msg                              -> "[info] " <+> align (pretty msg)
+    -- TODO plug in prettifier for Tx here once it's ready
+    BchTx _                                  -> "[tx]   " <+> align "TODO print tx"
+    BchFail fReason                          -> "[error]" <+> align (pretty fReason)
+    BchMustFailLog (MustFailLog msg fReason) -> "[fail] " <+> align (vcat [pretty msg, pretty fReason])
 
 instance Pretty WithdrawError where
   pretty = \case

@@ -103,6 +103,7 @@ module Plutus.Test.Model.Blockchain (
   filterSlot,
   getLog,
   getFails,
+  MustFailLog(..),
 
   -- * internal
   intToPubKey,
@@ -389,6 +390,7 @@ data Blockchain = Blockchain
   , bchUserStep     :: !Integer
   , bchFails        :: !(Log FailReason)
   , bchInfo         :: !(Log String)
+  , mustFailLog     :: !(Log MustFailLog)
   , -- | human readable names. Idea is to substitute for them
     -- in pretty printers for error logs, user names, script names.
     bchNames :: !BchNames
@@ -424,6 +426,10 @@ fromGroupLog = fmap toGroup . L.groupBy ((==) `on` fst) . fromLog
 
 instance Monoid (Log a) where
   mempty = Log Seq.empty
+
+-- | Wrapper for error logs, produced in the paths of execution protected by
+-- 'mustFail' combinator.
+data MustFailLog = MustFailLog String FailReason
 
 -- | Result of the execution.
 data Result = Ok | Fail FailReason
@@ -566,6 +572,7 @@ initBch cfg initVal =
     , bchUserStep = 1
     , bchFails = mempty
     , bchInfo = mempty
+    , mustFailLog = mempty
     , bchNames = BchNames
                   (M.singleton genesisUserId "Genesis role")
                   (M.singleton genesisAddress "Genesis role")
@@ -987,9 +994,10 @@ testnetBlockLimits = mainnetBlockLimits
 
 -- | Blockchain events to log.
 data BchEvent
-  = BchTx TxStat           -- ^ Sucessful TXs
-  | BchInfo String         -- ^ Info messages
-  | BchFail FailReason     -- ^ Errors
+  = BchTx TxStat               -- ^ Sucessful TXs
+  | BchInfo String             -- ^ Info messages
+  | BchFail FailReason         -- ^ Errors
+  | BchMustFailLog MustFailLog -- ^ Expected errors, see 'mustFail'
 
 -- | Skip all info messages
 silentLog :: Log BchEvent -> Log BchEvent
@@ -1014,4 +1022,4 @@ filterSlot f (Log xs) = Log (Seq.filter (f . fst) xs)
 -- | Reads the log.
 getLog :: Blockchain -> Log BchEvent
 getLog Blockchain{..} =
-  mconcat [BchInfo <$> bchInfo, BchTx <$> bchTxs, BchFail <$> bchFails]
+  mconcat [BchInfo <$> bchInfo, BchMustFailLog <$> mustFailLog, BchTx <$> bchTxs, BchFail <$> bchFails]
