@@ -25,6 +25,8 @@ module Plutus.Test.Model.Contract (
   hasPool,
   hasStake,
   TxBox(..),
+  txBoxAddress,
+  txBoxDatumHash,
   txBoxValue,
   boxAt,
   scriptBoxAt,
@@ -379,7 +381,7 @@ modifyBox :: (ToData (DatumType a), ToData (RedeemerType a))
   -> Tx
 modifyBox tv box act modDatum modValue = mconcat
   [ spendBox tv act box
-  , payToScript tv (modDatum $ txBoxDatum box) (modValue $ txOutValue $ txBoxOut box)
+  , payToScriptAddress box (modDatum $ txBoxDatum box) (modValue $ txOutValue $ txBoxOut box)
   ]
 
 -- | Spend value for the user and also include change in the outputs.
@@ -439,6 +441,17 @@ data TxBox a = TxBox
   }
   deriving (Show, Eq)
 
+instance HasAddress (TxBox a) where
+  toAddress = txBoxAddress
+
+-- | Get box address
+txBoxAddress :: TxBox a -> Address
+txBoxAddress = txOutAddress . txBoxOut
+
+-- | Get box datum hash
+txBoxDatumHash :: TxBox a -> Maybe DatumHash
+txBoxDatumHash = txOutDatumHash . txBoxOut
+
 -- | Get value at the box.
 txBoxValue :: TxBox a -> Value
 txBoxValue = txOutValue . txBoxOut
@@ -457,9 +470,6 @@ scriptBoxAt tv = boxAt (validatorAddress tv)
 -- which is NFT.
 nftAt :: FromData (DatumType a) => TypedValidator a -> Run (TxBox (DatumType a))
 nftAt tv = head <$> scriptBoxAt tv
-
-----------------------------------------------------------------------
--- time helpers
 
 ----------------------------------------------------------------------
 -- time helpers
