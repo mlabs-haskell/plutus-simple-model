@@ -478,7 +478,7 @@ data LimitOverflow
 
 -- | State monad wrapper to run blockchain.
 newtype Run a = Run (State Blockchain a)
-  deriving (Functor, Applicative, Monad, MonadState Blockchain, MonadFix)
+  deriving (Functor, Applicative, Monad, MonadState Blockchain)
 
 -- | Dummy instance to be able to use partial pattern matching
 -- in do-notation
