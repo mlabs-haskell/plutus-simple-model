@@ -1,3 +1,4 @@
+{-# LANGUAGE UndecidableInstances #-}
 -- | Functions to create TXs and query blockchain model.
 module Plutus.Test.Model.Contract (
   -- * Modify blockchain
@@ -358,7 +359,7 @@ spendBox ::
   (ToData (DatumType a), ToData (RedeemerType a)) =>
   TypedValidator a ->
   RedeemerType a ->
-  TxBox (DatumType a) ->
+  TxBox a ->
   Tx
 spendBox tv red TxBox{..} =
   spendScript tv txBoxRef red txBoxDatum
@@ -366,7 +367,7 @@ spendBox tv red TxBox{..} =
 -- | Specify that box is used as oracle (read-only). Spends value to itself and uses the same datum.
 readOnlyBox :: (ToData (DatumType a), ToData (RedeemerType a))
   => TypedValidator a
-  -> TxBox (DatumType a)
+  -> TxBox a
   -> RedeemerType a
   -> Tx
 readOnlyBox tv box act = modifyBox tv box act id id
@@ -374,7 +375,7 @@ readOnlyBox tv box act = modifyBox tv box act id id
 -- | Modifies the box. We specify how script box datum and value are updated.
 modifyBox :: (ToData (DatumType a), ToData (RedeemerType a))
   => TypedValidator a
-  -> TxBox (DatumType a)
+  -> TxBox a
   -> RedeemerType a
   -> (DatumType a -> DatumType a)
   -> (Value -> Value)
@@ -435,11 +436,13 @@ validateIn times = updatePlutusTx $ \tx -> do
 
 -- | Typed txOut that contains decoded datum
 data TxBox a = TxBox
-  { txBoxRef   :: TxOutRef   -- ^ tx out reference
-  , txBoxOut   :: TxOut      -- ^ tx out
-  , txBoxDatum :: a          -- ^ datum
+  { txBoxRef   :: TxOutRef     -- ^ tx out reference
+  , txBoxOut   :: TxOut        -- ^ tx out
+  , txBoxDatum :: DatumType a  -- ^ datum
   }
-  deriving (Show, Eq)
+
+deriving instance Show (DatumType a) => Show (TxBox a)
+deriving instance Eq (DatumType a)   => Eq (TxBox a)
 
 instance HasAddress (TxBox a) where
   toAddress = txBoxAddress
@@ -457,18 +460,18 @@ txBoxValue :: TxBox a -> Value
 txBoxValue = txOutValue . txBoxOut
 
 -- | Read UTXOs with datums.
-boxAt :: (HasAddress addr, FromData a) => addr -> Run [TxBox a]
+boxAt :: (HasAddress addr, FromData (DatumType a)) => addr -> Run [TxBox a]
 boxAt addr = do
   utxos <- utxoAt (toAddress addr)
   fmap catMaybes $ mapM (\(ref, tout) -> fmap (\dat -> TxBox ref tout dat) <$> datumAt ref) utxos
 
 -- | Reads the Box for the script.
-scriptBoxAt :: FromData (DatumType a) => TypedValidator a -> Run [TxBox (DatumType a)]
+scriptBoxAt :: FromData (DatumType a) => TypedValidator a -> Run [TxBox a]
 scriptBoxAt tv = boxAt (validatorAddress tv)
 
 -- | It expects that Typed validator can have only one UTXO
 -- which is NFT.
-nftAt :: FromData (DatumType a) => TypedValidator a -> Run (TxBox (DatumType a))
+nftAt :: FromData (DatumType a) => TypedValidator a -> Run (TxBox a)
 nftAt tv = head <$> scriptBoxAt tv
 
 ----------------------------------------------------------------------
