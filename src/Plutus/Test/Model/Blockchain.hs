@@ -67,6 +67,7 @@ module Plutus.Test.Model.Blockchain (
   txOutRefAt,
   getTxOut,
   utxoAt,
+  utxoAtState,
   datumAt,
   rewardAt,
   stakesAt,
@@ -921,13 +922,22 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
 
 -- | Read all TxOutRefs that belong to given address.
 txOutRefAt :: Address -> Run [TxOutRef]
-txOutRefAt addr = maybe [] S.toList . M.lookup addr <$> gets bchAddresses
+txOutRefAt addr = txOutRefAtState addr <$> get
+
+-- | Read all TxOutRefs that belong to given address.
+txOutRefAtState :: Address -> Blockchain -> [TxOutRef]
+txOutRefAtState addr st = maybe [] S.toList . M.lookup addr $ bchAddresses st
 
 -- | Get all UTXOs that belong to an address
 utxoAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
-utxoAt (toAddress -> addr) = do
-  refs <- txOutRefAt addr
-  fmap (\m -> mapMaybe (\r -> (r,) <$> M.lookup r m) refs) $ gets bchUtxos
+utxoAt addr = utxoAtState addr <$> get
+
+-- | Get all UTXOs that belong to an address
+utxoAtState :: HasAddress user => user -> Blockchain -> [(TxOutRef, TxOut)]
+utxoAtState (toAddress -> addr) st =
+  mapMaybe (\r -> (r,) <$> M.lookup r (bchUtxos st)) refs
+  where
+    refs = txOutRefAtState addr st
 
 -- | Reads typed datum from blockchain that belongs to UTXO (by reference).
 datumAt :: FromData a => TxOutRef -> Run (Maybe a)

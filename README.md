@@ -511,7 +511,15 @@ Because TypedValidator has instanced of the HasAddress we can also check payment
 checkBalance (gives pkh prize gameScript) $ do { ... }
 ```
 
+Sometimes we need to check balances based on result of the action. For that we have generic 
+function `checkBalanceBy`:
+
+```haskell
+checkBalanceBy :: (a -> BalanceDiff) -> Run a -> Run a
+```
+
 See more examples at tests for `Game` and `Counter` scripts.
+
 
 ### How to use in unit tests
 
