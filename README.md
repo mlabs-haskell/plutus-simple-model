@@ -624,7 +624,7 @@ Enter the Box - typed `TxOut`. The `Box` is `TxOut` augmented with typed datum.
 We can read Box for the script with the function:
 
 ```haskell
-boxAt :: (HasAddress addr, FromData a) => addr -> Run [TxBox a]
+boxAt :: (HasAddress addr, FromData (DatumType a)) => addr -> Run [TxBox a]
 ```
 
 It reads the typed box. We can use it like this: 
@@ -636,13 +636,13 @@ gameBox <- head <$> boxAt @GameDatum gameScript
 There is type safe variant that derives type of the datum from the type of the `TypedValidator`:
 
 ```haskell
-scriptBoxAt :: FromData (DatumType a) => TypedValidator a -> Run [TxBox (DatumType a)]
+scriptBoxAt :: FromData (DatumType a) => TypedValidator a -> Run [TxBox a]
 ```
 
 Sometimes it's useful to read the box by NFT, since often scripts are identified by unque NFTs:
 
 ```haskell
-nftAt :: FromData (DatumType a) => TypedValidator a -> Run (TxBox (DatumType a))
+nftAt :: FromData (DatumType a) => TypedValidator a -> Run (TxBox a)
 nftAt tv = ...
 ```
 
@@ -651,9 +651,9 @@ So let's look at the box:
 ```haskell
 -- | Typed txOut that contains decoded datum
 data TxBox a = TxBox
-  { txBoxRef   :: TxOutRef   -- ^ tx out reference
-  , txBoxOut   :: TxOut      -- ^ tx out
-  , txBoxDatum :: a          -- ^ datum
+  { txBoxRef   :: TxOutRef    -- ^ tx out reference
+  , txBoxOut   :: TxOut       -- ^ tx out
+  , txBoxDatum :: DatumType a -- ^ datum
   }
 
 txBoxValue :: TxBox a -> Value
@@ -669,7 +669,7 @@ spendBox ::
   (ToData (DatumType a), ToData (RedeemerType a)) =>
   TypedValidator a ->
   RedeemerType a ->
-  TxBox (DatumType a) ->
+  TxBox a ->
   Tx
 spendBox tv redeemer box
 ```
@@ -679,7 +679,7 @@ The most generic function is `modifyBox`:
 ```haskell
 modifyBox :: (ToData (DatumType a), ToData (RedeemerType a))
   => TypedValidator a
-  -> TxBox (DatumType a)
+  -> TxBox a
   -> RedeemerType a
   -> (DatumType a -> DatumType a)
   -> (Value -> Value)
@@ -693,7 +693,7 @@ Also, often we use boxes as oracles:
 ```haskell
 readOnlyBox :: (ToData (DatumType a), ToData (RedeemerType a))
   => TypedValidator a
-  -> TxBox (DatumType a)
+  -> TxBox a
   -> RedeemerType a
   -> Tx
 ```
