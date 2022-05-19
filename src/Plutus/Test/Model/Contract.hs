@@ -93,6 +93,7 @@ module Plutus.Test.Model.Contract (
   -- * balance checks
   BalanceDiff,
   checkBalance,
+  checkBalanceBy,
   HasAddress(..),
   owns,
   gives,
@@ -216,6 +217,10 @@ noErrors = nullLog <$> gets bchFails
 -- | Get total value on the address or user by @PubKeyHash@.
 valueAt :: HasAddress user => user -> Run Value
 valueAt user = foldMap (txOutValue . snd) <$> utxoAt user
+
+-- | Get total value on the address or user by @PubKeyHash@.
+valueAtState :: HasAddress user => user -> Blockchain -> Value
+valueAtState user st = foldMap (txOutValue . snd) $ utxoAtState user st
 
 {- | To spend some value user should provide valid set of UTXOs owned by the user.
  Also it holds the change. For example if user has one UTXO that holds 100 coins
@@ -584,11 +589,18 @@ instance Monoid BalanceDiff where
 
 -- | Checks that after execution of an action balances changed in certain way
 checkBalance :: BalanceDiff -> Run a -> Run a
-checkBalance (BalanceDiff diffs) act = do
-  before <- mapM valueAt addrs
+checkBalance diff = checkBalanceBy (const diff)
+
+-- | Checks that after execution of an action balances changed in certain way
+checkBalanceBy :: (a -> BalanceDiff) -> Run a -> Run a
+checkBalanceBy getDiffs act = do
+  beforeSt <- get
   res <- act
+  let BalanceDiff diffs = getDiffs res
+      addrs = M.keys diffs
+      before =  fmap (flip valueAtState beforeSt) addrs
   after <- mapM valueAt addrs
-  mapM_ (logError . show . vcat <=< mapM ppError) (check before after)
+  mapM_ (logError . show . vcat <=< mapM ppError) (check addrs diffs before after)
   pure res
   where
     ppError :: (Address, Value, Value) -> Run (Doc ann)
@@ -603,10 +615,9 @@ checkBalance (BalanceDiff diffs) act = do
               ]
           ]
 
-    addrs = M.keys diffs
 
-    check :: [Value] -> [Value] -> Maybe [(Address, Value, Value)]
-    check before after
+    check :: [Address] -> Map Address Value -> [Value] -> [Value] -> Maybe [(Address, Value, Value)]
+    check addrs diffs before after
       | null errs = Nothing
       | otherwise = Just errs
       where
