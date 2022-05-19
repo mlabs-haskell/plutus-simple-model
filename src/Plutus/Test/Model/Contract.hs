@@ -598,7 +598,7 @@ checkBalanceBy getDiffs act = do
   res <- act
   let BalanceDiff diffs = getDiffs res
       addrs = M.keys diffs
-      before =  fmap (flip valueAtState beforeSt) addrs
+      before =  fmap (`valueAtState` beforeSt) addrs
   after <- mapM valueAt addrs
   mapM_ (logError . show . vcat <=< mapM ppError) (check addrs diffs before after)
   pure res
