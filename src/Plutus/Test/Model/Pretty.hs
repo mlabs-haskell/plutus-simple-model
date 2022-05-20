@@ -40,7 +40,7 @@ ppPercent (Percent x) = printf "%.2f" x <> "%"
 ppBchEvent :: BchNames -> Log BchEvent -> String
 ppBchEvent _names = show . vcat . fmap ppSlot . fromGroupLog
   where
-    ppSlot (slot, events) = hardline <> vcat [pretty slot <> colon, indent 2 (vcat $ pretty <$> events)]
+    ppSlot (slot, events) = vcat [pretty slot <> colon, indent 2 (vcat $ pretty <$> events)]
 
 ppLimitInfo :: BchNames -> Log TxStat -> String
 ppLimitInfo names bch =

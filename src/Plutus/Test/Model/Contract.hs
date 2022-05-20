@@ -555,7 +555,7 @@ testNoErrorsTrace funds cfg msg act =
         assertFailure $ errors >>= \errs -> pure $ errs <> bchLog
   where
     (errors, bch) = runBch (act >> checkErrors) $ initBch cfg funds
-    bchLog = "\n\nBlockchain log :\n----------------\n" <> ppBchEvent (bchNames bch) (getLog bch)
+    bchLog = "\nBlockchain log :\n----------------\n" <> ppBchEvent (bchNames bch) (getLog bch)
 
 -- | Logs the blockchain state, i.e. balance sheet in the log
 logBalanceSheet :: Run ()
