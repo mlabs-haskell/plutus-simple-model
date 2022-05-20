@@ -3,8 +3,8 @@ Plutus simple model
 
 Unit test library for Plutus with estimation of resource usage.
 
-Library defines simple mock model of Blockchain to unit test Plutus contracts 
-and estimate usage of resources. What are benefits for this framework. It's:
+Library defines simple mock model of Blockchain to unit test plutus contracts 
+and estimate usage of resources. What are the benefits for this framework? It's:
 
 * easy to use
 * easy to think about
@@ -116,7 +116,7 @@ that users have expected values.
 To check for TX errors we use:
 
 ```haskell
-noErros :: Run Bool
+noErrors :: Run Bool
 ```
 
 Blockchain logs all failed transactions to te list `bchFails`. We check that this list is empty.
