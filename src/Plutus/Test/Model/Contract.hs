@@ -568,12 +568,12 @@ testNoErrors funds cfg msg act =
     fst (runBch (act >> checkErrors) (initBch cfg funds))
 
 -- | check transaction limits
-testLimits :: Value -> BchConfig -> String -> (Log BchEvent -> Log BchEvent) -> Run a -> TestTree
+testLimits :: Value -> BchConfig -> String -> (Log TxStat -> Log TxStat) -> Run a -> TestTree
 testLimits initFunds cfg msg tfmLog act =
   testCase msg $ assertBool limitLog isOk
   where
     (isOk, bch) = runBch (act >> noErrors) (initBch (warnLimits cfg) initFunds)
-    limitLog = ppLimitInfo (bchNames bch) $ tfmLog $ getLog bch
+    limitLog = ppLimitInfo (bchNames bch) $ tfmLog $ bchTxs bch
 
 ----------------------------------------------------------------------
 -- balance diff
