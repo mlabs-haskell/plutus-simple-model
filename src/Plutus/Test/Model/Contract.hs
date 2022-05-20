@@ -573,7 +573,7 @@ testLimits initFunds cfg msg tfmLog act =
   testCase msg $ assertBool limitLog isOk
   where
     (isOk, bch) = runBch (act >> noErrors) (initBch (warnLimits cfg) initFunds)
-    limitLog = ppLimitInfo (bchNames bch) tfmLog (bchTxs bch)
+    limitLog = ppLimitInfo (bchNames bch) $ tfmLog $ bchTxs bch
 
 ----------------------------------------------------------------------
 -- balance diff
