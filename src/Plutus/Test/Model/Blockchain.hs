@@ -975,7 +975,7 @@ mainnetTxLimits =
   Stat
     { statSize  = 16 * 1024
     , statExecutionUnits = ExecutionUnits
-        { executionMemory = 10_000_000
+        { executionMemory = 14_000_000
         , executionSteps = 10_000_000_000
         }
     }
