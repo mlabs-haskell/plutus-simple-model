@@ -11,6 +11,8 @@ module Plutus.Test.Model.Stake(
   lookupReward,
   lookupStakes,
   rewardStake,
+  regPool,
+  retirePool,
 ) where
 
 import Prelude

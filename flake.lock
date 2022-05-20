@@ -571,34 +571,34 @@
     "plutus": {
       "flake": false,
       "locked": {
-        "lastModified": 1646650116,
-        "narHash": "sha256-S8uvyld7ZpPsmxZlWJeRNAPd+mw3PafrtaiiuU8H3KA=",
+        "lastModified": 1644763429,
+        "narHash": "sha256-hJDQIrSEJWXmJnOYoneAZQDB2VW59FRm8ly/nqkU2dA=",
         "owner": "input-output-hk",
         "repo": "plutus",
-        "rev": "4127e9cd6e889824d724c30eae55033cb50cbf3e",
+        "rev": "d4f933d25ecc35a9c5bb057f5cf462112129cfdb",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
         "repo": "plutus",
-        "rev": "4127e9cd6e889824d724c30eae55033cb50cbf3e",
+        "rev": "d4f933d25ecc35a9c5bb057f5cf462112129cfdb",
         "type": "github"
       }
     },
     "plutus-apps": {
       "flake": false,
       "locked": {
-        "lastModified": 1646839502,
-        "narHash": "sha256-uQ+OEE+xdDXvH2ZhP2N2nYeiU+JoU8zFV1ZLHvGWR9k=",
+        "lastModified": 1646168223,
+        "narHash": "sha256-ao9CPg1/FwDQ8JCIetTnEv8nRgWYrsMrvRpXRBvz9sU=",
         "owner": "input-output-hk",
         "repo": "plutus-apps",
-        "rev": "63deb7d7ebd1c8c8ddf2640e1873d8f0f49559a1",
+        "rev": "686b559d34c7bd934b327a1644f31fe42d643492",
         "type": "github"
       },
       "original": {
         "owner": "input-output-hk",
         "repo": "plutus-apps",
-        "rev": "63deb7d7ebd1c8c8ddf2640e1873d8f0f49559a1",
+        "rev": "686b559d34c7bd934b327a1644f31fe42d643492",
         "type": "github"
       }
     },

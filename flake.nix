@@ -81,12 +81,12 @@
     };
     plutus = {
       url =
-        "github:input-output-hk/plutus/4127e9cd6e889824d724c30eae55033cb50cbf3e";
+        "github:input-output-hk/plutus/d4f933d25ecc35a9c5bb057f5cf462112129cfdb";
       flake = false;
     };
     plutus-apps = {
       url =
-        "github:input-output-hk/plutus-apps/63deb7d7ebd1c8c8ddf2640e1873d8f0f49559a1";
+        "github:input-output-hk/plutus-apps/686b559d34c7bd934b327a1644f31fe42d643492";
       flake = false;
     };
     Win32-network = {

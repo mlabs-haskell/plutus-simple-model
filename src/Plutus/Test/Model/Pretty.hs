@@ -1,27 +1,33 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 -- | Pretty printers for blockchain state
 module Plutus.Test.Model.Pretty(
-  ppPercent,
-  ppStatPercent,
-  ppLimitInfo,
+  ppBalanceSheet,
+  ppBalanceWith,
+  ppBchEvent,
   ppBlockchain,
   ppFailure,
-  ppBalanceWith,
+  ppLimitInfo,
+  ppPercent,
+  ppStatPercent,
+  ppTransaction,
 ) where
 
-import Prelude
+import Data.Foldable (toList)
 import Data.List qualified as L
 import Data.Map.Strict qualified as M
-import Data.Foldable (toList)
-import Text.Printf (printf)
+import Data.Set (Set)
+import Prelude
 import Prettyprinter
+import Text.Printf (printf)
 
 import Cardano.Api.Shelley (Error (..))
+import Ledger (txId)
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Slot
 import Plutus.V1.Ledger.Value (assetClass, flattenValue, toString)
 
 import Plutus.Test.Model.Blockchain
+import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Stake (DCertError(..), WithdrawError(..))
 
 -- | Pretty-print for stats experessed in percents
@@ -31,19 +37,33 @@ ppStatPercent = show . pretty
 ppPercent :: Percent -> String
 ppPercent (Percent x) = printf "%.2f" x <> "%"
 
-ppLimitInfo :: Log BchEvent -> String
-ppLimitInfo bch =
+ppBchEvent :: BchNames -> Log BchEvent -> String
+ppBchEvent _names = show . vcat . fmap ppSlot . fromGroupLog
+  where
+    ppSlot (slot, events) = hardline <> vcat [pretty slot <> colon, indent 2 (vcat $ pretty <$> events)]
+
+ppLimitInfo :: BchNames -> Log BchEvent -> String
+ppLimitInfo names bch =
   show $ vcat $ fmap ppGroup $ fromGroupLog bch
   where
-    ppGroup (slot, events) = vcat [ pretty slot <> colon, indent 2 (vcat $ fmap ppStatEvent events)]
+    ppGroup (slot, events) = vcat [pretty slot <> colon, indent 2 (vcat $ fmap ppStatEvent events)]
 
     ppStatEvent = \case
-      BchInfo msg -> pretty msg
-      BchTx tx    -> indent 2 $ ppStatWarn (txStatPercent tx)
-      BchFail err ->
-        case err of
-          TxLimitError _ _ -> mempty
-          other            -> pretty other
+      BchTx tx    -> vcat [ ppTx $ Ledger.txId $ tx'plutus $ txStatTx tx
+                          , indent 2 $ ppStatWarn (txStatPercent tx)
+                          ]
+      _ -> mempty
+-- FIXME: do we really want to pollute limit info with error/info entries?
+--      BchInfo msg -> pretty msg
+--      BchFail err -> mempty
+--        case err of
+--          TxLimitError _ _ -> mempty
+--          other            -> pretty other
+--      BchMustFailLog _ -> mempty
+
+    ppTx ident = "Tx name/id:" <+> case readTxName names ident of
+      Just name -> pretty name
+      Nothing -> pretty ident
 
     ppStatWarn stat
       | isLimitError stat = vcat ["error: out of limits", indent 2 (pretty stat)]
@@ -81,6 +101,9 @@ ppFailureWith names (slot, fReason) =
             Nothing -> pretty fReason
         _ -> pretty fReason
 
+ppTransaction :: Tx -> String
+ppTransaction = show . pretty
+
 ppBalanceWith :: BchNames -> Value -> Doc ann
 ppBalanceWith names val = vcat $ fmap
   (\(cs, tn, amt) ->
@@ -109,41 +132,60 @@ instance Pretty Percent where
 
 instance Pretty Blockchain where
   pretty bch = vcat
-    [ "Balances:"
-    , indent 2 . vcat $
-        prettyBalances pubKeyAddrs <>
-        prettyBalances scriptAddrs
-    , "Current slot:" <+> pretty (getSlot $ bchCurrentSlot bch)
-    , case toList . unLog $ bchFails bch of
-       [] -> mempty
-       xs -> vcat [ "Failures:"
-                  , indent 2 . vcat . map (ppFailureWith names) $ xs
-                  ]
-    ]
-   where
-    names = bchNames bch
-    valueSet =
-      foldMap $ maybe mempty txOutValue . (\ref -> M.lookup ref (bchUtxos bch))
-
-    prettyBalances =
-      fmap balance . L.sortBy (\(a,_) (b,_) -> compare a b) . fmap toAddrName
-
-    isPubKeyCredential (addr,_) = case addressCredential addr of
-                                    PubKeyCredential _ -> True
-                                    _ -> False
-
-    (pubKeyAddrs, scriptAddrs) =
-      L.partition isPubKeyCredential $ M.toList (bchAddresses bch)
-
-    toAddrName (addr, txSet) =
-      case readAddressName names addr of
-        Just addrName -> (addrName, txSet)
-        Nothing -> (show . pretty $ addr, txSet)
-
-    balance (prettyAddr, txSet) = vcat
-      [ pretty prettyAddr <> colon
-      , indent 2 (ppBalanceWith names (valueSet txSet))
+      [ prettyBalanceSheet bch
+      , "Current slot:" <+> pretty (getSlot $ bchCurrentSlot bch)
+      , case toList . unLog $ bchFails bch of
+         [] -> mempty
+         xs -> vcat [ "Failures:"
+                    , indent 2 . vcat . map (ppFailureWith names) $ xs
+                    ]
       ]
+    where
+      names = bchNames bch
+
+type BchUtxos = M.Map TxOutRef TxOut
+type Utxos = Set TxOutRef
+
+prettyBalances :: BchNames -> BchUtxos -> [(Address, Utxos)] -> [Doc ann]
+prettyBalances names utxos =
+  fmap (balance names utxos). L.sortBy (\(a,_) (b,_) -> compare a b) . fmap (toAddrName names)
+
+toAddrName :: BchNames -> (Address, b) -> (String, b)
+toAddrName names (addr, txSet) =
+  case readAddressName names addr of
+    Just addrName -> (addrName, txSet)
+    Nothing -> (show . pretty $ addr, txSet)
+
+balance :: BchNames -> BchUtxos -> (String, Utxos) -> Doc ann1
+balance names utxos (prettyAddr, txSet) = vcat
+  [ pretty prettyAddr <> colon
+  , indent 2 (ppBalanceWith names (valueSet utxos txSet))
+  ]
+
+valueSet :: BchUtxos -> Utxos -> Value
+valueSet utxos = foldMap $ maybe mempty txOutValue . (\ref -> M.lookup ref utxos)
+
+-- | Pretty-prints balance for all users/scripts
+ppBalanceSheet :: Blockchain -> String
+ppBalanceSheet = show . prettyBalanceSheet
+
+prettyBalanceSheet :: Blockchain -> Doc ann
+prettyBalanceSheet bch = vcat
+   [ "Balances:"
+   , indent 2 . vcat $
+       prettyBalances names utxos pubKeyAddrs <>
+       prettyBalances names utxos scriptAddrs
+   ]
+ where
+   names = bchNames bch
+   utxos = bchUtxos bch
+
+   (pubKeyAddrs, scriptAddrs) =
+     L.partition isPubKeyCredential $ M.toList (bchAddresses bch)
+
+   isPubKeyCredential (addr,_) = case addressCredential addr of
+                                   PubKeyCredential _ -> True
+                                   _ -> False
 
 instance Pretty FailReason where
   pretty = \case
@@ -152,7 +194,7 @@ instance Pretty FailReason where
     NotEnoughFunds pkh val -> vcat
       [ "User with PubKeyHash" <+> pretty (getPubKeyHash pkh)
         <+> "doesn't have enough funds to pay:"
-      , indent 5 (ppBalanceWith (BchNames M.empty M.empty M.empty M.empty) val)
+      , indent 5 (ppBalanceWith (BchNames M.empty M.empty M.empty M.empty M.empty) val)
       ]
     IntervalError err -> "Time or vlaid range related error:" <+> pretty (displayError err)
     NotBalancedTx -> "Not balanced transaction"
@@ -185,9 +227,11 @@ instance Pretty DCertError where
 
 instance Pretty BchEvent where
   pretty = \case
-    BchInfo msg     -> "[info]  " <+> pretty msg
-    BchTx _         -> "[tx]    " <+> "TODO print tx"
-    BchFail fReason -> "[error] " <+> pretty fReason
+    BchInfo msg                              -> "[info] " <+> align (pretty msg)
+    -- TODO plug in prettifier for Tx here once it's ready
+    BchTx _                                  -> "[tx]   " <+> align "TODO print tx"
+    BchFail fReason                          -> "[error]" <+> align (pretty fReason)
+    BchMustFailLog (MustFailLog msg fReason) -> "[fail] " <+> align (vcat [pretty msg, pretty fReason])
 
 instance Pretty WithdrawError where
   pretty = \case
@@ -198,3 +242,7 @@ instance Pretty WithdrawError where
     WithdrawNotSigned pkh -> hsep ["Reward withdraw by pub key not signed by", pretty pkh]
     StakeNotRegistered cred ->
       hsep [ "Stake credential", pretty cred, "is not registered for rewards"]
+
+-- TODO implement with respect to 'Pretty' law
+instance Pretty Tx where
+  pretty = viaShow

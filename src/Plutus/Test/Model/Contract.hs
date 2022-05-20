@@ -1,3 +1,4 @@
+{-# LANGUAGE UndecidableInstances #-}
 -- | Functions to create TXs and query blockchain model.
 module Plutus.Test.Model.Contract (
   -- * Modify blockchain
@@ -25,6 +26,8 @@ module Plutus.Test.Model.Contract (
   hasPool,
   hasStake,
   TxBox(..),
+  txBoxAddress,
+  txBoxDatumHash,
   txBoxValue,
   boxAt,
   scriptBoxAt,
@@ -49,6 +52,7 @@ module Plutus.Test.Model.Contract (
   mintValue,
   addMintRedeemer,
   validateIn,
+
   -- ** Staking valdiators primitives
   --
   -- | to use them convert vanila Plutus @Tx@ to @Tx@ with @toExtra@
@@ -63,6 +67,8 @@ module Plutus.Test.Model.Contract (
   deregisterStakeScript,
   registerPool,
   retirePool,
+  insertPool,
+  deletePool,
   delegateStakeKey,
   delegateStakeScript,
 
@@ -77,13 +83,17 @@ module Plutus.Test.Model.Contract (
   -- * testing helpers
   mustFail,
   mustFailWith,
+  mustFailWithName,
   checkErrors,
   testNoErrors,
+  testNoErrorsTrace,
   testLimits,
+  logBalanceSheet,
 
   -- * balance checks
   BalanceDiff,
   checkBalance,
+  checkBalanceBy,
   HasAddress(..),
   owns,
   gives,
@@ -92,12 +102,14 @@ module Plutus.Test.Model.Contract (
 import Control.Monad.State.Strict
 import Prelude
 
+import Data.Bifunctor (second)
 import Data.List qualified as L
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
 import Data.Maybe
 import Data.Set (Set)
 import Data.Set qualified as S
+import Data.Sequence qualified as Seq (drop, length)
 
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
@@ -117,7 +129,8 @@ import PlutusTx.Prelude qualified as Plutus
 import Plutus.Test.Model.Blockchain
 import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Pretty
-import Prettyprinter (Doc, vcat, hcat, indent, (<+>), pretty)
+import Prettyprinter (Doc, vcat, indent, (<+>), pretty)
+import Plutus.Test.Model.Stake qualified as Stake
 
 ------------------------------------------------------------------------
 -- modify blockchain
@@ -204,6 +217,10 @@ noErrors = nullLog <$> gets bchFails
 -- | Get total value on the address or user by @PubKeyHash@.
 valueAt :: HasAddress user => user -> Run Value
 valueAt user = foldMap (txOutValue . snd) <$> utxoAt user
+
+-- | Get total value on the address or user by @PubKeyHash@.
+valueAtState :: HasAddress user => user -> Blockchain -> Value
+valueAtState user st = foldMap (txOutValue . snd) $ utxoAtState user st
 
 {- | To spend some value user should provide valid set of UTXOs owned by the user.
  Also it holds the change. For example if user has one UTXO that holds 100 coins
@@ -347,7 +364,7 @@ spendBox ::
   (ToData (DatumType a), ToData (RedeemerType a)) =>
   TypedValidator a ->
   RedeemerType a ->
-  TxBox (DatumType a) ->
+  TxBox a ->
   Tx
 spendBox tv red TxBox{..} =
   spendScript tv txBoxRef red txBoxDatum
@@ -355,7 +372,7 @@ spendBox tv red TxBox{..} =
 -- | Specify that box is used as oracle (read-only). Spends value to itself and uses the same datum.
 readOnlyBox :: (ToData (DatumType a), ToData (RedeemerType a))
   => TypedValidator a
-  -> TxBox (DatumType a)
+  -> TxBox a
   -> RedeemerType a
   -> Tx
 readOnlyBox tv box act = modifyBox tv box act id id
@@ -363,14 +380,14 @@ readOnlyBox tv box act = modifyBox tv box act id id
 -- | Modifies the box. We specify how script box datum and value are updated.
 modifyBox :: (ToData (DatumType a), ToData (RedeemerType a))
   => TypedValidator a
-  -> TxBox (DatumType a)
+  -> TxBox a
   -> RedeemerType a
   -> (DatumType a -> DatumType a)
   -> (Value -> Value)
   -> Tx
 modifyBox tv box act modDatum modValue = mconcat
   [ spendBox tv act box
-  , payToScript tv (modDatum $ txBoxDatum box) (modValue $ txOutValue $ txBoxOut box)
+  , payToScriptAddress box (modDatum $ txBoxDatum box) (modValue $ txOutValue $ txBoxOut box)
   ]
 
 -- | Spend value for the user and also include change in the outputs.
@@ -424,33 +441,43 @@ validateIn times = updatePlutusTx $ \tx -> do
 
 -- | Typed txOut that contains decoded datum
 data TxBox a = TxBox
-  { txBoxRef   :: TxOutRef   -- ^ tx out reference
-  , txBoxOut   :: TxOut      -- ^ tx out
-  , txBoxDatum :: a          -- ^ datum
+  { txBoxRef   :: TxOutRef     -- ^ tx out reference
+  , txBoxOut   :: TxOut        -- ^ tx out
+  , txBoxDatum :: DatumType a  -- ^ datum
   }
-  deriving (Show, Eq)
+
+deriving instance Show (DatumType a) => Show (TxBox a)
+deriving instance Eq (DatumType a)   => Eq (TxBox a)
+
+instance HasAddress (TxBox a) where
+  toAddress = txBoxAddress
+
+-- | Get box address
+txBoxAddress :: TxBox a -> Address
+txBoxAddress = txOutAddress . txBoxOut
+
+-- | Get box datum hash
+txBoxDatumHash :: TxBox a -> Maybe DatumHash
+txBoxDatumHash = txOutDatumHash . txBoxOut
 
 -- | Get value at the box.
 txBoxValue :: TxBox a -> Value
 txBoxValue = txOutValue . txBoxOut
 
 -- | Read UTXOs with datums.
-boxAt :: (HasAddress addr, FromData a) => addr -> Run [TxBox a]
+boxAt :: (HasAddress addr, FromData (DatumType a)) => addr -> Run [TxBox a]
 boxAt addr = do
   utxos <- utxoAt (toAddress addr)
   fmap catMaybes $ mapM (\(ref, tout) -> fmap (\dat -> TxBox ref tout dat) <$> datumAt ref) utxos
 
 -- | Reads the Box for the script.
-scriptBoxAt :: FromData (DatumType a) => TypedValidator a -> Run [TxBox (DatumType a)]
+scriptBoxAt :: FromData (DatumType a) => TypedValidator a -> Run [TxBox a]
 scriptBoxAt tv = boxAt (validatorAddress tv)
 
 -- | It expects that Typed validator can have only one UTXO
 -- which is NFT.
-nftAt :: FromData (DatumType a) => TypedValidator a -> Run (TxBox (DatumType a))
+nftAt :: FromData (DatumType a) => TypedValidator a -> Run (TxBox a)
 nftAt tv = head <$> scriptBoxAt tv
-
-----------------------------------------------------------------------
--- time helpers
 
 ----------------------------------------------------------------------
 -- time helpers
@@ -476,24 +503,35 @@ weeks n = days (7 * n)
 ----------------------------------------------------------------------
 -- testing helpers
 
--- | Try to execute action and if it fails restore to the current state.
--- If it succeeds log error as we exepect it to fail.
+-- | Try to execute an action, and if it fails, restore to the current state
+-- while preserving logs. If the action succeeds, logs an error as we expect
+-- it to fail. Use 'mustFailWith' and 'mustFailWithBlock' to provide custom
+-- error message or/and failure action name.
 mustFail :: Run a -> Run ()
-mustFail = mustFailWith "Expected action to fail but it succeeds"
+mustFail = mustFailWith  "Expected action to fail but it succeeds"
 
--- | Try to execute action and if it fails restore to the current state.
--- If it succeeds log error as we exepect it to fail.
+-- | The same as 'mustFail', but takes custom error message.
 mustFailWith :: String -> Run a -> Run ()
-mustFailWith msg act = do
+mustFailWith = mustFailWithName "Unnamed failure action"
+
+-- | The same as 'mustFail', but takes action name and custom error message.
+mustFailWithName :: String -> String -> Run a -> Run ()
+mustFailWithName name msg act = do
   st <- get
-  preFails <- fromLog <$> getFails
+  preFails <- getFails
   void act
-  postFails <- fromLog <$> getFails
+  postFails <- getFails
   if noNewErrors preFails postFails
     then logError msg
-    else put st
+    else do
+      infoLog <- gets bchInfo
+      put st  { bchInfo = infoLog
+             , mustFailLog = mkMustFailLog preFails postFails
+             }
   where
-    noNewErrors a b = length a == length b
+    noNewErrors (fromLog -> a) (fromLog -> b) = length a == length b
+    mkMustFailLog (unLog -> pre) (unLog -> post) =
+      Log $ (second $ MustFailLog name) <$> Seq.drop (Seq.length pre) post
 
 -- | Checks that script runs without errors and returns pretty printed failure
 -- if something bad happens.
@@ -506,6 +544,24 @@ checkErrors = do
       then Nothing
       else Just (init . unlines $ fmap (ppFailure names) failures)
 
+-- | like 'testNoErrors' but prints out blockchain log for both
+-- failing and successful tests. The recommended way to choose
+-- between those two is using @tasty@ 'askOption'. To pull in
+-- parameters use an 'Ingredient' built with 'includingOptions'.
+testNoErrorsTrace :: Value -> BchConfig -> String -> Run a -> TestTree
+testNoErrorsTrace funds cfg msg act =
+    testCaseInfo msg $
+      maybe (pure bchLog)
+        assertFailure $ errors >>= \errs -> pure $ errs <> bchLog
+  where
+    (errors, bch) = runBch (act >> checkErrors) $ initBch cfg funds
+    bchLog = "\n\nBlockchain log :\n----------------\n" <> ppBchEvent (bchNames bch) (getLog bch)
+
+-- | Logs the blockchain state, i.e. balance sheet in the log
+logBalanceSheet :: Run ()
+logBalanceSheet =
+  modify' $ \s -> s { bchInfo = appendLog (bchCurrentSlot s) (ppBalanceSheet s) (bchInfo s) }
+
 testNoErrors :: Value -> BchConfig -> String -> Run a -> TestTree
 testNoErrors funds cfg msg act =
    testCase msg $ maybe (pure ()) assertFailure $
@@ -517,7 +573,7 @@ testLimits initFunds cfg msg tfmLog act =
   testCase msg $ assertBool limitLog isOk
   where
     (isOk, bch) = runBch (act >> noErrors) (initBch (warnLimits cfg) initFunds)
-    limitLog = ppLimitInfo $ tfmLog $ getLog bch
+    limitLog = ppLimitInfo (bchNames bch) $ tfmLog $ getLog bch
 
 ----------------------------------------------------------------------
 -- balance diff
@@ -533,11 +589,18 @@ instance Monoid BalanceDiff where
 
 -- | Checks that after execution of an action balances changed in certain way
 checkBalance :: BalanceDiff -> Run a -> Run a
-checkBalance (BalanceDiff diffs) act = do
-  before <- mapM valueAt addrs
+checkBalance diff = checkBalanceBy (const diff)
+
+-- | Checks that after execution of an action balances changed in certain way
+checkBalanceBy :: (a -> BalanceDiff) -> Run a -> Run a
+checkBalanceBy getDiffs act = do
+  beforeSt <- get
   res <- act
+  let BalanceDiff diffs = getDiffs res
+      addrs = M.keys diffs
+      before =  fmap (`valueAtState` beforeSt) addrs
   after <- mapM valueAt addrs
-  mapM_ (logError . show . vcat <=< mapM ppError) (check before after)
+  mapM_ (logError . show . vcat <=< mapM ppError) (check addrs diffs before after)
   pure res
   where
     ppError :: (Address, Value, Value) -> Run (Doc ann)
@@ -545,17 +608,16 @@ checkBalance (BalanceDiff diffs) act = do
       names <- gets bchNames
       let addrName = maybe (pretty addr) pretty $ readAddressName names addr
       pure $ vcat
-          [ hcat ["Balance error for", addrName, ":"]
+          [ "Balance error for:" <+> addrName
           , indent 2 $ vcat
               [ "Expected:" <+> ppBalanceWith names expected
               , "Got:" <+> ppBalanceWith names got
               ]
           ]
 
-    addrs = M.keys diffs
 
-    check :: [Value] -> [Value] -> Maybe [(Address, Value, Value)]
-    check before after
+    check :: [Address] -> Map Address Value -> [Value] -> [Value] -> Maybe [(Address, Value, Value)]
+    check addrs diffs before after
       | null errs = Nothing
       | otherwise = Just errs
       where
@@ -625,9 +687,21 @@ deregisterStakeScript script red = certTx $
   Certificate (DCertDelegDeRegKey $ scriptToStaking script) (withStakeScript script red)
 
 -- | Register staking pool
+-- TODO: thois does not work on TX level.
+-- Use insertPool as a workaround.
 registerPool :: PoolId -> Tx
 registerPool (PoolId pkh) = certTx $
   Certificate (DCertPoolRegister pkh pkh) Nothing
+
+-- | Insert pool id to the list of stake pools
+insertPool :: PoolId -> Run ()
+insertPool pid = modify' $ \st ->
+  st { bchStake = Stake.regPool pid $ bchStake st }
+
+-- | delete pool from the list of stake pools
+deletePool :: PoolId -> Run ()
+deletePool pid = modify' $ \st ->
+  st { bchStake = Stake.retirePool pid $ bchStake st }
 
 -- | Retire staking pool
 retirePool :: PoolId -> Tx
@@ -644,4 +718,3 @@ delegateStakeScript :: ToData redeemer =>
   StakeValidator -> redeemer -> PoolId -> Tx
 delegateStakeScript script red (PoolId poolKey) = certTx $
   Certificate (DCertDelegDelegate (scriptToStaking script) poolKey) (withStakeScript script red)
-

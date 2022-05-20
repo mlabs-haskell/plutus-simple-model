@@ -37,10 +37,12 @@ module Plutus.Test.Model.Blockchain (
   writeAddressName,
   writeAssetClassName,
   writeCurrencySymbolName,
+  writeTxName,
   readUserName,
   readAddressName,
   readAssetClassName,
   readCurrencySymbolName,
+  readTxName,
   Run (..),
   runBch,
   initBch,
@@ -58,10 +60,14 @@ module Plutus.Test.Model.Blockchain (
   logFail,
   logInfo,
   logError,
+  noLog,
+  noLogTx,
+  noLogInfo,
   pureFail,
   txOutRefAt,
   getTxOut,
   utxoAt,
+  utxoAtState,
   datumAt,
   rewardAt,
   stakesAt,
@@ -98,6 +104,7 @@ module Plutus.Test.Model.Blockchain (
   filterSlot,
   getLog,
   getFails,
+  MustFailLog(..),
 
   -- * internal
   intToPubKey,
@@ -107,6 +114,7 @@ import Prelude
 
 import Data.Aeson (decodeFileStrict')
 import Data.ByteString qualified as BS
+import Data.Coerce (coerce)
 import Data.Either
 import Data.Foldable
 import Data.Function (on)
@@ -154,7 +162,7 @@ import PlutusTx.Prelude qualified as Plutus
 import Basement.Compat.Natural
 import qualified Plutus.V1.Ledger.Ada            as Ada
 import Ledger.Typed.Scripts (TypedValidator, validatorAddress, ValidatorTypes(..))
-import Ledger (PaymentPubKeyHash(..))
+import Ledger (PaymentPubKeyHash(..), txId)
 
 import Ouroboros.Consensus.Block.Abstract (EpochNo (..), EpochSize (..))
 import Ouroboros.Consensus.HardFork.History.EraParams
@@ -198,6 +206,9 @@ instance HasAddress (TypedValidator a) where
 class HasStakingCredential a where
   toStakingCredential :: a -> StakingCredential
 
+instance HasStakingCredential StakingCredential where
+  toStakingCredential = id
+
 instance HasStakingCredential PubKeyHash where
   toStakingCredential = keyToStaking
 
@@ -227,8 +238,8 @@ appendStakingCredential cred = AppendStaking (StakingHash cred)
 appendStakingPubKey :: PubKeyHash -> a -> AppendStaking a
 appendStakingPubKey pkh = appendStakingCredential (PubKeyCredential pkh)
 
-appendStakingScript :: ValidatorHash -> a -> AppendStaking a
-appendStakingScript vh = appendStakingCredential (ScriptCredential vh)
+appendStakingScript :: StakeValidatorHash -> a -> AppendStaking a
+appendStakingScript sh = appendStakingCredential (ScriptCredential $ coerce sh)
 
 instance Semigroup ExecutionUnits where
   (<>) (ExecutionUnits a1 b1) (ExecutionUnits a2 b2) =
@@ -380,11 +391,11 @@ data Blockchain = Blockchain
   , bchUserStep     :: !Integer
   , bchFails        :: !(Log FailReason)
   , bchInfo         :: !(Log String)
+  , mustFailLog     :: !(Log MustFailLog)
   , -- | human readable names. Idea is to substitute for them
     -- in pretty printers for error logs, user names, script names.
     bchNames :: !BchNames
   }
-
 
 newtype Log a = Log { unLog :: Seq (Slot, a) }
   deriving (Functor)
@@ -416,6 +427,10 @@ fromGroupLog = fmap toGroup . L.groupBy ((==) `on` fst) . fromLog
 
 instance Monoid (Log a) where
   mempty = Log Seq.empty
+
+-- | Wrapper for error logs, produced in the paths of execution protected by
+-- 'mustFail' combinator.
+data MustFailLog = MustFailLog String FailReason
 
 -- | Result of the execution.
 data Result = Ok | Fail FailReason
@@ -476,6 +491,7 @@ data BchNames = BchNames
   , bchNameAddresses :: !(Map Address String)
   , bchNameAssetClasses :: !(Map AssetClass String)
   , bchNameCurrencySymbols :: !(Map CurrencySymbol String)
+  , bchNameTxns :: !(Map TxId String)
   }
 
 -- | Modifies the mappings to human-readable names
@@ -504,6 +520,11 @@ writeCurrencySymbolName :: CurrencySymbol -> String -> Run ()
 writeCurrencySymbolName cs name = modifyBchNames $ \ns ->
   ns {bchNameCurrencySymbols = M.insert cs name (bchNameCurrencySymbols ns)}
 
+-- | Assigns human-readable name to a transaction
+writeTxName :: Tx -> String -> Run ()
+writeTxName (txId . tx'plutus -> ident) name = modifyBchNames $ \ns ->
+  ns {bchNameTxns = M.insert ident name (bchNameTxns ns)}
+
 -- | Gets human-readable name of user
 readUserName :: BchNames -> PubKeyHash -> Maybe String
 readUserName names pkh = M.lookup pkh (bchNameUsers names)
@@ -519,6 +540,10 @@ readAssetClassName names ac = M.lookup ac (bchNameAssetClasses names)
 -- | Gets human-readable name of user
 readCurrencySymbolName :: BchNames -> CurrencySymbol -> Maybe String
 readCurrencySymbolName names cs = M.lookup cs (bchNameCurrencySymbols names)
+
+-- | Gets human-readable name of transaction
+readTxName :: BchNames -> TxId -> Maybe String
+readTxName names cs = M.lookup cs (bchNameTxns names)
 
 --------------------------------------------------------
 -- API
@@ -548,9 +573,11 @@ initBch cfg initVal =
     , bchUserStep = 1
     , bchFails = mempty
     , bchInfo = mempty
+    , mustFailLog = mempty
     , bchNames = BchNames
                   (M.singleton genesisUserId "Genesis role")
                   (M.singleton genesisAddress "Genesis role")
+                  M.empty
                   M.empty
                   M.empty
     }
@@ -623,6 +650,31 @@ logInfo msg = do
   slot <- gets bchCurrentSlot
   modify' $ \s -> s { bchInfo = appendLog slot msg (bchInfo s) }
 
+-- | Igonres log of TXs and info messages during execution (but not errors)
+noLog :: Run a -> Run a
+noLog act = do
+  txLog <- gets bchTxs
+  infoLog <- gets bchInfo
+  res <- act
+  modify' $ \st -> st { bchTxs = txLog, bchInfo = infoLog }
+  pure res
+
+-- | Igonres log of TXs during execution
+noLogTx :: Run a -> Run a
+noLogTx act = do
+  txLog <- gets bchTxs
+  res <- act
+  modify' $ \st -> st { bchTxs = txLog }
+  pure res
+
+-- | Igonres log of info level messages during execution
+noLogInfo :: Run a -> Run a
+noLogInfo act = do
+  infoLog <- gets bchInfo
+  res <- act
+  modify' $ \st -> st { bchInfo = infoLog }
+  pure res
+
 -- | Send block of TXs to blockchain.
 sendBlock :: [Tx] -> Run (Either FailReason [Stat])
 sendBlock txs = do
@@ -638,7 +690,7 @@ sendTx tx = do
   pure res
 
 {- | Send single TX to blockchain. It logs failure if TX is invalid
- and pproduces performance stats if TX was ok.
+ and produces performance stats if TX was ok.
 -}
 sendSingleTx :: Tx -> Run (Either FailReason Stat)
 sendSingleTx (Tx extra tx) =
@@ -784,7 +836,7 @@ getUTxO tid tx = do
 
     fromTxOut networkId (tin, tout) = do
       cin <- Cardano.toCardanoTxIn $ P.txInRef tin
-      cout <- fmap toCtxUTxOTxOut $ Cardano.toCardanoTxOut networkId (Fork.lookupDatum' $ P.txData tx) tout
+      cout <- fmap toCtxUTxOTxOut $ Cardano.toCardanoTxOut networkId (P.txData tx) tout
       pure (cin, cout)
 
     toUtxo :: NetworkId -> [(TxIn, TxOut)] -> Either Cardano.ToCardanoError (UTxO AlonzoEra)
@@ -811,7 +863,7 @@ waitNSlots n = modify' $ \s -> s {bchCurrentSlot = bchCurrentSlot s + n}
 
 -- | Applies valid TX to modify blockchain.
 applyTx :: Stat -> TxId -> Tx -> Run ()
-applyTx stat tid (Tx extra tx@P.Tx {..}) = do
+applyTx stat tid etx@(Tx extra P.Tx {..}) = do
   updateUtxos
   updateRewards
   updateCertificates
@@ -824,7 +876,7 @@ applyTx stat tid (Tx extra tx@P.Tx {..}) = do
     saveTx = do
       t <- gets bchCurrentSlot
       statPercent <- getStatPercent
-      modify' $ \s -> s {bchTxs = appendLog t (TxStat (toExtra tx) t stat statPercent) $ bchTxs s}
+      modify' $ \s -> s {bchTxs = appendLog t (TxStat etx t stat statPercent) $ bchTxs s}
 
     getStatPercent = do
       maxLimits <- gets (bchConfigLimitStats . bchConfig)
@@ -870,13 +922,22 @@ applyTx stat tid (Tx extra tx@P.Tx {..}) = do
 
 -- | Read all TxOutRefs that belong to given address.
 txOutRefAt :: Address -> Run [TxOutRef]
-txOutRefAt addr = maybe [] S.toList . M.lookup addr <$> gets bchAddresses
+txOutRefAt addr = txOutRefAtState addr <$> get
+
+-- | Read all TxOutRefs that belong to given address.
+txOutRefAtState :: Address -> Blockchain -> [TxOutRef]
+txOutRefAtState addr st = maybe [] S.toList . M.lookup addr $ bchAddresses st
 
 -- | Get all UTXOs that belong to an address
 utxoAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
-utxoAt (toAddress -> addr) = do
-  refs <- txOutRefAt addr
-  fmap (\m -> mapMaybe (\r -> (r,) <$> M.lookup r m) refs) $ gets bchUtxos
+utxoAt addr = utxoAtState addr <$> get
+
+-- | Get all UTXOs that belong to an address
+utxoAtState :: HasAddress user => user -> Blockchain -> [(TxOutRef, TxOut)]
+utxoAtState (toAddress -> addr) st =
+  mapMaybe (\r -> (r,) <$> M.lookup r (bchUtxos st)) refs
+  where
+    refs = txOutRefAtState addr st
 
 -- | Reads typed datum from blockchain that belongs to UTXO (by reference).
 datumAt :: FromData a => TxOutRef -> Run (Maybe a)
@@ -887,8 +948,8 @@ datumAt ref = do
 
 
 -- | Reads current reward amount for a staking credential
-rewardAt :: StakingCredential -> Run Integer
-rewardAt cred = gets (maybe 0 id . lookupReward cred . bchStake)
+rewardAt :: HasStakingCredential cred => cred -> Run Integer
+rewardAt cred = gets (maybe 0 id . lookupReward (toStakingCredential cred) . bchStake)
 
 -- | Returns all stakes delegatged to a pool
 stakesAt :: PoolId -> Run [StakingCredential]
@@ -914,7 +975,7 @@ mainnetTxLimits =
   Stat
     { statSize  = 16 * 1024
     , statExecutionUnits = ExecutionUnits
-        { executionMemory = 10_000_000
+        { executionMemory = 14_000_000
         , executionSteps = 10_000_000_000
         }
     }
@@ -943,9 +1004,10 @@ testnetBlockLimits = mainnetBlockLimits
 
 -- | Blockchain events to log.
 data BchEvent
-  = BchTx TxStat           -- ^ Sucessful TXs
-  | BchInfo String         -- ^ Info messages
-  | BchFail FailReason     -- ^ Errors
+  = BchTx TxStat               -- ^ Sucessful TXs
+  | BchInfo String             -- ^ Info messages
+  | BchFail FailReason         -- ^ Errors
+  | BchMustFailLog MustFailLog -- ^ Expected errors, see 'mustFail'
 
 -- | Skip all info messages
 silentLog :: Log BchEvent -> Log BchEvent
@@ -970,9 +1032,4 @@ filterSlot f (Log xs) = Log (Seq.filter (f . fst) xs)
 -- | Reads the log.
 getLog :: Blockchain -> Log BchEvent
 getLog Blockchain{..} =
-  mconcat [BchInfo <$> bchInfo, BchTx <$> bchTxs, BchFail <$> bchFails]
-
---------------------------------------------------------------
--- Cardano internals re-exports
-
-
+  mconcat [BchInfo <$> bchInfo, BchMustFailLog <$> mustFailLog, BchTx <$> bchTxs, BchFail <$> bchFails]
