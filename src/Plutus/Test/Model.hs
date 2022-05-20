@@ -375,29 +375,29 @@
 
   -- * How to check TX resource usage
 
-  Sometimes we write too mcuh code in the validators and it starts to exceed execution limits.
-  TXs like this can not be executed on chain. To watch out for that we have specail functions:
+  Sometimes we write too much code in the validators and it starts to exceed execution limits.
+  TXs like this can not be executed on chain. To watch out for that we have special functions:
 
   > testLimits ::
   >    Value
   >    -> BchConfig
   >    -> String
-  >    -> (Log BchEvent -> Log BchEvent)
+  >    -> (Log TxStat -> Log TxStat)
   >    -> Run a
   >    -> TestTree
   > testLimits totalBchFunds bchConfig testMessage logFilter script
 
   Let's break apart what it does. It runs blockchain with limit check config set to @WarnLimits@.
-  This way we proceed to execute TX onblockchain even if TX exceeds the limits but we save the
-  error on exceedance of the limits. When script was run if resource usage errors are encountered
+  This way we proceed to execute TX on blockchain even if TX exceeds the limits, but we save the
+  error every time it happens. When script was run if resource usage errors are encountered
   they are logged to the user in easy to read way.
 
-  To see the logs even on sucessful run we can add fake error:
+  To see the logs even on successful run we can add fake error:
 
   > (script >> logError "Show stats")
 
-  Filter of the log can be usefl to filter out some non-related events. for example setup of the blockchain
-  users. We typically cn use it like this:
+  Filter of the log can be useful to filter out some non-related events, for example setup of the
+   blockchain users. We typically cn use it like this:
 
   > good "Reward scripts" (filterSlot (> 4)) (Rewards.simpleRewardTestBy 1)
   >   where

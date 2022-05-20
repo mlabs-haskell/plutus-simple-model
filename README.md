@@ -587,15 +587,15 @@ testLimits ::
    Value
    -> BchConfig
    -> String
-   -> (Log BchEvent -> Log BchEvent)
+   -> (Log TxStat -> Log TxStat)
    -> Run a
    -> TestTree
 testLimits totalBchFunds bchConfig testMessage logFilter script
 ```
 
-Let's break apart what it does. It runs blockchain with limit check config set to `WarnLimits`.
+Let's break apart what it does. It runs blockchain with limit check config set to @WarnLimits@.
 This way we proceed to execute TX on blockchain even if TX exceeds the limits, but we save the
-error once limits exceed. When script was run if resource usage errors are encountered
+error every time it happens. When script was run if resource usage errors are encountered
 they are logged to the user in easy to read way.
 
 To see the logs even on successful run we can add fake error:

@@ -42,24 +42,15 @@ ppBchEvent _names = show . vcat . fmap ppSlot . fromGroupLog
   where
     ppSlot (slot, events) = hardline <> vcat [pretty slot <> colon, indent 2 (vcat $ pretty <$> events)]
 
-ppLimitInfo :: BchNames -> Log BchEvent -> String
+ppLimitInfo :: BchNames -> Log TxStat -> String
 ppLimitInfo names bch =
   show $ vcat $ fmap ppGroup $ fromGroupLog bch
   where
     ppGroup (slot, events) = vcat [pretty slot <> colon, indent 2 (vcat $ fmap ppStatEvent events)]
 
-    ppStatEvent = \case
-      BchTx tx    -> vcat [ ppTx $ Ledger.txId $ tx'plutus $ txStatTx tx
+    ppStatEvent tx = vcat [ ppTx $ Ledger.txId $ tx'plutus $ txStatTx tx
                           , indent 2 $ ppStatWarn (txStatPercent tx)
                           ]
-      _ -> mempty
--- FIXME: do we really want to pollute limit info with error/info entries?
---      BchInfo msg -> pretty msg
---      BchFail err -> mempty
---        case err of
---          TxLimitError _ _ -> mempty
---          other            -> pretty other
---      BchMustFailLog _ -> mempty
 
     ppTx ident = "Tx name/id:" <+> case readTxName names ident of
       Just name -> pretty name
