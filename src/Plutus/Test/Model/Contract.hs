@@ -1,4 +1,5 @@
 {-# LANGUAGE UndecidableInstances #-}
+
 -- | Functions to create TXs and query blockchain model.
 module Plutus.Test.Model.Contract (
   -- * Modify blockchain
@@ -25,7 +26,7 @@ module Plutus.Test.Model.Contract (
   stakesAt,
   hasPool,
   hasStake,
-  TxBox(..),
+  TxBox (..),
   txBoxAddress,
   txBoxDatumHash,
   txBoxValue,
@@ -54,11 +55,13 @@ module Plutus.Test.Model.Contract (
   validateIn,
 
   -- ** Staking valdiators primitives
+
   --
+
   -- | to use them convert vanila Plutus @Tx@ to @Tx@ with @toExtra@
-  Tx(..),
+  Tx (..),
   toExtra,
-  HasStakingCredential(..),
+  HasStakingCredential (..),
   withdrawStakeKey,
   withdrawStakeScript,
   registerStakeKey,
@@ -94,7 +97,7 @@ module Plutus.Test.Model.Contract (
   BalanceDiff,
   checkBalance,
   checkBalanceBy,
-  HasAddress(..),
+  HasAddress (..),
   owns,
   gives,
 ) where
@@ -107,9 +110,9 @@ import Data.List qualified as L
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
 import Data.Maybe
+import Data.Sequence qualified as Seq (drop, length)
 import Data.Set (Set)
 import Data.Set qualified as S
-import Data.Sequence qualified as Seq (drop, length)
 
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
@@ -122,15 +125,15 @@ import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Interval ()
 import Plutus.V1.Ledger.Slot
-import Plutus.V1.Ledger.Tx hiding (Tx(Tx))
+import Plutus.V1.Ledger.Tx hiding (Tx (Tx))
 import Plutus.V1.Ledger.Value
 import PlutusTx.Prelude qualified as Plutus
 
 import Plutus.Test.Model.Blockchain
 import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Pretty
-import Prettyprinter (Doc, vcat, indent, (<+>), pretty)
 import Plutus.Test.Model.Stake qualified as Stake
+import Prettyprinter (Doc, indent, pretty, vcat, (<+>))
 
 ------------------------------------------------------------------------
 -- modify blockchain
@@ -174,7 +177,7 @@ withSpend pkh val cont = do
   mUsp <- spend' pkh val
   case mUsp of
     Just usp -> cont usp
-    Nothing  -> logError "No funds for user to spend"
+    Nothing -> logError "No funds for user to spend"
 
 -- | Signs transaction and sends it ignoring the result stats.
 submitTx :: PubKeyHash -> Tx -> Run ()
@@ -233,10 +236,11 @@ data UserSpend = UserSpend
   }
   deriving (Show)
 
--- | Reads first @TxOutRef@ from user spend inputs.
--- It can be useful to create NFTs that depend on TxOutRef's.
+{- | Reads first @TxOutRef@ from user spend inputs.
+ It can be useful to create NFTs that depend on TxOutRef's.
+-}
 getHeadRef :: UserSpend -> TxOutRef
-getHeadRef UserSpend{..} = txInRef $ S.elemAt 0 userSpend'inputs
+getHeadRef UserSpend {..} = txInRef $ S.elemAt 0 userSpend'inputs
 
 -- | Variant of spend' that fails in run-time if there are not enough funds to spend.
 spend :: PubKeyHash -> Value -> Run UserSpend
@@ -283,68 +287,86 @@ spend' pkh expected = do
 
 -- | Pay value to the owner of PubKeyHash.
 payToPubKey :: PubKeyHash -> Value -> Tx
-payToPubKey pkh val = toExtra $
-  mempty
-    { txOutputs = [TxOut (pubKeyHashAddress pkh) val Nothing]
-    }
+payToPubKey pkh val =
+  toExtra $
+    mempty
+      { txOutputs = [TxOut (pubKeyHashAddress pkh) val Nothing]
+      }
 
 payWithDatumToPubKey :: ToData a => PubKeyHash -> a -> Value -> Tx
-payWithDatumToPubKey pkh dat val = toExtra $
-  mempty
-    { txOutputs = [TxOut (pubKeyHashAddress pkh) val (Just dh)]
-    , txData = M.singleton dh datum
-    }
+payWithDatumToPubKey pkh dat val =
+  toExtra $
+    mempty
+      { txOutputs = [TxOut (pubKeyHashAddress pkh) val (Just dh)]
+      , txData = M.singleton dh datum
+      }
   where
     dh = datumHash datum
     datum = Datum $ toBuiltinData dat
 
--- | Pay value to the owner of PubKeyHash.
--- We use address to supply staking credential if we need it.
+{- | Pay value to the owner of PubKeyHash.
+ We use address to supply staking credential if we need it.
+-}
 payToPubKeyAddress :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
-payToPubKeyAddress pkh val = toExtra $
-  mempty
-    { txOutputs = [TxOut (toAddress pkh) val Nothing]
-    }
+payToPubKeyAddress pkh val =
+  toExtra $
+    mempty
+      { txOutputs = [TxOut (toAddress pkh) val Nothing]
+      }
 
--- | Pay to the script.
--- We can use TypedValidator as argument and it will be checked that the datum is correct.
-payToScript :: ToData (DatumType a) =>
-  TypedValidator a -> DatumType a -> Value -> Tx
-payToScript tv dat val = toExtra $
-  mempty
-    { txOutputs = [TxOut (toAddress tv) val (Just dh)]
-    , txData = M.singleton dh datum
-    }
+{- | Pay to the script.
+ We can use TypedValidator as argument and it will be checked that the datum is correct.
+-}
+payToScript ::
+  ToData (DatumType a) =>
+  TypedValidator a ->
+  DatumType a ->
+  Value ->
+  Tx
+payToScript tv dat val =
+  toExtra $
+    mempty
+      { txOutputs = [TxOut (toAddress tv) val (Just dh)]
+      , txData = M.singleton dh datum
+      }
   where
     dh = datumHash datum
     datum = Datum $ toBuiltinData dat
 
--- | Pay to the script.
--- We can use TypedValidator as argument and it will be checked that the datum is correct.
-payToScriptAddress :: (HasAddress script, ToData datum) =>
-  script -> datum -> Value -> Tx
-payToScriptAddress script dat val = toExtra $
-  mempty
-    { txOutputs = [TxOut (toAddress script) val (Just dh)]
-    , txData = M.singleton dh datum
-    }
+{- | Pay to the script.
+ We can use TypedValidator as argument and it will be checked that the datum is correct.
+-}
+payToScriptAddress ::
+  (HasAddress script, ToData datum) =>
+  script ->
+  datum ->
+  Value ->
+  Tx
+payToScriptAddress script dat val =
+  toExtra $
+    mempty
+      { txOutputs = [TxOut (toAddress script) val (Just dh)]
+      , txData = M.singleton dh datum
+      }
   where
     dh = datumHash datum
     datum = Datum $ toBuiltinData dat
 
 -- | Pay fee for TX-submission
 payFee :: Value -> Tx
-payFee val = toExtra $
-  mempty
-    { txFee = val
-    }
+payFee val =
+  toExtra $
+    mempty
+      { txFee = val
+      }
 
 -- | Spend @TxOutRef@ that belongs to pub key (user).
 spendPubKey :: TxOutRef -> Tx
-spendPubKey ref = toExtra $
-  mempty
-    { txInputs = S.singleton $ TxIn ref (Just ConsumePublicKeyAddress)
-    }
+spendPubKey ref =
+  toExtra $
+    mempty
+      { txInputs = S.singleton $ TxIn ref (Just ConsumePublicKeyAddress)
+      }
 
 -- | Spend script input.
 spendScript ::
@@ -354,10 +376,11 @@ spendScript ::
   RedeemerType a ->
   DatumType a ->
   Tx
-spendScript tv ref red dat = toExtra $
-  mempty
-    { txInputs = S.singleton $ TxIn ref (Just $ ConsumeScriptAddress (validatorScript tv) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
-    }
+spendScript tv ref red dat =
+  toExtra $
+    mempty
+      { txInputs = S.singleton $ TxIn ref (Just $ ConsumeScriptAddress (validatorScript tv) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
+      }
 
 -- | Spend script input.
 spendBox ::
@@ -366,45 +389,50 @@ spendBox ::
   RedeemerType a ->
   TxBox a ->
   Tx
-spendBox tv red TxBox{..} =
+spendBox tv red TxBox {..} =
   spendScript tv txBoxRef red txBoxDatum
 
 -- | Specify that box is used as oracle (read-only). Spends value to itself and uses the same datum.
-readOnlyBox :: (ToData (DatumType a), ToData (RedeemerType a))
-  => TypedValidator a
-  -> TxBox a
-  -> RedeemerType a
-  -> Tx
+readOnlyBox ::
+  (ToData (DatumType a), ToData (RedeemerType a)) =>
+  TypedValidator a ->
+  TxBox a ->
+  RedeemerType a ->
+  Tx
 readOnlyBox tv box act = modifyBox tv box act id id
 
 -- | Modifies the box. We specify how script box datum and value are updated.
-modifyBox :: (ToData (DatumType a), ToData (RedeemerType a))
-  => TypedValidator a
-  -> TxBox a
-  -> RedeemerType a
-  -> (DatumType a -> DatumType a)
-  -> (Value -> Value)
-  -> Tx
-modifyBox tv box act modDatum modValue = mconcat
-  [ spendBox tv act box
-  , payToScriptAddress box (modDatum $ txBoxDatum box) (modValue $ txOutValue $ txBoxOut box)
-  ]
+modifyBox ::
+  (ToData (DatumType a), ToData (RedeemerType a)) =>
+  TypedValidator a ->
+  TxBox a ->
+  RedeemerType a ->
+  (DatumType a -> DatumType a) ->
+  (Value -> Value) ->
+  Tx
+modifyBox tv box act modDatum modValue =
+  mconcat
+    [ spendBox tv act box
+    , payToScriptAddress box (modDatum $ txBoxDatum box) (modValue $ txOutValue $ txBoxOut box)
+    ]
 
 -- | Spend value for the user and also include change in the outputs.
 userSpend :: UserSpend -> Tx
-userSpend (UserSpend ins mChange) = toExtra $
-  mempty
-    { txInputs = ins
-    , txOutputs = maybe [] pure mChange
-    }
+userSpend (UserSpend ins mChange) =
+  toExtra $
+    mempty
+      { txInputs = ins
+      , txOutputs = maybe [] pure mChange
+      }
 
 -- | Mints value. To use redeemer see function @addMintRedeemer@.
 mintValue :: MintingPolicy -> Value -> Tx
-mintValue policy val = toExtra $
-  mempty
-    { txMint = val
-    , txMintScripts = S.singleton policy
-    }
+mintValue policy val =
+  toExtra $
+    mempty
+      { txMint = val
+      , txMintScripts = S.singleton policy
+      }
 
 {- | Adds redeemr to the minting policy.
  Note that this should be done only as all mint values are specified.
@@ -441,13 +469,16 @@ validateIn times = updatePlutusTx $ \tx -> do
 
 -- | Typed txOut that contains decoded datum
 data TxBox a = TxBox
-  { txBoxRef   :: TxOutRef     -- ^ tx out reference
-  , txBoxOut   :: TxOut        -- ^ tx out
-  , txBoxDatum :: DatumType a  -- ^ datum
+  { -- | tx out reference
+    txBoxRef :: TxOutRef
+  , -- | tx out
+    txBoxOut :: TxOut
+  , -- | datum
+    txBoxDatum :: DatumType a
   }
 
 deriving instance Show (DatumType a) => Show (TxBox a)
-deriving instance Eq (DatumType a)   => Eq (TxBox a)
+deriving instance Eq (DatumType a) => Eq (TxBox a)
 
 instance HasAddress (TxBox a) where
   toAddress = txBoxAddress
@@ -474,8 +505,9 @@ boxAt addr = do
 scriptBoxAt :: FromData (DatumType a) => TypedValidator a -> Run [TxBox a]
 scriptBoxAt tv = boxAt (validatorAddress tv)
 
--- | It expects that Typed validator can have only one UTXO
--- which is NFT.
+{- | It expects that Typed validator can have only one UTXO
+ which is NFT.
+-}
 nftAt :: FromData (DatumType a) => TypedValidator a -> Run (TxBox a)
 nftAt tv = head <$> scriptBoxAt tv
 
@@ -503,12 +535,13 @@ weeks n = days (7 * n)
 ----------------------------------------------------------------------
 -- testing helpers
 
--- | Try to execute an action, and if it fails, restore to the current state
--- while preserving logs. If the action succeeds, logs an error as we expect
--- it to fail. Use 'mustFailWith' and 'mustFailWithBlock' to provide custom
--- error message or/and failure action name.
+{- | Try to execute an action, and if it fails, restore to the current state
+ while preserving logs. If the action succeeds, logs an error as we expect
+ it to fail. Use 'mustFailWith' and 'mustFailWithBlock' to provide custom
+ error message or/and failure action name.
+-}
 mustFail :: Run a -> Run ()
-mustFail = mustFailWith  "Expected action to fail but it succeeds"
+mustFail = mustFailWith "Expected action to fail but it succeeds"
 
 -- | The same as 'mustFail', but takes custom error message.
 mustFailWith :: String -> Run a -> Run ()
@@ -525,16 +558,19 @@ mustFailWithName name msg act = do
     then logError msg
     else do
       infoLog <- gets bchInfo
-      put st  { bchInfo = infoLog
-             , mustFailLog = mkMustFailLog preFails postFails
-             }
+      put
+        st
+          { bchInfo = infoLog
+          , mustFailLog = mkMustFailLog preFails postFails
+          }
   where
     noNewErrors (fromLog -> a) (fromLog -> b) = length a == length b
     mkMustFailLog (unLog -> pre) (unLog -> post) =
       Log $ (second $ MustFailLog name) <$> Seq.drop (Seq.length pre) post
 
--- | Checks that script runs without errors and returns pretty printed failure
--- if something bad happens.
+{- | Checks that script runs without errors and returns pretty printed failure
+ if something bad happens.
+-}
 checkErrors :: Run (Maybe String)
 checkErrors = do
   failures <- fromLog <$> getFails
@@ -544,15 +580,18 @@ checkErrors = do
       then Nothing
       else Just (init . unlines $ fmap (ppFailure names) failures)
 
--- | like 'testNoErrors' but prints out blockchain log for both
--- failing and successful tests. The recommended way to choose
--- between those two is using @tasty@ 'askOption'. To pull in
--- parameters use an 'Ingredient' built with 'includingOptions'.
+{- | like 'testNoErrors' but prints out blockchain log for both
+ failing and successful tests. The recommended way to choose
+ between those two is using @tasty@ 'askOption'. To pull in
+ parameters use an 'Ingredient' built with 'includingOptions'.
+-}
 testNoErrorsTrace :: Value -> BchConfig -> String -> Run a -> TestTree
 testNoErrorsTrace funds cfg msg act =
-    testCaseInfo msg $
-      maybe (pure bchLog)
-        assertFailure $ errors >>= \errs -> pure $ errs <> bchLog
+  testCaseInfo msg $
+    maybe
+      (pure bchLog)
+      assertFailure
+      $ errors >>= \errs -> pure $ errs <> bchLog
   where
     (errors, bch) = runBch (act >> checkErrors) $ initBch cfg funds
     bchLog = "\n\nBlockchain log :\n----------------\n" <> ppBchEvent (bchNames bch) (getLog bch)
@@ -560,12 +599,13 @@ testNoErrorsTrace funds cfg msg act =
 -- | Logs the blockchain state, i.e. balance sheet in the log
 logBalanceSheet :: Run ()
 logBalanceSheet =
-  modify' $ \s -> s { bchInfo = appendLog (bchCurrentSlot s) (ppBalanceSheet s) (bchInfo s) }
+  modify' $ \s -> s {bchInfo = appendLog (bchCurrentSlot s) (ppBalanceSheet s) (bchInfo s)}
 
 testNoErrors :: Value -> BchConfig -> String -> Run a -> TestTree
 testNoErrors funds cfg msg act =
-   testCase msg $ maybe (pure ()) assertFailure $
-    fst (runBch (act >> checkErrors) (initBch cfg funds))
+  testCase msg $
+    maybe (pure ()) assertFailure $
+      fst (runBch (act >> checkErrors) (initBch cfg funds))
 
 -- | check transaction limits
 testLimits :: Value -> BchConfig -> String -> (Log TxStat -> Log TxStat) -> Run a -> TestTree
@@ -598,7 +638,7 @@ checkBalanceBy getDiffs act = do
   res <- act
   let BalanceDiff diffs = getDiffs res
       addrs = M.keys diffs
-      before =  fmap (`valueAtState` beforeSt) addrs
+      before = fmap (`valueAtState` beforeSt) addrs
   after <- mapM valueAt addrs
   mapM_ (logError . show . vcat <=< mapM ppError) (check addrs diffs before after)
   pure res
@@ -607,14 +647,15 @@ checkBalanceBy getDiffs act = do
     ppError (addr, expected, got) = do
       names <- gets bchNames
       let addrName = maybe (pretty addr) pretty $ readAddressName names addr
-      pure $ vcat
+      pure $
+        vcat
           [ "Balance error for:" <+> addrName
-          , indent 2 $ vcat
-              [ "Expected:" <+> ppBalanceWith names expected
-              , "Got:" <+> ppBalanceWith names got
-              ]
+          , indent 2 $
+              vcat
+                [ "Expected:" <+> ppBalanceWith names expected
+                , "Got:" <+> ppBalanceWith names got
+                ]
           ]
-
 
     check :: [Address] -> Map Address Value -> [Value] -> [Value] -> Maybe [(Address, Value, Value)]
     check addrs diffs before after
@@ -625,7 +666,7 @@ checkBalanceBy getDiffs act = do
 
         go addr a b
           | res Plutus.== dv = Nothing
-          | otherwise        = Just (addr, dv, res)
+          | otherwise = Just (addr, dv, res)
           where
             res = b <> Plutus.negate a
             dv = diffs M.! addr
@@ -642,7 +683,7 @@ gives userA val userB = owns userA (Plutus.negate val) <> owns userB val
 -- staking and certificates
 
 withdrawTx :: Withdraw -> Tx
-withdrawTx w = mempty { tx'extra = mempty { extra'withdraws = [w] } }
+withdrawTx w = mempty {tx'extra = mempty {extra'withdraws = [w]}}
 
 toRedeemer :: ToData red => red -> Redeemer
 toRedeemer = Redeemer . toBuiltinData
@@ -652,69 +693,94 @@ withStakeScript script red = Just (toRedeemer red, script)
 
 -- | Add staking withdrawal based on pub key hash
 withdrawStakeKey :: PubKeyHash -> Integer -> Tx
-withdrawStakeKey key amount = withdrawTx $
-  Withdraw (keyToStaking key) amount Nothing
+withdrawStakeKey key amount =
+  withdrawTx $
+    Withdraw (keyToStaking key) amount Nothing
 
 -- | Add staking withdrawal based on script
-withdrawStakeScript :: ToData redeemer
-  => StakeValidator -> redeemer -> Integer -> Tx
-withdrawStakeScript validator red amount = withdrawTx $
-  Withdraw (scriptToStaking validator) amount (withStakeScript validator red)
+withdrawStakeScript ::
+  ToData redeemer =>
+  StakeValidator ->
+  redeemer ->
+  Integer ->
+  Tx
+withdrawStakeScript validator red amount =
+  withdrawTx $
+    Withdraw (scriptToStaking validator) amount (withStakeScript validator red)
 
 certTx :: Certificate -> Tx
-certTx cert = mempty { tx'extra = mempty { extra'certificates = [cert] } }
+certTx cert = mempty {tx'extra = mempty {extra'certificates = [cert]}}
 
 -- | Register staking credential by key
 registerStakeKey :: PubKeyHash -> Tx
-registerStakeKey pkh = certTx $
-  Certificate (DCertDelegRegKey $ keyToStaking pkh) Nothing
+registerStakeKey pkh =
+  certTx $
+    Certificate (DCertDelegRegKey $ keyToStaking pkh) Nothing
 
 -- | Register staking credential by stake validator
-registerStakeScript :: ToData redeemer =>
-  StakeValidator -> redeemer -> Tx
-registerStakeScript script red = certTx $
-  Certificate (DCertDelegRegKey $ scriptToStaking script) (withStakeScript script red)
+registerStakeScript ::
+  ToData redeemer =>
+  StakeValidator ->
+  redeemer ->
+  Tx
+registerStakeScript script red =
+  certTx $
+    Certificate (DCertDelegRegKey $ scriptToStaking script) (withStakeScript script red)
 
 -- | DeRegister staking credential by key
 deregisterStakeKey :: PubKeyHash -> Tx
-deregisterStakeKey pkh = certTx $
-  Certificate (DCertDelegDeRegKey $ keyToStaking pkh) Nothing
+deregisterStakeKey pkh =
+  certTx $
+    Certificate (DCertDelegDeRegKey $ keyToStaking pkh) Nothing
 
 -- | DeRegister staking credential by stake validator
-deregisterStakeScript :: ToData redeemer =>
-  StakeValidator -> redeemer -> Tx
-deregisterStakeScript script red = certTx $
-  Certificate (DCertDelegDeRegKey $ scriptToStaking script) (withStakeScript script red)
+deregisterStakeScript ::
+  ToData redeemer =>
+  StakeValidator ->
+  redeemer ->
+  Tx
+deregisterStakeScript script red =
+  certTx $
+    Certificate (DCertDelegDeRegKey $ scriptToStaking script) (withStakeScript script red)
 
--- | Register staking pool
--- TODO: thois does not work on TX level.
--- Use insertPool as a workaround.
+{- | Register staking pool
+ TODO: thois does not work on TX level.
+ Use insertPool as a workaround.
+-}
 registerPool :: PoolId -> Tx
-registerPool (PoolId pkh) = certTx $
-  Certificate (DCertPoolRegister pkh pkh) Nothing
+registerPool (PoolId pkh) =
+  certTx $
+    Certificate (DCertPoolRegister pkh pkh) Nothing
 
 -- | Insert pool id to the list of stake pools
 insertPool :: PoolId -> Run ()
 insertPool pid = modify' $ \st ->
-  st { bchStake = Stake.regPool pid $ bchStake st }
+  st {bchStake = Stake.regPool pid $ bchStake st}
 
 -- | delete pool from the list of stake pools
 deletePool :: PoolId -> Run ()
 deletePool pid = modify' $ \st ->
-  st { bchStake = Stake.retirePool pid $ bchStake st }
+  st {bchStake = Stake.retirePool pid $ bchStake st}
 
 -- | Retire staking pool
 retirePool :: PoolId -> Tx
-retirePool (PoolId pkh) = certTx $
-  Certificate (DCertPoolRetire pkh 0) Nothing
+retirePool (PoolId pkh) =
+  certTx $
+    Certificate (DCertPoolRetire pkh 0) Nothing
 
 -- | Delegates staking credential (specified by key) to pool
 delegateStakeKey :: PubKeyHash -> PoolId -> Tx
-delegateStakeKey stakeKey (PoolId poolKey) = certTx $
-  Certificate (DCertDelegDelegate (keyToStaking stakeKey) poolKey) Nothing
+delegateStakeKey stakeKey (PoolId poolKey) =
+  certTx $
+    Certificate (DCertDelegDelegate (keyToStaking stakeKey) poolKey) Nothing
 
 -- | Delegates staking credential (specified by stakevalidator) to pool
-delegateStakeScript :: ToData redeemer =>
-  StakeValidator -> redeemer -> PoolId -> Tx
-delegateStakeScript script red (PoolId poolKey) = certTx $
-  Certificate (DCertDelegDelegate (scriptToStaking script) poolKey) (withStakeScript script red)
+delegateStakeScript ::
+  ToData redeemer =>
+  StakeValidator ->
+  redeemer ->
+  PoolId ->
+  Tx
+delegateStakeScript script red (PoolId poolKey) =
+  certTx $
+    Certificate (DCertDelegDelegate (scriptToStaking script) poolKey) (withStakeScript script red)

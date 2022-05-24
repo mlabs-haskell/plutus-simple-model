@@ -1,11 +1,12 @@
 module Plutus.Test.Model.Fork.TxExtra (
   -- * Plutus TX with extra fields
-  Tx(..),
-  Extra(..),
-  Withdraw(..),
+  Tx (..),
+  Extra (..),
+  Withdraw (..),
   toExtra,
-  Certificate(..),
+  Certificate (..),
   getCertificateValidators,
+
   -- * utils
   updatePlutusTx,
   liftPlutusTx,
@@ -13,16 +14,17 @@ module Plutus.Test.Model.Fork.TxExtra (
   scriptToStaking,
 ) where
 
+import Data.Map.Strict qualified as M
 import Data.Monoid
-import Prelude
 import Ledger qualified as P
 import Plutus.V1.Ledger.Api
-import qualified Data.Map.Strict as M
+import Prelude
 
--- | Plutus TX with extra fields for Cardano TX fields that are missing
--- in native Plutus TX (staking and certificates).
+{- | Plutus TX with extra fields for Cardano TX fields that are missing
+ in native Plutus TX (staking and certificates).
+-}
 data Tx = Tx
-  { tx'extra  :: Extra
+  { tx'extra :: Extra
   , tx'plutus :: P.Tx
   }
   deriving (Show, Eq)
@@ -39,8 +41,8 @@ toExtra = Tx mempty
 
 -- | Extra fields for Cardano TX
 data Extra = Extra
-  { extra'withdraws      :: [Withdraw]
-  , extra'certificates   :: [Certificate]
+  { extra'withdraws :: [Withdraw]
+  , extra'certificates :: [Certificate]
   }
   deriving (Show, Eq)
 
@@ -51,7 +53,7 @@ instance Monoid Extra where
   mempty = Extra [] []
 
 data Certificate = Certificate
-  { certificate'dcert  :: DCert
+  { certificate'dcert :: DCert
   , certificate'script :: Maybe (Redeemer, StakeValidator)
   }
   deriving (Show, Eq)
@@ -59,23 +61,25 @@ data Certificate = Certificate
 getCertificateValidators :: [Certificate] -> M.Map StakingCredential (Redeemer, StakeValidator)
 getCertificateValidators = foldMap go
   where
-    go Certificate{..} = case certificate'dcert of
-      DCertDelegRegKey stakeCred            -> fromCred stakeCred
-      DCertDelegDeRegKey stakeCred          -> fromCred stakeCred
+    go Certificate {..} = case certificate'dcert of
+      DCertDelegRegKey stakeCred -> fromCred stakeCred
+      DCertDelegDeRegKey stakeCred -> fromCred stakeCred
       DCertDelegDelegate stakeCred _poolKey -> fromCred stakeCred
-      DCertPoolRegister _poolKey _poolVrf   -> mempty
-      DCertPoolRetire _poolKey _epoch       -> mempty
-      DCertGenesis                          -> mempty
-      DCertMir                              -> mempty
+      DCertPoolRegister _poolKey _poolVrf -> mempty
+      DCertPoolRetire _poolKey _epoch -> mempty
+      DCertGenesis -> mempty
+      DCertMir -> mempty
       where
         fromCred cred = maybe mempty (M.singleton cred) certificate'script
 
-
 -- | Stake withdrawal
 data Withdraw = Withdraw
-  { withdraw'credential :: StakingCredential                 -- ^ staking credential
-  , withdraw'amount     :: Integer                           -- ^ amount of withdrawal in Lovelace
-  , withdraw'script     :: Maybe (Redeemer, StakeValidator)  -- ^ Just in case of script withdrawal
+  { -- | staking credential
+    withdraw'credential :: StakingCredential
+  , -- | amount of withdrawal in Lovelace
+    withdraw'amount :: Integer
+  , -- | Just in case of script withdrawal
+    withdraw'script :: Maybe (Redeemer, StakeValidator)
   }
   deriving (Show, Eq)
 

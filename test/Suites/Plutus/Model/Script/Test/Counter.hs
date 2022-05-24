@@ -1,4 +1,4 @@
-module Suites.Plutus.Model.Script.Test.Counter(
+module Suites.Plutus.Model.Script.Test.Counter (
   tests,
   initCounter,
   goodCounter,
@@ -30,8 +30,8 @@ tests cfg =
     check :: String -> Run a -> (a -> Assertion) -> TestTree
     check msg act f = testCase msg $ f $ fst (runBch act (initBch cfg $ adaValue 10_000_000))
 
-    good msg act = check msg (act >> checkErrors) ( @?= Nothing)
-    bad msg act = check msg (fmap isJust $ act >> checkErrors) ( @?= True)
+    good msg act = check msg (act >> checkErrors) (@?= Nothing)
+    bad msg act = check msg (fmap isJust $ act >> checkErrors) (@?= True)
 
 initCounterTest :: Run Bool
 initCounterTest = do

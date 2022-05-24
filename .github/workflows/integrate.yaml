@@ -13,24 +13,24 @@ on:
       - '**.nix'
       - 'plutus-simple-model.cabal'
 jobs:
-  #  check-formatting:
-  #    runs-on: ubuntu-latest
-  #    steps:
-  #      - uses: actions/checkout@v2
-  #
-  #      - uses: actions/cache@v2.1.4
-  #        name: Cache Stack
-  #        with:
-  #          path: ~/.stack
-  #          key: ${{ runner.os }}-stack-formatting
-  #          restore-keys: ${{ runner.os }}-stack-
-  #
-  #      - run: stack install fourmolu
-  #        name: Setup
-  #
-  #      - run: ./.github/format.sh
-  #        name: "Run fourmolu"
-  #
+  check-formatting:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+  
+      - uses: actions/cache@v2.1.4
+        name: Cache Stack
+        with:
+          path: ~/.stack
+          key: ${{ runner.os }}-stack-formatting
+          restore-keys: ${{ runner.os }}-stack-
+  
+      - run: stack install fourmolu
+        name: Setup
+  
+      - run: ./.github/format.sh
+        name: "Run fourmolu"
+  
   lint:
     runs-on: ubuntu-latest
     steps:

@@ -67,7 +67,7 @@ coverage: plutus-simple-model.cabal
 FORMAT_SOURCES := $(shell find -name '*.hs' -not -path './dist-*/*')
 
 # Extensions we need to tell fourmolu about
-FORMAT_EXTENSIONS := -o -XTemplateHaskell -o -XTypeApplications -o -XImportQualifiedPost -o -XPatternSynonyms -o -fplugin=RecordDotPreprocessor
+FORMAT_EXTENSIONS := -o -XTemplateHaskell -o -XTypeApplications -o -XImportQualifiedPost -o -XPatternSynonyms -o -fplugin=RecordDotPreprocessor -o -XBangPatterns
 
 # Run fourmolu formatter
 format: requires_nix_shell
