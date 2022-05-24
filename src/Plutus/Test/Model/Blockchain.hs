@@ -13,20 +13,21 @@
 -}
 module Plutus.Test.Model.Blockchain (
   -- * Address helpers
-  HasAddress(..),
-  HasStakingCredential(..),
-  AppendStaking(..),
+  HasAddress (..),
+  HasStakingCredential (..),
+  AppendStaking (..),
   appendStakingCredential,
   appendStakingPubKey,
   appendStakingScript,
+
   -- * Blockchain model
   Blockchain (..),
   BchConfig (..),
-  CheckLimits(..),
+  CheckLimits (..),
   BchNames (..),
   User (..),
   TxStat (..),
-  PoolId(..),
+  PoolId (..),
   ExecutionUnits (..),
   Result (..),
   isOkResult,
@@ -46,10 +47,10 @@ module Plutus.Test.Model.Blockchain (
   Run (..),
   runBch,
   initBch,
-  Percent(..),
+  Percent (..),
   toPercent,
-  StatPercent(..),
-  PercentExecutionUnits(..),
+  StatPercent (..),
+  PercentExecutionUnits (..),
   toStatPercent,
 
   -- * core blockchain functions
@@ -93,18 +94,18 @@ module Plutus.Test.Model.Blockchain (
   testnetTxLimits,
 
   -- * Logs
-  Log(..),
+  Log (..),
   appendLog,
   nullLog,
   fromLog,
   fromGroupLog,
-  BchEvent(..),
+  BchEvent (..),
   silentLog,
   failLog,
   filterSlot,
   getLog,
   getFails,
-  MustFailLog(..),
+  MustFailLog (..),
 
   -- * internal
   intToPubKey,
@@ -121,14 +122,15 @@ import Data.Function (on)
 import Data.List qualified as L
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
-import Data.Vector qualified as V
 import Data.Maybe
+import Data.Sequence (Seq (..))
+import Data.Sequence qualified as Seq
 import Data.Set (Set)
 import Data.Set qualified as S
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Data.Sequence (Seq(..))
-import Data.Sequence qualified as Seq
+import Data.Vector qualified as V
 
+import Basement.Compat.Natural
 import Cardano.Api.Shelley (
   AlonzoEra,
   ConsensusMode (..),
@@ -138,7 +140,7 @@ import Cardano.Api.Shelley (
   NetworkId (..),
   ProtocolParameters (..),
   ScriptExecutionError,
-  TransactionValidityError(..),
+  TransactionValidityError (..),
   UTxO (..),
   evaluateTransactionBalance,
   evaluateTransactionExecutionUnits,
@@ -150,19 +152,18 @@ import Cardano.Api.Shelley (
 import Cardano.Slotting.Slot (SlotNo (..))
 import Cardano.Slotting.Time (RelativeTime (..), SystemStart (..), slotLengthFromMillisec)
 import Control.Monad.State.Strict
+import Ledger (PaymentPubKeyHash (..), txId)
+import Ledger.Typed.Scripts (TypedValidator, ValidatorTypes (..), validatorAddress)
+import Plutus.V1.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Interval ()
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Slot (Slot (..), SlotRange)
-import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Tx (TxIn)
+import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value (AssetClass, valueOf)
 import PlutusTx.Prelude qualified as Plutus
-import Basement.Compat.Natural
-import qualified Plutus.V1.Ledger.Ada            as Ada
-import Ledger.Typed.Scripts (TypedValidator, validatorAddress, ValidatorTypes(..))
-import Ledger (PaymentPubKeyHash(..), txId)
 
 import Ouroboros.Consensus.Block.Abstract (EpochNo (..), EpochSize (..))
 import Ouroboros.Consensus.HardFork.History.EraParams
@@ -178,8 +179,8 @@ import Ouroboros.Consensus.Util.Counting (NonEmpty (..))
 import Cardano.Api qualified as Cardano
 import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash qualified as Crypto
+import Cardano.Ledger.Alonzo.Data qualified as Alonzo
 import Cardano.Ledger.Hashes as Ledger (EraIndependentTxBody)
-import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import Ledger.Crypto (PubKey (..), Signature (..), pubKeyHash)
 import Ledger.TimeSlot (SlotConfig (..))
 import Ledger.Tx.CardanoAPI qualified as Cardano
@@ -216,21 +217,21 @@ instance HasStakingCredential StakeValidator where
   toStakingCredential = scriptToStaking
 
 -- | Encodes appening of staking address
-data AppendStaking a =
-  AppendStaking StakingCredential a
+data AppendStaking a
+  = AppendStaking StakingCredential a
 
 instance ValidatorTypes (TypedValidator a) where
-   type DatumType    (TypedValidator a) = DatumType a
-   type RedeemerType (TypedValidator a) = RedeemerType a
+  type DatumType (TypedValidator a) = DatumType a
+  type RedeemerType (TypedValidator a) = RedeemerType a
 
 instance ValidatorTypes (AppendStaking (TypedValidator a)) where
-   type DatumType    (AppendStaking (TypedValidator a)) = DatumType a
-   type RedeemerType (AppendStaking (TypedValidator a)) = RedeemerType a
+  type DatumType (AppendStaking (TypedValidator a)) = DatumType a
+  type RedeemerType (AppendStaking (TypedValidator a)) = RedeemerType a
 
 instance HasAddress a => HasAddress (AppendStaking a) where
   toAddress (AppendStaking stakeCred a) = appendStake (toAddress a)
     where
-      appendStake addr = addr { addressStakingCredential = Just stakeCred }
+      appendStake addr = addr {addressStakingCredential = Just stakeCred}
 
 appendStakingCredential :: Credential -> a -> AppendStaking a
 appendStakingCredential cred = AppendStaking (StakingHash cred)
@@ -249,7 +250,7 @@ instance Monoid ExecutionUnits where
   mempty = ExecutionUnits 0 0
 
 data PercentExecutionUnits = PercentExecutionUnits
-  { percentExecutionSteps  :: !Percent
+  { percentExecutionSteps :: !Percent
   , percentExecutionMemory :: !Percent
   }
   deriving (Show, Eq)
@@ -261,26 +262,34 @@ newtype User = User
 
 -- | TX with stats of TX execution onchain.
 data TxStat = TxStat
-  { txStatTx        :: !Tx
-  , txStatTime      :: !Slot
-  , txStat          :: !Stat
-  , txStatPercent   :: !StatPercent
+  { txStatTx :: !Tx
+  , txStatTime :: !Slot
+  , txStat :: !Stat
+  , txStatPercent :: !StatPercent
   }
   deriving (Show)
 
 -- | Config for the blockchain.
 data BchConfig = BchConfig
-  { bchConfigCheckLimits  :: !CheckLimits             -- ^ limits check mode
-  , bchConfigLimitStats   :: !Stat                    -- ^ TX execution resources limits
-  , bchConfigProtocol     :: !ProtocolParameters      -- ^ Protocol parameters
-  , bchConfigNetworkId    :: !NetworkId               -- ^ Network id (mainnet / testnet)
-  , bchConfigSlotConfig   :: !SlotConfig              -- ^ Slot config
+  { -- | limits check mode
+    bchConfigCheckLimits :: !CheckLimits
+  , -- | TX execution resources limits
+    bchConfigLimitStats :: !Stat
+  , -- | Protocol parameters
+    bchConfigProtocol :: !ProtocolParameters
+  , -- | Network id (mainnet / testnet)
+    bchConfigNetworkId :: !NetworkId
+  , -- | Slot config
+    bchConfigSlotConfig :: !SlotConfig
   }
 
 data CheckLimits
-  = IgnoreLimits   -- ^ ignore TX-limits
-  | WarnLimits     -- ^ log TX to error log if it exceeds limits but accept TX
-  | ErrorLimits    -- ^ reject TX if it exceeds the limits
+  = -- | ignore TX-limits
+    IgnoreLimits
+  | -- | log TX to error log if it exceeds limits but accept TX
+    WarnLimits
+  | -- | reject TX if it exceeds the limits
+    ErrorLimits
   deriving (Show)
 
 -- | Default slot config
@@ -310,15 +319,15 @@ defaultBchConfig params =
 
 -- | Do not check for limits
 skipLimits :: BchConfig -> BchConfig
-skipLimits cfg = cfg { bchConfigCheckLimits = IgnoreLimits }
+skipLimits cfg = cfg {bchConfigCheckLimits = IgnoreLimits}
 
 -- | Warn on limits
 warnLimits :: BchConfig -> BchConfig
-warnLimits cfg = cfg { bchConfigCheckLimits = WarnLimits }
+warnLimits cfg = cfg {bchConfigCheckLimits = WarnLimits}
 
 -- | Error on limits
 forceLimits :: BchConfig -> BchConfig
-forceLimits cfg = cfg { bchConfigCheckLimits = ErrorLimits }
+forceLimits cfg = cfg {bchConfigCheckLimits = ErrorLimits}
 
 {- | Read config for protocol parameters and form blockchain config.
 
@@ -335,22 +344,24 @@ readProtocolParameters file =
 
 -- | Stats of TX execution onchain.
 data Stat = Stat
-  { statSize           :: !Integer          -- ^ TX-size in bytes
-  , statExecutionUnits :: !ExecutionUnits   -- ^ execution units of TX
+  { -- | TX-size in bytes
+    statSize :: !Integer
+  , -- | execution units of TX
+    statExecutionUnits :: !ExecutionUnits
   }
   deriving (Show, Eq)
 
 -- | Percent values from 0 to 100 %.
-newtype Percent = Percent { getPercent :: Float }
+newtype Percent = Percent {getPercent :: Float}
   deriving (Show, Eq)
 
 -- | Convert integer to percent based on maximum value (first argument)
 toPercent :: Integer -> Integer -> Percent
-toPercent maxLim n = Percent $ (fromInteger @Float $ 100 * n ) / fromInteger maxLim
+toPercent maxLim n = Percent $ (fromInteger @Float $ 100 * n) / fromInteger maxLim
 
 -- | Stats measured in percents (0 to 100 %)
 data StatPercent = StatPercent
-  { statPercentSize           :: !Percent
+  { statPercentSize :: !Percent
   , statPercentExecutionUnits :: !PercentExecutionUnits
   }
   deriving (Show, Eq)
@@ -360,10 +371,11 @@ toStatPercent :: Stat -> Stat -> StatPercent
 toStatPercent maxStat stat =
   StatPercent
     { statPercentSize = percent statSize
-    , statPercentExecutionUnits = PercentExecutionUnits
-        { percentExecutionSteps  = percentNat executionSteps
-        , percentExecutionMemory = percentNat executionMemory
-        }
+    , statPercentExecutionUnits =
+        PercentExecutionUnits
+          { percentExecutionSteps = percentNat executionSteps
+          , percentExecutionMemory = percentNat executionMemory
+          }
     }
   where
     percentNat getter = percent (naturalToInteger . getter . statExecutionUnits)
@@ -380,24 +392,24 @@ toStatPercent maxStat stat =
  is estimated on Cardano version of TX.
 -}
 data Blockchain = Blockchain
-  { bchUsers        :: !(Map PubKeyHash User)
-  , bchAddresses    :: !(Map Address (Set TxOutRef))
-  , bchUtxos        :: !(Map TxOutRef TxOut)
-  , bchDatums       :: !(Map DatumHash Datum)
-  , bchStake        :: !Stake
-  , bchTxs          :: !(Log TxStat)
-  , bchConfig       :: !BchConfig
-  , bchCurrentSlot  :: !Slot
-  , bchUserStep     :: !Integer
-  , bchFails        :: !(Log FailReason)
-  , bchInfo         :: !(Log String)
-  , mustFailLog     :: !(Log MustFailLog)
+  { bchUsers :: !(Map PubKeyHash User)
+  , bchAddresses :: !(Map Address (Set TxOutRef))
+  , bchUtxos :: !(Map TxOutRef TxOut)
+  , bchDatums :: !(Map DatumHash Datum)
+  , bchStake :: !Stake
+  , bchTxs :: !(Log TxStat)
+  , bchConfig :: !BchConfig
+  , bchCurrentSlot :: !Slot
+  , bchUserStep :: !Integer
+  , bchFails :: !(Log FailReason)
+  , bchInfo :: !(Log String)
+  , mustFailLog :: !(Log MustFailLog)
   , -- | human readable names. Idea is to substitute for them
     -- in pretty printers for error logs, user names, script names.
     bchNames :: !BchNames
   }
 
-newtype Log a = Log { unLog :: Seq (Slot, a) }
+newtype Log a = Log {unLog :: Seq (Slot, a)}
   deriving (Functor)
 
 instance Semigroup (Log a) where
@@ -428,8 +440,9 @@ fromGroupLog = fmap toGroup . L.groupBy ((==) `on` fst) . fromLog
 instance Monoid (Log a) where
   mempty = Log Seq.empty
 
--- | Wrapper for error logs, produced in the paths of execution protected by
--- 'mustFail' combinator.
+{- | Wrapper for error logs, produced in the paths of execution protected by
+ 'mustFail' combinator.
+-}
 data MustFailLog = MustFailLog String FailReason
 
 -- | Result of the execution.
@@ -460,30 +473,34 @@ data FailReason
     TxScriptFail [ScriptExecutionError]
   | -- | invalid range. TX is submitted with current slot not in valid range
     TxInvalidRange Slot SlotRange
-    -- | invalid reward for staking credential, expected and actual values for stake at the moment of reward
-  | TxInvalidWithdraw WithdrawError
-    -- | Certificate errors
-  | TxInvalidCertificate DCertError
+  | -- | invalid reward for staking credential, expected and actual values for stake at the moment of reward
+    TxInvalidWithdraw WithdrawError
+  | -- | Certificate errors
+    TxInvalidCertificate DCertError
   | TxLimitError [LimitOverflow] StatPercent
-  -- | Any error (can be useful to report logic errors on testing)
-  | GenericFail String
+  | -- | Any error (can be useful to report logic errors on testing)
+    GenericFail String
   deriving (Show)
 
 -- | Encodes overflow of the TX-resources
 data LimitOverflow
-  = TxSizeError !Integer !Percent -- ^ by how many bytes we exceed the limit
-  | ExMemError !Integer !Percent  -- ^ how many mem units exceeded
-  | ExStepError !Integer !Percent -- ^ how many steps executions exceeded
+  = -- | by how many bytes we exceed the limit
+    TxSizeError !Integer !Percent
+  | -- | how many mem units exceeded
+    ExMemError !Integer !Percent
+  | -- | how many steps executions exceeded
+    ExStepError !Integer !Percent
   deriving (Show, Eq)
 
 -- | State monad wrapper to run blockchain.
 newtype Run a = Run (State Blockchain a)
   deriving (Functor, Applicative, Monad, MonadState Blockchain)
 
--- | Dummy instance to be able to use partial pattern matching
--- in do-notation
+{- | Dummy instance to be able to use partial pattern matching
+ in do-notation
+-}
 instance MonadFail Run where
-   fail err = error $ "Failed to recover: " <> err
+  fail err = error $ "Failed to recover: " <> err
 
 -- | Human readable names for pretty printing.
 data BchNames = BchNames
@@ -508,7 +525,7 @@ writeUserName pkh name = do
 -- | Assigns human-readable name to address
 writeAddressName :: Address -> String -> Run ()
 writeAddressName addr name = modifyBchNames $ \ns ->
-   ns {bchNameAddresses = M.insert addr name (bchNameAddresses ns)}
+  ns {bchNameAddresses = M.insert addr name (bchNameAddresses ns)}
 
 -- | Assigns human-readable name to asset class
 writeAssetClassName :: AssetClass -> String -> Run ()
@@ -574,12 +591,13 @@ initBch cfg initVal =
     , bchFails = mempty
     , bchInfo = mempty
     , mustFailLog = mempty
-    , bchNames = BchNames
-                  (M.singleton genesisUserId "Genesis role")
-                  (M.singleton genesisAddress "Genesis role")
-                  M.empty
-                  M.empty
-                  M.empty
+    , bchNames =
+        BchNames
+          (M.singleton genesisUserId "Genesis role")
+          (M.singleton genesisAddress "Genesis role")
+          M.empty
+          M.empty
+          M.empty
     }
   where
     genesisUserId = pubKeyHash genesisPubKey
@@ -590,12 +608,13 @@ initBch cfg initVal =
     genesisTxOutRef = TxOutRef genesisTxId 0
     genesisTxOut = TxOut (pubKeyHashAddress genesisUserId) initVal Nothing
 
-    initStake = Stake
-      { stake'pools      = M.singleton genesisPoolId (Pool { pool'stakes = [genesisStakingCred]})
-      , stake'poolIds    = V.singleton genesisPoolId
-      , stake'stakes     = M.singleton genesisStakingCred 0
-      , stake'nextReward = 0
-      }
+    initStake =
+      Stake
+        { stake'pools = M.singleton genesisPoolId (Pool {pool'stakes = [genesisStakingCred]})
+        , stake'poolIds = V.singleton genesisPoolId
+        , stake'stakes = M.singleton genesisStakingCred 0
+        , stake'nextReward = 0
+        }
 
     genesisPoolId = PoolId genesisUserId
     genesisStakingCred = keyToStaking genesisUserId
@@ -620,7 +639,7 @@ signTx :: PubKeyHash -> Tx -> Run Tx
 signTx pkh = updatePlutusTx $ \tx -> do
   mPk <- getUserPubKey pkh
   case mPk of
-    Just pk -> pure $ tx { P.txSignatures = M.insert pk (Signature $ getPubKeyHash pkh) $ P.txSignatures tx}
+    Just pk -> pure $ tx {P.txSignatures = M.insert pk (Signature $ getPubKeyHash pkh) $ P.txSignatures tx}
     Nothing -> do
       logFail (NoUser pkh)
       pure tx
@@ -639,7 +658,7 @@ pureFail res = do
 logFail :: FailReason -> Run ()
 logFail res = do
   curTime <- gets bchCurrentSlot
-  modify' $ \s -> s {bchFails = appendLog curTime res (bchFails s) }
+  modify' $ \s -> s {bchFails = appendLog curTime res (bchFails s)}
 
 -- | Log generic error.
 logError :: String -> Run ()
@@ -648,7 +667,7 @@ logError = logFail . GenericFail
 logInfo :: String -> Run ()
 logInfo msg = do
   slot <- gets bchCurrentSlot
-  modify' $ \s -> s { bchInfo = appendLog slot msg (bchInfo s) }
+  modify' $ \s -> s {bchInfo = appendLog slot msg (bchInfo s)}
 
 -- | Igonres log of TXs and info messages during execution (but not errors)
 noLog :: Run a -> Run a
@@ -656,7 +675,7 @@ noLog act = do
   txLog <- gets bchTxs
   infoLog <- gets bchInfo
   res <- act
-  modify' $ \st -> st { bchTxs = txLog, bchInfo = infoLog }
+  modify' $ \st -> st {bchTxs = txLog, bchInfo = infoLog}
   pure res
 
 -- | Igonres log of TXs during execution
@@ -664,7 +683,7 @@ noLogTx :: Run a -> Run a
 noLogTx act = do
   txLog <- gets bchTxs
   res <- act
-  modify' $ \st -> st { bchTxs = txLog }
+  modify' $ \st -> st {bchTxs = txLog}
   pure res
 
 -- | Igonres log of info level messages during execution
@@ -672,7 +691,7 @@ noLogInfo :: Run a -> Run a
 noLogInfo act = do
   infoLog <- gets bchInfo
   res <- act
-  modify' $ \st -> st { bchInfo = infoLog }
+  modify' $ \st -> st {bchInfo = infoLog}
   pure res
 
 -- | Send block of TXs to blockchain.
@@ -709,9 +728,9 @@ sendSingleTx (Tx extra tx) =
   where
     pkhs = fmap pubKeyHash $ M.keys $ P.txSignatures tx
 
-    withCheckStaking cont = withCheckWithdraw (withCheckCertificates cont )
+    withCheckStaking cont = withCheckWithdraw (withCheckCertificates cont)
 
-    withCheckWithdraw cont = maybe cont leftFail =<< checkWithdraws (extra'withdraws extra )
+    withCheckWithdraw cont = maybe cont leftFail =<< checkWithdraws (extra'withdraws extra)
     withCheckCertificates cont = maybe cont leftFail =<< checkCertificates (extra'certificates extra)
 
     checkWithdraws ws = do
@@ -720,9 +739,9 @@ sendSingleTx (Tx extra tx) =
       where
         go st = \case
           [] -> pure Nothing
-          Withdraw{..} : rest ->
+          Withdraw {..} : rest ->
             case checkWithdrawStake pkhs withdraw'credential withdraw'amount st of
-              Nothing  -> go st rest
+              Nothing -> go st rest
               Just err -> pure $ Just $ TxInvalidWithdraw err
 
     checkCertificates certs = do
@@ -730,9 +749,9 @@ sendSingleTx (Tx extra tx) =
       go st (certificate'dcert <$> certs)
       where
         go st = \case
-          []   -> pure Nothing
-          c:cs -> case checkDCert c st of
-            Nothing  -> go (reactDCert c st) cs
+          [] -> pure Nothing
+          c : cs -> case checkDCert c st of
+            Nothing -> go (reactDCert c st) cs
             Just err -> pure $ Just $ TxInvalidCertificate err
 
     withCheckRange cont = do
@@ -789,29 +808,28 @@ sendSingleTx (Tx extra tx) =
           statPercent = toStatPercent maxLimits stat
       if null errs
         then cont
-        else
-          case checkLimits of
-            IgnoreLimits -> cont
-            WarnLimits   -> logFail (TxLimitError errs statPercent) >> cont
-            ErrorLimits  -> leftFail (TxLimitError errs statPercent)
+        else case checkLimits of
+          IgnoreLimits -> cont
+          WarnLimits -> logFail (TxLimitError errs statPercent) >> cont
+          ErrorLimits -> leftFail (TxLimitError errs statPercent)
 
     leftFail err = do
       logFail err
       pure $ Left err
 
 compareLimits :: Stat -> Stat -> [LimitOverflow]
-compareLimits maxLimits stat = catMaybes
-  [ cmp TxSizeError statSize
-  , cmp ExMemError (naturalToInteger . executionMemory . statExecutionUnits)
-  , cmp ExStepError (naturalToInteger . executionSteps . statExecutionUnits)
-  ]
+compareLimits maxLimits stat =
+  catMaybes
+    [ cmp TxSizeError statSize
+    , cmp ExMemError (naturalToInteger . executionMemory . statExecutionUnits)
+    , cmp ExStepError (naturalToInteger . executionSteps . statExecutionUnits)
+    ]
   where
     cmp cons getter
       | overflow > 0 = Just $ cons overflow (toPercent (getter maxLimits) overflow)
-      | otherwise    = Nothing
+      | otherwise = Nothing
       where
         overflow = getter stat - getter maxLimits
-
 
 -- | Read UTxO relevant to transaction
 getUTxO :: TxId -> P.Tx -> Run (Maybe (Either Cardano.ToCardanoError (UTxO AlonzoEra)))
@@ -821,17 +839,21 @@ getUTxO tid tx = do
   pure $ fmap (toUtxo networkId . zip ins) mOuts
   where
     ins = S.toList $ P.txInputs tx
-    outs = zip [0..] $ P.txOutputs tx
+    outs = zip [0 ..] $ P.txOutputs tx
 
     fromOutTxOut networkId (ix, tout) = do
       cin <- Cardano.toCardanoTxIn $ TxOutRef tid ix
-      cout <- fmap toCtxUTxOTxOut $ Cardano.TxOut
-                <$> Cardano.toCardanoAddress networkId (txOutAddress tout)
-                <*> toCardanoTxOutValue (txOutValue tout)
-                <*> pure (fromMaybe Cardano.TxOutDatumNone $ do
-                       dh <- txOutDatumHash tout
-                       dat <- M.lookup dh (P.txData tx)
-                       pure $ Cardano.TxOutDatum Cardano.ScriptDataInAlonzoEra (toScriptData dat))
+      cout <-
+        fmap toCtxUTxOTxOut $
+          Cardano.TxOut
+            <$> Cardano.toCardanoAddress networkId (txOutAddress tout)
+            <*> toCardanoTxOutValue (txOutValue tout)
+            <*> pure
+              ( fromMaybe Cardano.TxOutDatumNone $ do
+                  dh <- txOutDatumHash tout
+                  dat <- M.lookup dh (P.txData tx)
+                  pure $ Cardano.TxOutDatum Cardano.ScriptDataInAlonzoEra (toScriptData dat)
+              )
       pure (cin, cout)
 
     fromTxOut networkId (tin, tout) = do
@@ -847,8 +869,8 @@ toScriptData d = fromAlonzoData $ Alonzo.Data $ toData d
 
 toCardanoTxOutValue :: Value -> Either Cardano.ToCardanoError (Cardano.TxOutValue Cardano.AlonzoEra)
 toCardanoTxOutValue value = do
-    when (Ada.fromValue value == mempty) (Left Cardano.OutputHasZeroAda)
-    Cardano.TxOutValue Cardano.MultiAssetInAlonzoEra <$> Cardano.toCardanoValue value
+  when (Ada.fromValue value == mempty) (Left Cardano.OutputHasZeroAda)
+  Cardano.TxOutValue Cardano.MultiAssetInAlonzoEra <$> Cardano.toCardanoValue value
 
 -- | Reads TxOut by its reference.
 getTxOut :: TxOutRef -> Run (Maybe TxOut)
@@ -908,15 +930,15 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
 
     updateRewards = mapM_ modifyWithdraw $ extra'withdraws extra
       where
-        modifyWithdraw Withdraw{..} = onStake (withdrawStake withdraw'credential)
+        modifyWithdraw Withdraw {..} = onStake (withdrawStake withdraw'credential)
 
     updateCertificates = mapM_ (onStake . reactDCert . certificate'dcert) $ extra'certificates extra
 
-    onStake f = modify' $ \st -> st { bchStake = f $ bchStake st }
+    onStake f = modify' $ \st -> st {bchStake = f $ bchStake st}
 
     updateFees = do
       st <- gets bchStake
-      forM_ (rewardStake amount st) $ \nextSt -> modify' $ \bch -> bch { bchStake = nextSt }
+      forM_ (rewardStake amount st) $ \nextSt -> modify' $ \bch -> bch {bchStake = nextSt}
       where
         amount = valueOf txFee adaSymbol adaToken
 
@@ -946,7 +968,6 @@ datumAt ref = do
   mDh <- (txOutDatumHash =<<) <$> getTxOut ref
   pure $ fromBuiltinData . getDatum =<< (`M.lookup` dhs) =<< mDh
 
-
 -- | Reads current reward amount for a staking credential
 rewardAt :: HasStakingCredential cred => cred -> Run Integer
 rewardAt cred = gets (maybe 0 id . lookupReward (toStakingCredential cred) . bchStake)
@@ -957,11 +978,11 @@ stakesAt (PoolId poolKey) = gets (lookupStakes (PoolId poolKey) . bchStake)
 
 -- | Checks that pool is registered
 hasPool :: PoolId -> Run Bool
-hasPool (PoolId pkh) = gets (M.member (PoolId pkh) . stake'pools. bchStake)
+hasPool (PoolId pkh) = gets (M.member (PoolId pkh) . stake'pools . bchStake)
 
 -- | Checks that staking credential is registered
 hasStake :: HasStakingCredential a => a -> Run Bool
-hasStake key = gets (M.member (toStakingCredential key) . stake'stakes. bchStake)
+hasStake key = gets (M.member (toStakingCredential key) . stake'stakes . bchStake)
 
 getPools :: Run [PoolId]
 getPools = gets (V.toList . stake'poolIds . bchStake)
@@ -973,11 +994,12 @@ getPools = gets (V.toList . stake'poolIds . bchStake)
 mainnetTxLimits :: Stat
 mainnetTxLimits =
   Stat
-    { statSize  = 16 * 1024
-    , statExecutionUnits = ExecutionUnits
-        { executionMemory = 14_000_000
-        , executionSteps = 10_000_000_000
-        }
+    { statSize = 16 * 1024
+    , statExecutionUnits =
+        ExecutionUnits
+          { executionMemory = 14_000_000
+          , executionSteps = 10_000_000_000
+          }
     }
 
 -- | Limits for Block-execution resources resources on Mainnet
@@ -985,10 +1007,11 @@ mainnetBlockLimits :: Stat
 mainnetBlockLimits =
   Stat
     { statSize = 65 * 1024
-    , statExecutionUnits = ExecutionUnits
-      { executionMemory = 50_000_000
-      , executionSteps = 40_000_000_000
-      }
+    , statExecutionUnits =
+        ExecutionUnits
+          { executionMemory = 50_000_000
+          , executionSteps = 40_000_000_000
+          }
     }
 
 -- | Limits for TX-execution resources resources on Testnet
@@ -1004,10 +1027,14 @@ testnetBlockLimits = mainnetBlockLimits
 
 -- | Blockchain events to log.
 data BchEvent
-  = BchTx TxStat               -- ^ Sucessful TXs
-  | BchInfo String             -- ^ Info messages
-  | BchFail FailReason         -- ^ Errors
-  | BchMustFailLog MustFailLog -- ^ Expected errors, see 'mustFail'
+  = -- | Sucessful TXs
+    BchTx TxStat
+  | -- | Info messages
+    BchInfo String
+  | -- | Errors
+    BchFail FailReason
+  | -- | Expected errors, see 'mustFail'
+    BchMustFailLog MustFailLog
 
 -- | Skip all info messages
 silentLog :: Log BchEvent -> Log BchEvent
@@ -1015,7 +1042,7 @@ silentLog (Log xs) = Log $ Seq.filter (not . isInfo . snd) xs
   where
     isInfo = \case
       BchInfo _ -> True
-      _         -> False
+      _ -> False
 
 -- | Skip successful TXs
 failLog :: Log BchEvent -> Log BchEvent
@@ -1023,7 +1050,7 @@ failLog (Log xs) = Log $ Seq.filter (not . isTx . snd) xs
   where
     isTx = \case
       BchTx _ -> True
-      _       -> False
+      _ -> False
 
 -- | filter by slot. Can be useful to filter out unnecessary info.
 filterSlot :: (Slot -> Bool) -> Log a -> Log a
@@ -1031,5 +1058,5 @@ filterSlot f (Log xs) = Log (Seq.filter (f . fst) xs)
 
 -- | Reads the log.
 getLog :: Blockchain -> Log BchEvent
-getLog Blockchain{..} =
+getLog Blockchain {..} =
   mconcat [BchInfo <$> bchInfo, BchMustFailLog <$> mustFailLog, BchTx <$> bchTxs, BchFail <$> bchFails]

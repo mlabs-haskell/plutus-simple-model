@@ -16,10 +16,10 @@ tests cfg =
   testGroup
     "Test scripts"
     [ Game.tests cfg
-    -- test highlights bug with missing output datums, output datums are not inluded in Cardano TX,
-    -- also see issue: <https://github.com/input-output-hk/plutus-apps/issues/139>
-    -- TODO: fix that
-    , Counter.tests cfg
+    , -- test highlights bug with missing output datums, output datums are not inluded in Cardano TX,
+      -- also see issue: <https://github.com/input-output-hk/plutus-apps/issues/139>
+      -- TODO: fix that
+      Counter.tests cfg
     , Safe.tests cfg
     , Nft.tests cfg
     , Staking.tests cfg

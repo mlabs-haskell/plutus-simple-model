@@ -406,13 +406,12 @@
   It's good to implement complete set of unit tests first and then add limits tests.
   So that every transformation to optimise on resources is checked by ordinary unit tests.
   On unit tests we can skip limit checks with @skipLimits :: BchConfig -> BchConfig@.
-
 -}
 module Plutus.Test.Model (
   module X,
 ) where
 
 import Plutus.Test.Model.Blockchain as X
-import Plutus.Test.Model.Contract   as X
-import Plutus.Test.Model.Mint       as X
-import Plutus.Test.Model.Pretty     as X
+import Plutus.Test.Model.Contract as X
+import Plutus.Test.Model.Mint as X
+import Plutus.Test.Model.Pretty as X

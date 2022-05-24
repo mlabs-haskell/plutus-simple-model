@@ -1,8 +1,8 @@
 -- | Simple counter that increments internal counter on every usage in TX.
-module Suites.Plutus.Model.Script.Onchain.Counter(
+module Suites.Plutus.Model.Script.Onchain.Counter (
   Counter,
-  CounterDatum(..),
-  CounterAct(..),
+  CounterDatum (..),
+  CounterAct (..),
   counterContract,
   counterScript,
   counterValidator,
@@ -30,7 +30,7 @@ instance Scripts.ValidatorTypes Counter where
   type DatumType Counter = CounterDatum
   type RedeemerType Counter = CounterAct
 
-newtype CounterDatum = CounterDatum { getCounterDatum :: Integer }
+newtype CounterDatum = CounterDatum {getCounterDatum :: Integer}
   deriving (ToData, FromData, UnsafeFromData, Plutus.Eq, Eq, Show)
 
 data CounterAct = Bump
@@ -38,12 +38,12 @@ data CounterAct = Bump
 ----------------------------------------------------------------------------
 -- contract
 
-{-# inlinable counterContract #-}
+{-# INLINEABLE counterContract #-}
 counterContract :: CounterDatum -> CounterAct -> ScriptContext -> Bool
 counterContract (CounterDatum n) Bump ctx =
   case datumOf info counterOut of
-    Just (CounterDatum m) -> Plutus.traceIfFalse "Counter is incremented" (n Plutus.+1 Plutus.== m)
-    Nothing               -> Plutus.traceError "No datum"
+    Just (CounterDatum m) -> Plutus.traceIfFalse "Counter is incremented" (n Plutus.+ 1 Plutus.== m)
+    Nothing -> Plutus.traceError "No datum"
   where
     !info = scriptContextTxInfo ctx
     [!counterOut] = getContinuingOutputs ctx
