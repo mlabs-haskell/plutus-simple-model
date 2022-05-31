@@ -43,27 +43,10 @@ ppBchEvent _names = show . vcat . fmap ppSlot . fromGroupLog
     ppSlot (slot, events) = vcat [pretty slot <> colon, indent 2 (vcat $ pretty <$> events)]
 
 ppLimitInfo :: BchNames -> Log TxStat -> String
-ppLimitInfo names bch =
+ppLimitInfo _names bch =
   show $ vcat $ fmap ppGroup $ fromGroupLog bch
   where
-    ppGroup (slot, events) = vcat [pretty slot <> colon, indent 2 (vcat $ fmap ppStatEvent events)]
-
-    ppStatEvent tx = vcat [ ppTx $ Ledger.txId $ tx'plutus $ txStatTx tx
-                          , indent 2 $ ppStatWarn (txStatPercent tx)
-                          ]
-
-    ppTx ident = "Tx name/id:" <+> case readTxName names ident of
-      Just name -> pretty name
-      Nothing -> pretty ident
-
-    ppStatWarn stat
-      | isLimitError stat = vcat ["error: out of limits", indent 2 (pretty stat)]
-      | otherwise         = pretty stat
-
-    isLimitError (StatPercent size units) =
-      err size || err (percentExecutionMemory units) || err (percentExecutionSteps units)
-      where
-        err (Percent x) = x >= 100
+    ppGroup (slot, events) = vcat [pretty slot <> colon, indent 2 (vcat $ fmap pretty events)]
 
 -- | Pretty-prints the blockchain state
 ppBlockchain :: Blockchain -> String
@@ -220,7 +203,7 @@ instance Pretty BchEvent where
   pretty = \case
     BchInfo msg                              -> "[info] " <+> align (pretty msg)
     -- TODO plug in prettifier for Tx here once it's ready
-    BchTx _                                  -> "[tx]   " <+> align "TODO print tx"
+    BchTx txStat                             -> "[tx]   " <+> align (pretty txStat)
     BchFail fReason                          -> "[error]" <+> align (pretty fReason)
     BchMustFailLog (MustFailLog msg fReason) -> "[fail] " <+> align (vcat [pretty msg, pretty fReason])
 
@@ -237,3 +220,28 @@ instance Pretty WithdrawError where
 -- TODO implement with respect to 'Pretty' law
 instance Pretty Tx where
   pretty = viaShow
+
+instance Pretty TxStat where
+  pretty TxStat { txStatTx = Tx { tx'plutus = tx}
+                , txStatPercent = stat} = vcat
+    [ prettyName tx
+    , indent 2 $ prettyStat
+
+    ]
+
+    where
+
+      prettyName (txId -> ident) = "Tx name/id:" <+> pretty ident
+
+--      prettyName = "Tx name/id:" <+> case readTxName names ident of
+--                      Just name -> pretty name
+--                      Nothing -> pretty ident
+
+      prettyStat
+        | isLimitError stat = vcat ["error: out of limits", indent 2 (pretty stat)]
+        | otherwise         = pretty stat
+
+      isLimitError (StatPercent size units) =
+        err size || err (percentExecutionMemory units) || err (percentExecutionSteps units)
+        where
+          err (Percent x) = x >= 100
