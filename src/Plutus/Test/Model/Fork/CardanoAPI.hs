@@ -15,6 +15,7 @@ not accessible from standard Plutus TX
 -}
 module Plutus.Test.Model.Fork.CardanoAPI (
   toCardanoTxBody,
+  toCardanoTxOutDatum,
   toCardanoStakeWitness,
 ) where
 
@@ -26,6 +27,7 @@ import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Bifunctor (first)
 import Data.Map.Strict qualified as Map
+import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Ledger.Address qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
@@ -35,9 +37,19 @@ import Codec.Serialise qualified as Codec
 
 import Plutus.Test.Model.Fork.CardanoAPITemp (makeTransactionBody')
 import Prelude
-import Ledger.Tx.CardanoAPI hiding (toCardanoTxBody)
+import Ledger.Tx.CardanoAPI hiding (deserialiseFromRawBytes, toCardanoTxBody)
 import Plutus.Test.Model.Fork.TxExtra
 import PlutusTx.Prelude qualified as PlutusTx
+
+-- They forgot to export this >:(
+toCardanoScriptData :: Api.BuiltinData -> C.ScriptData
+toCardanoScriptData = C.fromPlutusData . Api.builtinDataToData
+
+toCardanoTxOutDatum :: Map.Map Api.DatumHash Api.Datum -> Maybe Api.DatumHash -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.AlonzoEra)
+toCardanoTxOutDatum datas mHash = fromMaybe (toCardanoTxOutDatumHash mHash) $ do
+  datumHash <- mHash
+  datum <- Map.lookup datumHash datas
+  pure $ pure $ C.TxOutDatum C.ScriptDataInAlonzoEra $ toCardanoScriptData $ Api.getDatum datum
 
 toCardanoTxBody
     :: [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
@@ -48,7 +60,7 @@ toCardanoTxBody
 toCardanoTxBody sigs protocolParams networkId (Tx extra P.Tx{..}) = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
-    txOuts <- traverse (toCardanoTxOut networkId txData) txOutputs
+    txOuts <- traverse (toCardanoTxOut networkId $ toCardanoTxOutDatum txData) txOutputs
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
