@@ -41,7 +41,7 @@
     };
     cardano-node = {
       url =
-        "github:input-output-hk/cardano-node/814df2c146f5d56f8c35a681fe75e85b905aed5d";
+        "github:input-output-hk/cardano-node/73f9a746362695dc2cb63ba757fbcabb81733d23";
       flake = false;
     };
     cardano-prelude = {
@@ -51,7 +51,12 @@
     };
     cardano-wallet = {
       url =
-        "github:j-mueller/cardano-wallet/a5085acbd2670c24251cf8d76a4e83c77a2679ba";
+        "github:j-mueller/cardano-wallet/f6d4db733c4e47ee11683c343b440552f59beff7";
+      flake = false;
+    };
+    ekg-forward = {
+      url =
+        "github:input-output-hk/ekg-forward/297cd9db5074339a2fb2e5ae7d0780debb670c63";
       flake = false;
     };
     flat = {
@@ -62,6 +67,11 @@
     goblins = {
       url =
         "github:input-output-hk/goblins/cde90a2b27f79187ca8310b6549331e59595e7ba";
+      flake = false;
+    };
+    hedgehog-extras = {
+      url =
+        "github:input-output-hk/hedgehog-extras/edf6945007177a638fbeb8802397f3a6f4e47c14";
       flake = false;
     };
     iohk-monitoring-framework = {
@@ -76,17 +86,17 @@
     };
     ouroboros-network = {
       url =
-        "github:input-output-hk/ouroboros-network/d2d219a86cda42787325bb8c20539a75c2667132";
+        "github:input-output-hk/ouroboros-network/4fac197b6f0d2ff60dc3486c593b68dc00969fbf";
       flake = false;
     };
     plutus = {
       url =
-        "github:input-output-hk/plutus/d4f933d25ecc35a9c5bb057f5cf462112129cfdb";
+        "github:input-output-hk/plutus/4127e9cd6e889824d724c30eae55033cb50cbf3e";
       flake = false;
     };
     plutus-apps = {
       url =
-        "github:input-output-hk/plutus-apps/686b559d34c7bd934b327a1644f31fe42d643492";
+        "github:input-output-hk/plutus-apps/e4062bca213f233cdf9822833b07aa69dff6d22a";
       flake = false;
     };
     Win32-network = {

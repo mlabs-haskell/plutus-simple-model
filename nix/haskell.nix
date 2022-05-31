@@ -140,7 +140,17 @@ pkgs.haskell-nix.cabalProject {
     }
     {
       src = inputs.cardano-node;
-      subdirs = [ "cardano-api" "cardano-node" ];
+      subdirs = [ 
+        "cardano-api"
+        "cardano-cli"
+        "cardano-git-rev"
+        "cardano-node"
+        "cardano-submit-api"
+        "cardano-testnet"
+        "trace-dispatcher"
+        "trace-forward"
+        "trace-resources"
+      ];
     }
     {
       src = inputs.cardano-config;
@@ -166,11 +176,19 @@ pkgs.haskell-nix.cabalProject {
       ];
     }
     {
+      src = inputs.ekg-forward;
+      subdirs = [ "." ];
+    }
+    {
       src = inputs.flat;
       subdirs = [ "." ];
     }
     {
       src = inputs.goblins;
+      subdirs = [ "." ];
+    }
+    {
+      src = inputs.hedgehog-extras;
       subdirs = [ "." ];
     }
     {
