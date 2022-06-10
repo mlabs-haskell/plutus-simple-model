@@ -16,7 +16,7 @@
     # all inputs below here are for pinning with haskell.nix
     cardano-addresses = {
       url =
-        "github:input-output-hk/cardano-addresses/71006f9eb956b0004022e80aadd4ad50d837b621";
+        "github:input-output-hk/cardano-addresses/d2f86caa085402a953920c6714a0de6a50b655ec";
       flake = false;
     };
     cardano-base = {
@@ -51,7 +51,7 @@
     };
     cardano-wallet = {
       url =
-        "github:j-mueller/cardano-wallet/a5085acbd2670c24251cf8d76a4e83c77a2679ba";
+        "github:j-mueller/cardano-wallet/5ad348d26313363bacec061ee963c89fd9d467b8";
       flake = false;
     };
     flat = {
@@ -81,12 +81,12 @@
     };
     plutus = {
       url =
-        "github:input-output-hk/plutus/d4f933d25ecc35a9c5bb057f5cf462112129cfdb";
+        "github:input-output-hk/plutus/4127e9cd6e889824d724c30eae55033cb50cbf3e";
       flake = false;
     };
     plutus-apps = {
       url =
-        "github:input-output-hk/plutus-apps/686b559d34c7bd934b327a1644f31fe42d643492";
+        "github:input-output-hk/plutus-apps/63deb7d7ebd1c8c8ddf2640e1873d8f0f49559a1";
       flake = false;
     };
     Win32-network = {

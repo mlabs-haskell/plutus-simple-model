@@ -15,6 +15,7 @@ not accessible from standard Plutus TX
 -}
 module Plutus.Test.Model.Fork.CardanoAPI (
   toCardanoTxBody,
+  toCardanoTxOutDatum,
   toCardanoStakeWitness,
 ) where
 
@@ -35,10 +36,20 @@ import Codec.Serialise qualified as Codec
 
 import Plutus.Test.Model.Fork.CardanoAPITemp (makeTransactionBody')
 import Prelude
-import Ledger.Tx.CardanoAPI hiding (toCardanoTxBody)
+import Ledger.Tx.CardanoAPI hiding (deserialiseFromRawBytes, toCardanoTxBody)
 import Plutus.Test.Model.Fork.TxExtra
 import PlutusTx.Prelude qualified as PlutusTx
+import Data.Maybe (fromMaybe)
 
+toCardanoScriptData :: Api.BuiltinData -> C.ScriptData
+toCardanoScriptData = C.fromPlutusData . Api.builtinDataToData
+
+toCardanoTxOutDatum :: Map.Map Api.DatumHash Api.Datum -> Maybe Api.DatumHash -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.AlonzoEra)
+toCardanoTxOutDatum datas mHash = fromMaybe (toCardanoTxOutDatumHash mHash) $ do
+  datumHash <- mHash
+  datum <- Map.lookup datumHash datas
+  pure $ pure $ C.TxOutDatum C.ScriptDataInAlonzoEra $ toCardanoScriptData $ Api.getDatum datum
+  
 toCardanoTxBody
     :: [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
     -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
@@ -48,7 +59,7 @@ toCardanoTxBody
 toCardanoTxBody sigs protocolParams networkId (Tx extra P.Tx{..}) = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
-    txOuts <- traverse (toCardanoTxOut networkId txData) txOutputs
+    txOuts <- traverse (toCardanoTxOut networkId $ toCardanoTxOutDatum txData) txOutputs
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
