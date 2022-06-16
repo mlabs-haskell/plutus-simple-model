@@ -21,7 +21,6 @@ import Prettyprinter
 import Text.Printf (printf)
 
 import Cardano.Api.Shelley (Error (..))
-import Ledger (txId)
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Slot
 import Plutus.V1.Ledger.Value (assetClass, flattenValue, toString)
@@ -40,30 +39,24 @@ ppPercent (Percent x) = printf "%.2f" x <> "%"
 ppBchEvent :: BchNames -> Log BchEvent -> String
 ppBchEvent _names = show . vcat . fmap ppSlot . fromGroupLog
   where
-    ppSlot (slot, events) = hardline <> vcat [pretty slot <> colon, indent 2 (vcat $ pretty <$> events)]
+    ppSlot (slot, events) = vcat [pretty slot <> colon, indent 2 (vcat $ pretty <$> events)]
 
 ppLimitInfo :: BchNames -> Log TxStat -> String
 ppLimitInfo names bch =
   show $ vcat $ fmap ppGroup $ fromGroupLog bch
   where
-    ppGroup (slot, events) = vcat [pretty slot <> colon, indent 2 (vcat $ fmap ppStatEvent events)]
+    ppGroup (slot, events) =
+      vcat [ pretty slot <> colon
+           , indent 2 (vcat $ fmap ppEvent events)
+           ]
 
-    ppStatEvent tx = vcat [ ppTx $ Ledger.txId $ tx'plutus $ txStatTx tx
-                          , indent 2 $ ppStatWarn (txStatPercent tx)
-                          ]
+    ppEvent event =
+      vcat [ ppTxIdent (txStatId event)
+           , indent 2 $ pretty event
+           ]
 
-    ppTx ident = "Tx name/id:" <+> case readTxName names ident of
-      Just name -> pretty name
-      Nothing -> pretty ident
-
-    ppStatWarn stat
-      | isLimitError stat = vcat ["error: out of limits", indent 2 (pretty stat)]
-      | otherwise         = pretty stat
-
-    isLimitError (StatPercent size units) =
-      err size || err (percentExecutionMemory units) || err (percentExecutionSteps units)
-      where
-        err (Percent x) = x >= 100
+    ppTxIdent ident = "Tx name/id:" <+>
+      maybe (pretty ident) pretty (readTxName names ident)
 
 -- | Pretty-prints the blockchain state
 ppBlockchain :: Blockchain -> String
@@ -219,10 +212,17 @@ instance Pretty DCertError where
 instance Pretty BchEvent where
   pretty = \case
     BchInfo msg                              -> "[info] " <+> align (pretty msg)
-    -- TODO plug in prettifier for Tx here once it's ready
-    BchTx _                                  -> "[tx]   " <+> align "TODO print tx"
+    BchTx mbName txStat                      -> "[tx]   " <+> align (ppTxStat mbName txStat)
     BchFail fReason                          -> "[error]" <+> align (pretty fReason)
     BchMustFailLog (MustFailLog msg fReason) -> "[fail] " <+> align (vcat [pretty msg, pretty fReason])
+    where
+      ppTxStat mbName txStat =
+        vcat [ ppTxName mbName (txStatId txStat)
+             , indent 2 $ (pretty . TxStatFull) txStat]
+      ppTxName mbName txId = maybe
+        ("Tx id:" <+> pretty txId)
+        (\name -> "Named tx:" <+> pretty name)
+        mbName
 
 instance Pretty WithdrawError where
   pretty = \case
@@ -233,6 +233,33 @@ instance Pretty WithdrawError where
     WithdrawNotSigned pkh -> hsep ["Reward withdraw by pub key not signed by", pretty pkh]
     StakeNotRegistered cred ->
       hsep [ "Stake credential", pretty cred, "is not registered for rewards"]
+
+instance Pretty TxStat where
+  pretty TxStat { txStatPercent = stat} = vcat
+    [ "Usage statistics:"
+    , indent 2 prettyStat
+    ]
+
+    where
+      prettyStat
+        | isLimitError stat = vcat ["error: out of limits", indent 2 (pretty stat)]
+        | otherwise         = pretty stat
+
+      isLimitError (StatPercent size units) =
+        err size || err (percentExecutionMemory units) || err (percentExecutionSteps units)
+        where
+          err (Percent x) = x >= 100
+
+-- | The wrapper for full TxStat prettifier
+newtype TxStatFull = TxStatFull TxStat
+
+instance Pretty TxStatFull where
+  pretty (TxStatFull txStat) =
+    let TxStat { txStatTx = Tx { tx'plutus = tx}} = txStat
+    in vcat
+         [ pretty tx
+         , pretty txStat
+         ]
 
 -- TODO implement with respect to 'Pretty' law
 instance Pretty Tx where

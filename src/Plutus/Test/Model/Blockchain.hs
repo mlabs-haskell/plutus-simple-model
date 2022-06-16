@@ -26,6 +26,7 @@ module Plutus.Test.Model.Blockchain (
   BchNames (..),
   User (..),
   TxStat (..),
+  txStatId,
   PoolId(..),
   ExecutionUnits (..),
   Result (..),
@@ -267,6 +268,10 @@ data TxStat = TxStat
   , txStatPercent   :: !StatPercent
   }
   deriving (Show)
+
+-- | Gets Tx's hash
+txStatId :: TxStat -> TxId
+txStatId = txId . tx'plutus . txStatTx
 
 -- | Config for the blockchain.
 data BchConfig = BchConfig
@@ -1004,7 +1009,11 @@ testnetBlockLimits = mainnetBlockLimits
 
 -- | Blockchain events to log.
 data BchEvent
-  = BchTx TxStat               -- ^ Sucessful TXs
+  -- | Sucessful TXs
+  = BchTx
+    { bchTx'name   :: Maybe String -- ^ Optional tx's name
+    , bchTx'txStat :: TxStat       -- ^ Tx and stat
+    }
   | BchInfo String             -- ^ Info messages
   | BchFail FailReason         -- ^ Errors
   | BchMustFailLog MustFailLog -- ^ Expected errors, see 'mustFail'
@@ -1022,8 +1031,8 @@ failLog :: Log BchEvent -> Log BchEvent
 failLog (Log xs) = Log $ Seq.filter (not . isTx . snd) xs
   where
     isTx = \case
-      BchTx _ -> True
-      _       -> False
+      BchTx _ _ -> True
+      _         -> False
 
 -- | filter by slot. Can be useful to filter out unnecessary info.
 filterSlot :: (Slot -> Bool) -> Log a -> Log a
@@ -1032,4 +1041,11 @@ filterSlot f (Log xs) = Log (Seq.filter (f . fst) xs)
 -- | Reads the log.
 getLog :: Blockchain -> Log BchEvent
 getLog Blockchain{..} =
-  mconcat [BchInfo <$> bchInfo, BchMustFailLog <$> mustFailLog, BchTx <$> bchTxs, BchFail <$> bchFails]
+  mconcat 
+    [ BchInfo <$> bchInfo
+    , BchMustFailLog <$> mustFailLog
+    , uncurry BchTx . (\tx@(txStatId -> ident) -> (txName ident, tx)) <$> bchTxs
+    , BchFail <$> bchFails
+    ]
+  where
+    txName = readTxName bchNames
