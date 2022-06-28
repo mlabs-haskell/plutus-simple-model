@@ -102,8 +102,6 @@ module Plutus.Test.Model.Contract (
 import Control.Monad.State.Strict
 import Prelude
 
-import Debug.Trace
-
 import Data.Bifunctor (second)
 import Data.List qualified as L
 import Data.Map.Strict (Map)
@@ -266,8 +264,7 @@ spend' pkh expected = do
       | otherwise = (curVal, resUtxos)
       where
         outVal = txOutValue out
-        nextVal' = snd $ split $ curVal <> Plutus.negate outVal
-        nextVal = trace ("nextVal=" <> show nextVal' <> "\ncurVal=" <> show curVal) nextVal'
+        nextVal = snd $ split $ curVal <> Plutus.negate outVal
         -- 'lt' seems to be not usable here, see
         -- https://github.com/mlabs-haskell/plutus-simple-model/issues/26 for details.
         -- Strictly speaking, @isZero neg@ is redundant here, it always should hold
