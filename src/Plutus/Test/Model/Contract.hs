@@ -260,11 +260,20 @@ spend' pkh expected = do
   where
     go (curVal, resUtxos) u@(_, out)
       | curVal `leq` mempty = (curVal, resUtxos)
-      | nextVal `lt` curVal = (nextVal, u : resUtxos)
+      | nextVal `lt'` curVal = (nextVal, u : resUtxos)
       | otherwise = (curVal, resUtxos)
       where
         outVal = txOutValue out
         nextVal = snd $ split $ curVal <> Plutus.negate outVal
+        -- 'lt' seems to be not usable here, see
+        -- https://github.com/mlabs-haskell/plutus-simple-model/issues/26 for details.
+        -- Strictly speaking, @isZero neg@ is redundant here, it always should hold
+        -- be the way @nextVal@ is constructed. But general **less then** must
+        -- check the negative part is empty, so I decided to keep it for clarity.
+        lt' :: Value -> Value -> Bool
+        lt' a b = not (isZero pos) && isZero neg
+          where
+            (neg, pos) = split $ b <> Plutus.negate a
 
     toRes (curVal, utxos)
       | curVal `leq` mempty = Just $ UserSpend (foldMap (S.singleton . toInput) utxos) (getChange utxos)
