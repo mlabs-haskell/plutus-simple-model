@@ -841,7 +841,7 @@ getUTxO tid tx = do
 
     fromTxOut networkId (tin, tout) = do
       cin <- Cardano.toCardanoTxIn $ P.txInRef tin
-      cout <- fmap toCtxUTxOTxOut $ Cardano.toCardanoTxOut networkId (P.txData tx) tout
+      cout <- fmap toCtxUTxOTxOut $ Cardano.toCardanoTxOut networkId (Fork.lookupDatum $ P.txData tx) tout
       pure (cin, cout)
 
     toUtxo :: NetworkId -> [(TxIn, TxOut)] -> Either Cardano.ToCardanoError (UTxO AlonzoEra)
@@ -1041,7 +1041,7 @@ filterSlot f (Log xs) = Log (Seq.filter (f . fst) xs)
 -- | Reads the log.
 getLog :: Blockchain -> Log BchEvent
 getLog Blockchain{..} =
-  mconcat 
+  mconcat
     [ BchInfo <$> bchInfo
     , BchMustFailLog <$> mustFailLog
     , uncurry BchTx . (\tx@(txStatId -> ident) -> (txName ident, tx)) <$> bchTxs

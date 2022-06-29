@@ -16,15 +16,16 @@ not accessible from standard Plutus TX
 module Plutus.Test.Model.Fork.CardanoAPI (
   toCardanoTxBody,
   toCardanoStakeWitness,
+  lookupDatum,
 ) where
 
 import Data.Proxy
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Data.Coerce (coerce)
-import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Bifunctor (first)
+import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
 import Ledger.Address qualified as P
@@ -48,7 +49,7 @@ toCardanoTxBody
 toCardanoTxBody sigs protocolParams networkId (Tx extra P.Tx{..}) = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
-    txOuts <- traverse (toCardanoTxOut networkId txData) txOutputs
+    txOuts <- traverse (toCardanoTxOut networkId (lookupDatum txData)) txOutputs
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
@@ -182,9 +183,18 @@ toCardanoPlutusScript =
 zeroExecutionUnits :: C.ExecutionUnits
 zeroExecutionUnits = C.ExecutionUnits 0 0
 
-deserialiseFromRawBytes :: C.SerialiseAsRawBytes t => C.AsType t -> ByteString -> Either ToCardanoError t
-deserialiseFromRawBytes asType = maybe (Left DeserialisationError) Right . C.deserialiseFromRawBytes asType
-
 tag :: String -> Either ToCardanoError t -> Either ToCardanoError t
 tag s = first (Tag s)
+
+lookupDatum :: Map P.DatumHash P.Datum -> Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.AlonzoEra)
+lookupDatum datums datumHash =
+  case flip Map.lookup datums =<< datumHash of
+    Just datum -> pure $ C.TxOutDatum C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
+    Nothing    -> toCardanoTxOutDatumHash datumHash
+
+toCardanoScriptData :: Api.BuiltinData -> C.ScriptData
+toCardanoScriptData = C.fromPlutusData . Api.builtinDataToData
+
+
+
 
