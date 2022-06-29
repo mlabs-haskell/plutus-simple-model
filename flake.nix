@@ -1,150 +1,155 @@
 {
-  description = "plutus-simple-model";
+  description = "template-project";
+  nixConfig.bash-prompt = "\\[\\e[0m\\][\\[\\e[0;2m\\]nix-develop \\[\\e[0;1m\\]template-project \\[\\e[0;93m\\]\\w\\[\\e[0m\\]]\\[\\e[0m\\]$ \\[\\e[0m\\]";
 
   inputs = {
-    haskell-nix.url = "github:L-as/haskell.nix/ac825b91c202947ec59b1a477003564cc018fcec";
-    haskell-nix.inputs.nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
-    nixpkgs.follows = "haskell-nix/nixpkgs";
+    nixpkgs.follows = "plutip/nixpkgs";
+    haskell-nix.follows = "plutip/haskell-nix";
 
-    iohk-nix.url = "github:input-output-hk/iohk-nix";
-
-    flake-compat = {
-      url = "github:edolstra/flake-compat";
-      flake = false;
-    };
-
-    # all inputs below here are for pinning with haskell.nix
-    cardano-addresses = {
-      url =
-        "github:input-output-hk/cardano-addresses/71006f9eb956b0004022e80aadd4ad50d837b621";
-      flake = false;
-    };
-    cardano-base = {
-      url =
-        "github:input-output-hk/cardano-base/41545ba3ac6b3095966316a99883d678b5ab8da8";
-      flake = false;
-    };
-    cardano-config = {
-      url =
-        "github:input-output-hk/cardano-config/e9de7a2cf70796f6ff26eac9f9540184ded0e4e6";
-      flake = false;
-    };
-    cardano-crypto = {
-      url =
-        "github:input-output-hk/cardano-crypto/f73079303f663e028288f9f4a9e08bcca39a923e";
-      flake = false;
-    };
-    cardano-ledger = {
-      url =
-        "github:input-output-hk/cardano-ledger/1a9ec4ae9e0b09d54e49b2a40c4ead37edadcce5";
-      flake = false;
-    };
-    cardano-node = {
-      url =
-        "github:input-output-hk/cardano-node/814df2c146f5d56f8c35a681fe75e85b905aed5d";
-      flake = false;
-    };
-    cardano-prelude = {
-      url =
-        "github:input-output-hk/cardano-prelude/bb4ed71ba8e587f672d06edf9d2e376f4b055555";
-      flake = false;
-    };
-    cardano-wallet = {
-      url =
-        "github:j-mueller/cardano-wallet/a5085acbd2670c24251cf8d76a4e83c77a2679ba";
-      flake = false;
-    };
-    flat = {
-      url =
-        "github:input-output-hk/flat/ee59880f47ab835dbd73bea0847dab7869fc20d8";
-      flake = false;
-    };
-    goblins = {
-      url =
-        "github:input-output-hk/goblins/cde90a2b27f79187ca8310b6549331e59595e7ba";
-      flake = false;
-    };
-    iohk-monitoring-framework = {
-      url =
-        "github:input-output-hk/iohk-monitoring-framework/46f994e216a1f8b36fe4669b47b2a7011b0e153c";
-      flake = false;
-    };
-    optparse-applicative = {
-      url =
-        "github:input-output-hk/optparse-applicative/7497a29cb998721a9068d5725d49461f2bba0e7a";
-      flake = false;
-    };
-    ouroboros-network = {
-      url =
-        "github:input-output-hk/ouroboros-network/d2d219a86cda42787325bb8c20539a75c2667132";
-      flake = false;
-    };
-    plutus = {
-      url =
-        "github:input-output-hk/plutus/d4f933d25ecc35a9c5bb057f5cf462112129cfdb";
-      flake = false;
-    };
-    plutus-apps = {
-      url =
-        "github:input-output-hk/plutus-apps/c8cbde61c9cf52e7d07aec51957b63d7a90123ff";
-      flake = false;
-    };
-    Win32-network = {
-      url =
-        "github:input-output-hk/Win32-network/3825d3abf75f83f406c1f7161883c438dac7277d";
-      flake = false;
-    };
+    plutip.url = "github:mlabs-haskell/plutip?rev=88d069d68c41bfd31b2057446a9d4e584a4d2f32";
   };
 
-  outputs = { self, nixpkgs, haskell-nix, iohk-nix, ... }@inputs:
+
+  outputs = inputs@{ self, nixpkgs, haskell-nix, plutip, ... }:
     let
-      defaultSystems = [ "x86_64-linux" "x86_64-darwin" ];
+      # GENERAL
+      supportedSystems = with nixpkgs.lib.systems.supported; tier1 ++ tier2 ++ tier3;
+      perSystem = nixpkgs.lib.genAttrs supportedSystems;
 
-      perSystem = nixpkgs.lib.genAttrs defaultSystems;
-
-      nixpkgsFor = system:
-        import nixpkgs {
-          overlays = [ haskell-nix.overlay iohk-nix.overlays.crypto ];
-          inherit (haskell-nix) config;
-          inherit system;
-        };
-
+      nixpkgsFor = system: import nixpkgs {
+        inherit system;
+        overlays = [ haskell-nix.overlay (import "${plutip.inputs.iohk-nix}/overlays/crypto") ];
+        inherit (haskell-nix) config;
+      };
       nixpkgsFor' = system: import nixpkgs { inherit system; };
 
-      projectFor = system:
+      formatCheckFor = system:
         let
           pkgs = nixpkgsFor system;
           pkgs' = nixpkgsFor' system;
-          plutus = import inputs.plutus { inherit system; };
-          src = ./.;
-        in import ./nix/haskell.nix { inherit src inputs pkgs pkgs' system; };
+        in
+        pkgs.runCommand "format-check"
+          {
+            nativeBuildInputs = [
+              pkgs'.git
+              pkgs'.fd
+              pkgs'.haskellPackages.cabal-fmt
+              pkgs'.nixpkgs-fmt
+            ];
+          } ''
+          export LC_CTYPE=C.UTF-8
+          export LC_ALL=C.UTF-8
+          export LANG=C.UTF-8
+          cd ${self}
+          make format_check
+          mkdir $out
+        ''
+      ;
 
-    in {
-      flake = perSystem (system: (projectFor system).flake { });
+      # OFFCHAIN / Testnet, Cardano, ...
 
-      defaultPackage = perSystem (system:
-        let lib = "plutus-simple-model:lib:plutus-simple-model";
-        in self.flake.${system}.packages.${lib});
+      offchain = rec {
+        ghcVersion = "ghc8107";
 
+        projectFor = system:
+          let
+            pkgs = nixpkgsFor system;
+            pkgs' = nixpkgsFor' system;
+            fourmolu = pkgs.haskell-nix.tool "ghc921" "fourmolu" { };
+            project = pkgs.haskell-nix.cabalProject' {
+              src = ./.;
+              compiler-nix-name = ghcVersion;
+              inherit (plutip) cabalProjectLocal;
+              extraSources = plutip.extraSources;
+              modules = [
+                ({ config, ... }: {
+                  packages.template-project-offchain.components.tests.template-project-offchain-test.build-tools = [
+                    project.hsPkgs.cardano-cli.components.exes.cardano-cli
+                    project.hsPkgs.cardano-node.components.exes.cardano-node
+                  ];
+
+                })
+              ] ++ plutip.haskellModules;
+
+              shell = {
+                withHoogle = true;
+
+                exactDeps = true;
+
+                # We use the ones from Nixpkgs, since they are cached reliably.
+                # Eventually we will probably want to build these with haskell.nix.
+                nativeBuildInputs = [
+                  pkgs'.cabal-install
+                  pkgs'.fd
+                  pkgs'.haskellPackages.apply-refact
+                  pkgs'.haskellPackages.cabal-fmt
+                  pkgs'.hlint
+                  pkgs'.nixpkgs-fmt
+
+                  project.hsPkgs.cardano-cli.components.exes.cardano-cli
+                  project.hsPkgs.cardano-node.components.exes.cardano-node
+
+                  fourmolu
+                ];
+
+                tools.haskell-language-server = { };
+
+                additional = ps:
+                  with ps; [
+                    base-deriving-via
+                    cardano-addresses
+                    cardano-addresses-cli
+                    cardano-binary
+                    cardano-crypto
+                    cardano-crypto-class
+                    cardano-crypto-praos
+                    cardano-crypto-wrapper
+                    cardano-ledger-alonzo
+                    cardano-ledger-byron
+                    cardano-ledger-core
+                    cardano-ledger-pretty
+                    cardano-ledger-shelley
+                    cardano-ledger-shelley-ma
+                    cardano-node
+                    cardano-prelude
+                    cardano-slotting
+                    flat
+                    freer-extras
+                    goblins
+                    measures
+                    orphans-deriving-via
+                    plutus-ledger-constraints
+                    plutus-core
+                    plutus-ledger
+                    plutus-ledger-api
+                    plutus-tx
+                    plutus-tx-plugin
+                    prettyprinter-configurable
+                    Win32-network
+                    word-array
+                  ];
+
+              };
+            };
+          in
+          project;
+      };
+    in
+    {
+      inherit nixpkgsFor;
+
+      project = perSystem offchain.projectFor;
+      flake = perSystem (system: (offchain.projectFor system).flake { });
+
+      # this could be done automatically, but would reduce readability
       packages = perSystem (system: self.flake.${system}.packages);
-
-      apps = perSystem (system: self.flake.${system}.apps);
-
-      devShell = perSystem (system: self.flake.${system}.devShell);
-
-      # This will build all of the project's executables and the tests
-      check = perSystem (system:
-        (nixpkgsFor system).runCommand "combined-check" {
-          nativeBuildInputs = builtins.attrValues self.checks.${system}
-            ++ builtins.attrValues self.flake.${system}.packages
-            ++ [ self.flake.${system}.devShell.inputDerivation ];
-        } "touch $out");
-
-      # NOTE `nix flake check` will not work at the moment due to use of
-      # IFD in haskell.nix
-      #
-      # Includes all of the packages in the `checks`, otherwise only the
-      # test suite would be included
       checks = perSystem (system: self.flake.${system}.checks);
+      check = perSystem (system:
+        (nixpkgsFor system).runCommand "combined-test" {
+          nativeBuildInputs = builtins.attrValues self.checks.${system};
+        } "touch $out");
+      apps = perSystem (system: self.flake.${system}.apps);
+      devShell = perSystem (system: self.flake.${system}.devShell);
     };
 }
+

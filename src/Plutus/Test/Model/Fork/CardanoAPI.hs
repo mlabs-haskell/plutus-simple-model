@@ -23,6 +23,7 @@ import Data.Proxy
 import Cardano.Api qualified as C
 import Cardano.Api.Shelley qualified as C
 import Data.Coerce (coerce)
+import Data.ByteString (ByteString)
 import Data.ByteString.Lazy qualified as BSL
 import Data.Bifunctor (first)
 import Data.Map.Strict (Map)
@@ -49,7 +50,7 @@ toCardanoTxBody
 toCardanoTxBody sigs protocolParams networkId (Tx extra P.Tx{..}) = do
     txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
     txInsCollateral <- toCardanoTxInsCollateral txCollateral
-    txOuts <- traverse (toCardanoTxOut networkId (lookupDatum txData)) txOutputs
+    txOuts <- traverse (toCardanoTxOut networkId txData) txOutputs
     txFee' <- toCardanoFee txFee
     txValidityRange <- toCardanoValidityRange txValidRange
     txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
@@ -194,6 +195,14 @@ lookupDatum datums datumHash =
 
 toCardanoScriptData :: Api.BuiltinData -> C.ScriptData
 toCardanoScriptData = C.fromPlutusData . Api.builtinDataToData
+
+toCardanoTxOutDatumHash :: Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.AlonzoEra)
+toCardanoTxOutDatumHash Nothing          = pure C.TxOutDatumNone
+toCardanoTxOutDatumHash (Just datumHash) = C.TxOutDatumHash C.ScriptDataInAlonzoEra <$> toCardanoScriptDataHash datumHash
+
+deserialiseFromRawBytes :: C.SerialiseAsRawBytes t => C.AsType t -> ByteString -> Either ToCardanoError t
+deserialiseFromRawBytes asType = maybe (Left DeserialisationError) Right . C.deserialiseFromRawBytes asType
+
 
 
 
