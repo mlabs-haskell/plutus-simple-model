@@ -22,8 +22,8 @@ import Text.Printf (printf)
 
 import Cardano.Api.Shelley (Error (..))
 import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Slot
 import Plutus.V1.Ledger.Value (assetClass, flattenValue, toString)
+import Ledger (Slot (..))
 
 import Plutus.Test.Model.Blockchain
 import Plutus.Test.Model.Fork.TxExtra

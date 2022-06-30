@@ -28,9 +28,7 @@ import Data.Bifunctor (first)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
-import Ledger.Address qualified as P
-import Plutus.V1.Ledger.Tx qualified as P
-import Plutus.V1.Ledger.Api qualified as Api
+import Ledger qualified as P
 import Plutus.V1.Ledger.Api qualified as P
 import Codec.Serialise qualified as Codec
 
@@ -59,6 +57,8 @@ toCardanoTxBody sigs protocolParams networkId (Tx extra P.Tx{..}) = do
     first (TxBodyError . C.displayError) $ makeTransactionBody' C.TxBodyContent
         { txIns = txIns
         , txInsCollateral = txInsCollateral
+        , txTotalCollateral = C.TxTotalCollateralNone -- FIXME
+        , txReturnCollateral = C.TxReturnCollateralNone -- FIXME
         , txOuts = txOuts
         , txFee = txFee'
         , txValidityRange = txValidityRange
@@ -72,6 +72,7 @@ toCardanoTxBody sigs protocolParams networkId (Tx extra P.Tx{..}) = do
         , txWithdrawals = withdrawals
         , txCertificates = certificates
         , txUpdateProposal = C.TxUpdateProposalNone
+        , txInsReference = C.TxInsReferenceNone
         }
     where
       toWithdrawals = \case
@@ -164,7 +165,7 @@ toCardanoStakeWitness redeemer (P.StakeValidator script) = do
     C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1
         <$> toCardanoPlutusScript script
         <*> pure C.NoScriptDatumForStake
-        <*> pure (C.fromPlutusData $ Api.toData redeemer)
+        <*> pure (C.fromPlutusData $ P.toData redeemer)
         <*> pure zeroExecutionUnits
 
 castHash :: forall a b. (C.SerialiseAsRawBytes (C.Hash a), C.SerialiseAsRawBytes (C.Hash b))
@@ -175,10 +176,10 @@ castHash msg =
     err = txError $ "Failed to convert to " <> msg
 
 
-toCardanoPlutusScript :: P.Script -> Either ToCardanoError (C.PlutusScript C.PlutusScriptV1)
+toCardanoPlutusScript :: P.Script -> Either ToCardanoError (C.PlutusScriptOrReferenceInput C.PlutusScriptV1)
 toCardanoPlutusScript =
     tag "toCardanoPlutusScript"
-    . deserialiseFromRawBytes (C.AsPlutusScript C.AsPlutusScriptV1) . BSL.toStrict . Codec.serialise
+    . fmap C.PScript . deserialiseFromRawBytes (C.AsPlutusScript C.AsPlutusScriptV1) . BSL.toStrict . Codec.serialise
 
 zeroExecutionUnits :: C.ExecutionUnits
 zeroExecutionUnits = C.ExecutionUnits 0 0
@@ -189,12 +190,8 @@ tag s = first (Tag s)
 lookupDatum :: Map P.DatumHash P.Datum -> Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum C.CtxTx C.AlonzoEra)
 lookupDatum datums datumHash =
   case flip Map.lookup datums =<< datumHash of
-    Just datum -> pure $ C.TxOutDatum C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
+    Just datum -> pure $ C.TxOutDatumInTx C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
     Nothing    -> toCardanoTxOutDatumHash datumHash
 
-toCardanoScriptData :: Api.BuiltinData -> C.ScriptData
-toCardanoScriptData = C.fromPlutusData . Api.builtinDataToData
-
-
-
-
+toCardanoScriptData :: P.BuiltinData -> C.ScriptData
+toCardanoScriptData = C.fromPlutusData . P.builtinDataToData

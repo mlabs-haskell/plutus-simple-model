@@ -115,16 +115,15 @@ import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
 
 import Ledger.Crypto (pubKeyHash)
-import Ledger.Scripts (datumHash)
 import Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
 import Ledger.Typed.Scripts
 import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Interval ()
-import Plutus.V1.Ledger.Slot
-import Plutus.V1.Ledger.Tx hiding (Tx(Tx))
 import Plutus.V1.Ledger.Value
 import PlutusTx.Prelude qualified as Plutus
+import Ledger (Slot (..))
+import Ledger qualified as P
 
 import Plutus.Test.Model.Blockchain
 import Plutus.Test.Model.Fork.TxExtra
@@ -228,7 +227,7 @@ valueAtState user st = foldMap (txOutValue . snd) $ utxoAtState user st
  back to the user.
 -}
 data UserSpend = UserSpend
-  { userSpend'inputs :: Set TxIn
+  { userSpend'inputs :: Set P.TxIn
   , userSpend'change :: Maybe TxOut
   }
   deriving (Show)
@@ -236,7 +235,7 @@ data UserSpend = UserSpend
 -- | Reads first @TxOutRef@ from user spend inputs.
 -- It can be useful to create NFTs that depend on TxOutRef's.
 getHeadRef :: UserSpend -> TxOutRef
-getHeadRef UserSpend{..} = txInRef $ S.elemAt 0 userSpend'inputs
+getHeadRef UserSpend{..} = P.txInRef $ S.elemAt 0 userSpend'inputs
 
 -- | Variant of spend' that fails in run-time if there are not enough funds to spend.
 spend :: PubKeyHash -> Value -> Run UserSpend
@@ -279,7 +278,7 @@ spend' pkh expected = do
       | curVal `leq` mempty = Just $ UserSpend (foldMap (S.singleton . toInput) utxos) (getChange utxos)
       | otherwise = Nothing
 
-    toInput (ref, _) = TxIn ref (Just ConsumePublicKeyAddress)
+    toInput (ref, _) = P.TxIn ref (Just P.ConsumePublicKeyAddress)
 
     getChange utxos
       | change /= mempty = Just $ TxOut (pubKeyHashAddress pkh) change Nothing
@@ -294,14 +293,14 @@ spend' pkh expected = do
 payToPubKey :: PubKeyHash -> Value -> Tx
 payToPubKey pkh val = toExtra $
   mempty
-    { txOutputs = [TxOut (pubKeyHashAddress pkh) val Nothing]
+    { P.txOutputs = [TxOut (pubKeyHashAddress pkh) val Nothing]
     }
 
 payWithDatumToPubKey :: ToData a => PubKeyHash -> a -> Value -> Tx
 payWithDatumToPubKey pkh dat val = toExtra $
   mempty
-    { txOutputs = [TxOut (pubKeyHashAddress pkh) val (Just dh)]
-    , txData = M.singleton dh datum
+    { P.txOutputs = [TxOut (pubKeyHashAddress pkh) val (Just dh)]
+    , P.txData = M.singleton dh datum
     }
   where
     dh = datumHash datum
@@ -312,7 +311,7 @@ payWithDatumToPubKey pkh dat val = toExtra $
 payToPubKeyAddress :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
 payToPubKeyAddress pkh val = toExtra $
   mempty
-    { txOutputs = [TxOut (toAddress pkh) val Nothing]
+    { P.txOutputs = [TxOut (toAddress pkh) val Nothing]
     }
 
 -- | Pay to the script.
@@ -321,8 +320,8 @@ payToScript :: ToData (DatumType a) =>
   TypedValidator a -> DatumType a -> Value -> Tx
 payToScript tv dat val = toExtra $
   mempty
-    { txOutputs = [TxOut (toAddress tv) val (Just dh)]
-    , txData = M.singleton dh datum
+    { P.txOutputs = [TxOut (toAddress tv) val (Just dh)]
+    , P.txData = M.singleton dh datum
     }
   where
     dh = datumHash datum
@@ -334,8 +333,8 @@ payToScriptAddress :: (HasAddress script, ToData datum) =>
   script -> datum -> Value -> Tx
 payToScriptAddress script dat val = toExtra $
   mempty
-    { txOutputs = [TxOut (toAddress script) val (Just dh)]
-    , txData = M.singleton dh datum
+    { P.txOutputs = [TxOut (toAddress script) val (Just dh)]
+    , P.txData = M.singleton dh datum
     }
   where
     dh = datumHash datum
@@ -345,14 +344,14 @@ payToScriptAddress script dat val = toExtra $
 payFee :: Value -> Tx
 payFee val = toExtra $
   mempty
-    { txFee = val
+    { P.txFee = val
     }
 
 -- | Spend @TxOutRef@ that belongs to pub key (user).
 spendPubKey :: TxOutRef -> Tx
 spendPubKey ref = toExtra $
   mempty
-    { txInputs = S.singleton $ TxIn ref (Just ConsumePublicKeyAddress)
+    { P.txInputs = S.singleton $ P.TxIn ref (Just P.ConsumePublicKeyAddress)
     }
 
 -- | Spend script input.
@@ -365,7 +364,7 @@ spendScript ::
   Tx
 spendScript tv ref red dat = toExtra $
   mempty
-    { txInputs = S.singleton $ TxIn ref (Just $ ConsumeScriptAddress (validatorScript tv) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
+    { P.txInputs = S.singleton $ P.TxIn ref (Just $ P.ConsumeScriptAddress (validatorScript tv) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
     }
 
 -- | Spend script input.
@@ -403,16 +402,16 @@ modifyBox tv box act modDatum modValue = mconcat
 userSpend :: UserSpend -> Tx
 userSpend (UserSpend ins mChange) = toExtra $
   mempty
-    { txInputs = ins
-    , txOutputs = maybe [] pure mChange
+    { P.txInputs = ins
+    , P.txOutputs = maybe [] pure mChange
     }
 
 -- | Mints value. To use redeemer see function @addMintRedeemer@.
 mintValue :: MintingPolicy -> Value -> Tx
 mintValue policy val = toExtra $
   mempty
-    { txMint = val
-    , txMintScripts = S.singleton policy
+    { P.txMint = val
+    , P.txMintScripts = S.singleton policy
     }
 
 {- | Adds redeemr to the minting policy.
@@ -429,11 +428,11 @@ mintValue policy val = toExtra $
 -}
 addMintRedeemer :: ToData redeemer => MintingPolicy -> redeemer -> Tx -> Tx
 addMintRedeemer policy red = liftPlutusTx $ \tx ->
-  maybe tx (setRedeemer tx . fst) $ L.find ((== policy) . snd) $ zip [0 ..] $ S.toList $ txMintScripts tx
+  maybe tx (setRedeemer tx . fst) $ L.find ((== policy) . snd) $ zip [0 ..] $ S.toList $ P.txMintScripts tx
   where
     setRedeemer tx ix =
       tx
-        { txRedeemers = M.insert (RedeemerPtr Mint ix) (Redeemer $ toBuiltinData red) $ txRedeemers tx
+        { P.txRedeemers = M.insert (P.RedeemerPtr P.Mint ix) (Redeemer $ toBuiltinData red) $ P.txRedeemers tx
         }
 
 -- | Set validation time
@@ -442,7 +441,7 @@ validateIn times = updatePlutusTx $ \tx -> do
   slotCfg <- gets (bchConfigSlotConfig . bchConfig)
   pure $
     tx
-      { txValidRange = Plutus.fmap (posixTimeToEnclosingSlot slotCfg) times
+      { P.txValidRange = Plutus.fmap (posixTimeToEnclosingSlot slotCfg) times
       }
 
 ----------------------------------------------------------------------

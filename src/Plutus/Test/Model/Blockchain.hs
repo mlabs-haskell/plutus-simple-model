@@ -141,6 +141,7 @@ import Cardano.Api.Shelley (
   ScriptExecutionError,
   TransactionValidityError(..),
   UTxO (..),
+  ReferenceScript (..),
   evaluateTransactionBalance,
   evaluateTransactionExecutionUnits,
   fromAlonzoData,
@@ -155,15 +156,15 @@ import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Interval ()
 import Plutus.V1.Ledger.Interval qualified as Interval
-import Plutus.V1.Ledger.Slot (Slot (..), SlotRange)
 import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Tx (TxIn)
 import Plutus.V1.Ledger.Value (AssetClass, valueOf)
 import PlutusTx.Prelude qualified as Plutus
 import Basement.Compat.Natural
-import qualified Plutus.V1.Ledger.Ada            as Ada
+import qualified Ledger                as P
+import qualified Ledger.Ada            as Ada
 import Ledger.Typed.Scripts (TypedValidator, validatorAddress, ValidatorTypes(..))
-import Ledger (PaymentPubKeyHash(..), txId)
+import Ledger (PaymentPubKeyHash(..), Slot (..), SlotRange, txId)
 
 import Ouroboros.Consensus.Block.Abstract (EpochNo (..), EpochSize (..))
 import Ouroboros.Consensus.HardFork.History.EraParams
@@ -836,7 +837,8 @@ getUTxO tid tx = do
                 <*> pure (fromMaybe Cardano.TxOutDatumNone $ do
                        dh <- txOutDatumHash tout
                        dat <- M.lookup dh (P.txData tx)
-                       pure $ Cardano.TxOutDatum Cardano.ScriptDataInAlonzoEra (toScriptData dat))
+                       pure $ Cardano.TxOutDatumInTx Cardano.ScriptDataInAlonzoEra (toScriptData dat))
+                <*> pure ReferenceScriptNone
       pure (cin, cout)
 
     fromTxOut networkId (tin, tout) = do
