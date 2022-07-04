@@ -5,6 +5,9 @@ module Plutus.Test.Model.Validator(
   IsValidator(..),
   mkTypedValidator,
   mkTypedPolicy,
+  -- utils
+  toBuiltinValidator,
+  toBuiltinPolicy,
 ) where
 
 import Prelude
@@ -13,6 +16,7 @@ import Data.Kind (Type)
 import PlutusTx.Code (CompiledCode)
 import Plutus.V1.Ledger.Api
 import Plutus.Test.Model.Blockchain (HasAddress(..), AppendStaking(..))
+import PlutusTx.Prelude qualified as Plutus
 
 class (HasAddress script, ToData (DatumType script), FromData (DatumType script), ToData (RedeemerType script), FromData (RedeemerType script))
   => IsValidator script where
@@ -56,3 +60,25 @@ mkTypedValidator = TypedValidator . mkValidatorScript
 
 mkTypedPolicy :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedPolicy redeemer
 mkTypedPolicy = TypedPolicy . mkMintingPolicyScript
+
+-- | Coverts to low-level validator representation
+{-# INLINABLE toBuiltinValidator #-}
+toBuiltinValidator :: (UnsafeFromData datum, UnsafeFromData redeemer)
+  => (datum -> redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> BuiltinData -> ())
+toBuiltinValidator script =
+  \datum act ctx -> Plutus.check (
+        script (unsafeFromBuiltinData datum)
+               (unsafeFromBuiltinData act)
+               (unsafeFromBuiltinData ctx))
+
+
+-- | Coverts to low-level validator representation
+{-# INLINABLE toBuiltinPolicy #-}
+toBuiltinPolicy :: (UnsafeFromData redeemer)
+  => (redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> ())
+toBuiltinPolicy script =
+  \act ctx -> Plutus.check (
+        script (unsafeFromBuiltinData act)
+               (unsafeFromBuiltinData ctx))
+
+

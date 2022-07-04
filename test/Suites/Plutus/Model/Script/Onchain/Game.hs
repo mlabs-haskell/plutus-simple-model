@@ -4,7 +4,6 @@
  If other user can guess the hash then user can grab the value.
 -}
 module Suites.Plutus.Model.Script.Onchain.Game (
-  Game,
   GameDatum (..),
   GameAct (..),
   gameContract,
@@ -15,12 +14,10 @@ import Plutus.V1.Ledger.Api
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
 
-data Game
-
-data GameDatum = GuessHash Plutus.BuiltinByteString
+newtype GameDatum = GuessHash Plutus.BuiltinByteString
   deriving (Eq)
 
-data GameAct = Guess Plutus.BuiltinByteString
+newtype GameAct = Guess Plutus.BuiltinByteString
 
 gameContract :: GameDatum -> GameAct -> ScriptContext -> Bool
 gameContract (GuessHash h) (Guess answer) _ =

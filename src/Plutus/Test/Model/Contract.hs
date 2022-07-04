@@ -97,6 +97,7 @@ module Plutus.Test.Model.Contract (
 
   -- * Utils
   toBuiltinValidator,
+  toBuiltinPolicy,
 
   -- * Typed validators
   TypedValidator(..),
@@ -714,11 +715,4 @@ delegateStakeScript :: ToData redeemer =>
 delegateStakeScript script red (PoolId poolKey) = certTx $
   Certificate (DCertDelegDelegate (scriptToStaking script) poolKey) (withStakeScript script red)
 
--- | The GeroGov validator script instance
-toBuiltinValidator :: forall datum redeemer . (UnsafeFromData datum, UnsafeFromData redeemer)
-  => (datum -> redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> BuiltinData -> ())
-toBuiltinValidator script =
-  \datum act ctx -> Plutus.check (
-        script (unsafeFromBuiltinData datum)
-               (unsafeFromBuiltinData act)
-               (unsafeFromBuiltinData ctx))
+
