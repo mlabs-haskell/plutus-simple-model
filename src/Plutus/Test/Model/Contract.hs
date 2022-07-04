@@ -102,6 +102,8 @@ module Plutus.Test.Model.Contract (
   TypedValidator(..),
   TypedPolicy(..),
   IsValidator(..),
+  mkTypedValidator,
+  mkTypedPolicy,
 ) where
 
 import Control.Monad.State.Strict
@@ -711,9 +713,6 @@ delegateStakeScript :: ToData redeemer =>
   StakeValidator -> redeemer -> PoolId -> Tx
 delegateStakeScript script red (PoolId poolKey) = certTx $
   Certificate (DCertDelegDelegate (scriptToStaking script) poolKey) (withStakeScript script red)
-
-
-
 
 -- | The GeroGov validator script instance
 toBuiltinValidator :: forall datum redeemer . (UnsafeFromData datum, UnsafeFromData redeemer)
