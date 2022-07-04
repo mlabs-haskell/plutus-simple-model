@@ -35,7 +35,6 @@ safe = safeScript safeParams
 safeParams :: SafeParams
 safeParams = SafeParams 1_635_180_185_200
 
-
 initSafe :: Run Bool
 initSafe = do
   users <- setupUsers

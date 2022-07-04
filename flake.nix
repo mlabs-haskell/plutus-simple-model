@@ -23,8 +23,6 @@
     cardano-node.flake = false;
     cardano-prelude.url = "github:input-output-hk/cardano-prelude/bb4ed71ba8e587f672d06edf9d2e376f4b055555";
     cardano-prelude.flake = false;
-    cardano-wallet.url = "github:input-output-hk/cardano-wallet/0cdd1b72a16b2f287b5f1bf137b5eba15bc7f300";
-    cardano-wallet.flake = false;
     ekg-forward.url = "github:input-output-hk/ekg-forward/297cd9db5074339a2fb2e5ae7d0780debb670c63";
     ekg-forward.flake = false;
     flat.url = "github:Quid2/flat/ee59880f47ab835dbd73bea0847dab7869fc20d8";
@@ -115,16 +113,6 @@
           "${inputs.cardano-node}/trace-resources"
           "${inputs.cardano-prelude}/cardano-prelude"
           "${inputs.cardano-prelude}/cardano-prelude-test"
-          "${inputs.cardano-wallet}/lib/cli"
-          "${inputs.cardano-wallet}/lib/core"
-          "${inputs.cardano-wallet}/lib/core-integration"
-          "${inputs.cardano-wallet}/lib/dbvar"
-          "${inputs.cardano-wallet}/lib/launcher"
-          "${inputs.cardano-wallet}/lib/numeric"
-          "${inputs.cardano-wallet}/lib/shelley"
-          "${inputs.cardano-wallet}/lib/strict-non-empty-containers"
-          "${inputs.cardano-wallet}/lib/test-utils"
-          "${inputs.cardano-wallet}/lib/text-class"
           "${inputs.ekg-forward}"
           "${inputs.flat}"
           "${inputs.goblins}"
@@ -176,9 +164,6 @@
               plutus-contract.flags.defer-plugin-errors = true;
               cardano-crypto-praos.components.library.pkgconfig = pkgs.lib.mkForce [ [ pkgs.libsodium-vrf ] ];
               cardano-crypto-class.components.library.pkgconfig = pkgs.lib.mkForce [ [ pkgs.libsodium-vrf ] ];
-              cardano-wallet-core.components.library.build-tools = [
-                pkgs.buildPackages.buildPackages.gitMinimal
-              ];
               cardano-config.components.library.build-tools = [
                 pkgs.buildPackages.buildPackages.gitMinimal
               ];

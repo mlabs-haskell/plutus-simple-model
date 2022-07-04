@@ -219,23 +219,6 @@
         "type": "github"
       }
     },
-    "cardano-wallet": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1655673167,
-        "narHash": "sha256-fR+HgAjaenaklt9ChhD9c+aWSOeriYZtXxVHf1pg8uQ=",
-        "owner": "input-output-hk",
-        "repo": "cardano-wallet",
-        "rev": "0cdd1b72a16b2f287b5f1bf137b5eba15bc7f300",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "cardano-wallet",
-        "rev": "0cdd1b72a16b2f287b5f1bf137b5eba15bc7f300",
-        "type": "github"
-      }
-    },
     "ekg-forward": {
       "flake": false,
       "locked": {
@@ -761,7 +744,6 @@
         "cardano-ledger": "cardano-ledger",
         "cardano-node": "cardano-node",
         "cardano-prelude": "cardano-prelude",
-        "cardano-wallet": "cardano-wallet",
         "ekg-forward": "ekg-forward",
         "flat": "flat",
         "goblins": "goblins",
