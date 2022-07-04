@@ -40,6 +40,3 @@ instance HasAddress ( TypedValidator datum redeemer) where
 newtype TypedPolicy redeemer = TypedPolicy
   { unTypedPolicy :: MintingPolicy }
 
-
-
-

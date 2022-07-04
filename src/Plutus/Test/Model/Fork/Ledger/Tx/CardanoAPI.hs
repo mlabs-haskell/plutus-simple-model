@@ -19,31 +19,10 @@ module Plutus.Test.Model.Fork.Ledger.Tx.CardanoAPI(
   CardanoBuildTx(..)
   , SomeCardanoApiTx(..)
   , withIsCardanoEra
-  -- , txOutRefs
-  -- , unspentOutputsTx
-  , fromCardanoTxId
-  , fromCardanoTxIn
-  , fromCardanoTxInsCollateral
-  -- , fromCardanoTxInWitness
-  -- , fromCardanoTxOut
-  -- , fromCardanoTxOutDatum
-  -- , fromCardanoAddressInEra
-  -- , fromCardanoAddress
-  , fromCardanoMintValue
-  , fromCardanoValue
-  , fromCardanoPolicyId
-  , fromCardanoFee
-  , fromCardanoValidityRange
-  -- , fromCardanoScriptInEra
-  , fromCardanoPaymentKeyHash
-  , fromCardanoScriptData
   , fromTxScriptValidity
   , toTxScriptValidity
-  , scriptDataFromCardanoTxBody
   , plutusScriptsFromTxBody
-  -- ,  makeTransactionBody
-  -- , toCardanoTxBody
-  -- , toCardanoTxBodyContent
+  , fromCardanoTxId
   , toCardanoTxIn
   , toCardanoTxInsCollateral
   , toCardanoTxInWitness
@@ -73,7 +52,6 @@ import Cardano.Api qualified as C
 import Cardano.Api.Byron qualified as C
 import Cardano.Api.Shelley qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
-import Cardano.Ledger.Alonzo.TxWitness qualified as Alonzo
 import Cardano.Ledger.Core qualified as Ledger
 import Codec.Serialise (Serialise, deserialiseOrFail)
 import Codec.Serialise qualified as Codec
@@ -234,18 +212,6 @@ parseSomeCardanoTx _ _ invalid =
     prependFailure "parsing SomeCardanoApiTx failed, "
       (typeMismatch "Object" invalid)
 
-{-
-txOutRefs :: SomeCardanoApiTx -> [(P.TxOut, P.TxOutRef)]
-txOutRefs (SomeTx (C.Tx txBody@(C.TxBody C.TxBodyContent{..}) _) _) =
-  mkOut <$> zip [0..] plutusTxOuts
-  where
-    mkOut (i, o) = (o, P.TxOutRef (fromCardanoTxId $ C.getTxId txBody) i)
-    plutusTxOuts = mapMaybe (either (const Nothing) Just . fromCardanoTxOut) txOuts
-
-unspentOutputsTx :: SomeCardanoApiTx -> Map P.TxOutRef P.TxOut
-unspentOutputsTx tx = Map.fromList $ swap <$> txOutRefs tx
--}
-
 -- | Given a 'C.TxScriptValidity era', if the @era@ supports scripts, return a
 -- @True@ or @False@ depending on script validity. If the @era@ does not support
 -- scripts, always return @True@.
@@ -257,34 +223,6 @@ fromTxScriptValidity (C.TxScriptValidity C.TxScriptValiditySupportedInAlonzoEra 
 toTxScriptValidity :: Bool -> C.TxScriptValidity C.AlonzoEra
 toTxScriptValidity True  = C.TxScriptValidity C.TxScriptValiditySupportedInAlonzoEra C.ScriptValid
 toTxScriptValidity False = C.TxScriptValidity C.TxScriptValiditySupportedInAlonzoEra C.ScriptInvalid
-
--- | Given a 'C.TxBody from a 'C.Tx era', return the datums and redeemers along
--- with their hashes.
-scriptDataFromCardanoTxBody
-  :: C.TxBody era
-  -> (Map P.DatumHash P.Datum, Map P.RedeemerHash P.Redeemer)
-scriptDataFromCardanoTxBody C.ByronTxBody {} = (mempty, mempty)
-scriptDataFromCardanoTxBody (C.ShelleyTxBody _ _ _ C.TxBodyNoScriptData _ _) =
-  (mempty, mempty)
-scriptDataFromCardanoTxBody
-  (C.ShelleyTxBody _ _ _ (C.TxBodyScriptData _ (Alonzo.TxDats' dats) (Alonzo.Redeemers' reds)) _ _) =
-
-  let datums = Map.fromList
-             $ fmap ( (\d -> (P.datumHash d, d))
-                    . P.Datum
-                    . fromCardanoScriptData
-                    . C.fromAlonzoData
-                    )
-             $ Map.elems dats
-      redeemers = Map.fromList
-                $ fmap ( (\r -> (P.redeemerHash r, r))
-                       . P.Redeemer
-                       . fromCardanoScriptData
-                       . C.fromAlonzoData
-                       . fst
-                       )
-                $ Map.elems reds
-   in (datums, redeemers)
 
 -- | Extract plutus scripts from a Cardano API tx body.
 --
@@ -316,63 +254,7 @@ fromAlonzoLedgerScript (Alonzo.PlutusScript _ bs) =
              $ SBS.fromShort bs
    in either (const Nothing) Just script
 
-{-
-toCardanoTxBodyContent
-    :: [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
-    -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
-    -> C.NetworkId -- ^ Network ID
-    -> P.Tx
-    -> Either ToCardanoError CardanoBuildTx
-toCardanoTxBodyContent sigs protocolParams networkId P.Tx{..} = do
-    txIns <- traverse toCardanoTxInBuild $ Set.toList txInputs
-    txInsCollateral <- toCardanoTxInsCollateral txCollateral
-    txOuts <- traverse (toCardanoTxOut networkId (lookupDatum txData)) txOutputs
-    txFee' <- toCardanoFee txFee
-    txValidityRange <- toCardanoValidityRange txValidRange
-    txMintValue <- toCardanoMintValue txRedeemers txMint txMintScripts
-    txExtraKeyWits <- C.TxExtraKeyWitnesses C.ExtraKeyWitnessesInAlonzoEra <$> traverse toCardanoPaymentKeyHash sigs
-    pure $ CardanoBuildTx $ C.TxBodyContent
-        { txIns = txIns
-        , txInsCollateral = txInsCollateral
-        , txOuts = txOuts
-        , txFee = txFee'
-        , txValidityRange = txValidityRange
-        , txMintValue = txMintValue
-        , txProtocolParams = C.BuildTxWith protocolParams
-        , txScriptValidity = C.TxScriptValidityNone
-        , txExtraKeyWits
-        -- unused:
-        , txMetadata = C.TxMetadataNone
-        , txAuxScripts = C.TxAuxScriptsNone
-        , txWithdrawals = C.TxWithdrawalsNone
-        , txCertificates = C.TxCertificatesNone
-        , txUpdateProposal = C.TxUpdateProposalNone
-        }
-toCardanoTxBody ::
-    [P.PaymentPubKeyHash] -- ^ Required signers of the transaction
-    -> Maybe C.ProtocolParameters -- ^ Protocol parameters to use. Building Plutus transactions will fail if this is 'Nothing'
-    -> C.NetworkId -- ^ Network ID
-    -> P.Tx
-    -> Either ToCardanoError (C.TxBody C.AlonzoEra)
-toCardanoTxBody sigs protocolParams networkId tx = do
-    txBodyContent <- toCardanoTxBodyContent sigs protocolParams networkId tx
-    makeTransactionBody mempty txBodyContent
 
-makeTransactionBody
-    :: Map Alonzo.RdmrPtr Alonzo.ExUnits
-    -> CardanoBuildTx
-    -> Either ToCardanoError (C.TxBody C.AlonzoEra)
-makeTransactionBody exUnits (CardanoBuildTx txBodyContent) =
-  first (TxBodyError . C.displayError) $ makeTransactionBody' exUnits txBodyContent
--}
-
-fromCardanoTxIn :: C.TxIn -> P.TxOutRef
-fromCardanoTxIn (C.TxIn txId (C.TxIx txIx)) = P.TxOutRef (fromCardanoTxId txId) (toInteger txIx)
-{-
-toCardanoTxInBuild :: P.TxIn -> Either ToCardanoError (C.TxIn, C.BuildTxWith C.BuildTx (C.Witness C.WitCtxTxIn C.AlonzoEra))
-toCardanoTxInBuild (P.TxIn txInRef (Just txInType)) = (,) <$> toCardanoTxIn txInRef <*> (C.BuildTxWith <$> toCardanoTxInWitness txInType)
-toCardanoTxInBuild (P.TxIn _ Nothing) = Left MissingTxInType
--}
 toCardanoTxIn :: P.TxOutRef -> Either ToCardanoError C.TxIn
 toCardanoTxIn (P.TxOutRef txId txIx) = C.TxIn <$> toCardanoTxId txId <*> pure (C.TxIx (fromInteger txIx))
 
@@ -384,40 +266,9 @@ toCardanoTxId (P.TxId bs) =
     tag "toCardanoTxId"
     $ deserialiseFromRawBytes C.AsTxId $ PlutusTx.fromBuiltin bs
 
-fromCardanoTxInsCollateral :: C.TxInsCollateral era -> Set.Set P.TxIn
-fromCardanoTxInsCollateral C.TxInsCollateralNone       = mempty
-fromCardanoTxInsCollateral (C.TxInsCollateral _ txIns) = Set.fromList $ fmap (P.pubKeyTxIn . fromCardanoTxIn) txIns
 
 toCardanoTxInsCollateral :: Set.Set P.TxIn -> Either ToCardanoError (C.TxInsCollateral C.AlonzoEra)
 toCardanoTxInsCollateral = fmap (C.TxInsCollateral C.CollateralInAlonzoEra) . traverse (toCardanoTxIn . P.txInRef) . Set.toList
-
-{-
-fromCardanoTxInWitness :: C.Witness C.WitCtxTxIn era -> Either FromCardanoError P.TxInType
-fromCardanoTxInWitness (C.KeyWitness C.KeyWitnessForSpending) = pure P.ConsumePublicKeyAddress
-fromCardanoTxInWitness
-    (C.ScriptWitness _
-        (C.PlutusScriptWitness C.PlutusScriptV1InAlonzo C.PlutusScriptV1
-            script
-            (C.ScriptDatumForTxIn datum)
-            redeemer
-            _))
-    = pure $ P.ConsumeScriptAddress
-        (P.Validator $ fromCardanoPlutusScript script)
-        (P.Redeemer $ fromCardanoScriptData redeemer)
-        (P.Datum $ fromCardanoScriptData datum)
-fromCardanoTxInWitness
-    (C.ScriptWitness _
-        (C.PlutusScriptWitness C.PlutusScriptV2InAlonzo C.PlutusScriptV2
-            script
-            (C.ScriptDatumForTxIn datum)
-            redeemer
-            _))
-    = pure $ P.ConsumeScriptAddress
-        (P.Validator $ fromCardanoPlutusScript script)
-        (P.Redeemer $ fromCardanoScriptData redeemer)
-        (P.Datum $ fromCardanoScriptData datum)
-fromCardanoTxInWitness (C.ScriptWitness _ C.SimpleScriptWitness{}) = pure P.ConsumeSimpleScriptAddress
--}
 
 toCardanoTxInWitness :: P.TxInType -> Either ToCardanoError (C.Witness C.WitCtxTxIn C.AlonzoEra)
 toCardanoTxInWitness P.ConsumePublicKeyAddress = pure (C.KeyWitness C.KeyWitnessForSpending)
@@ -483,94 +334,39 @@ lookupDatum datums datumHash =
         Nothing    -> toCardanoTxOutDatumHash datumHash
 -}
 
-{-
-fromCardanoAddressInEra :: C.AddressInEra era -> Either FromCardanoError P.Address
-fromCardanoAddressInEra (C.AddressInEra C.ByronAddressInAnyEra address) = fromCardanoAddress address
-fromCardanoAddressInEra (C.AddressInEra _ address)                      = fromCardanoAddress address
-
-fromCardanoAddress :: C.Address addrtype -> Either FromCardanoError P.Address
-fromCardanoAddress (C.ByronAddress address) =
-    Right $ P.Address plutusCredential Nothing
-    where
-      plutusCredential :: Credential.Credential
-      plutusCredential =
-          Credential.PubKeyCredential
-        $ P.PubKeyHash
-        $ PlutusTx.toBuiltin
-        $ addrToBase58 address
-fromCardanoAddress (C.ShelleyAddress _ paymentCredential stakeAddressReference) =
-    P.Address (fromCardanoPaymentCredential (C.fromShelleyPaymentCredential paymentCredential))
-        <$> fromCardanoStakeAddressReference (C.fromShelleyStakeReference stakeAddressReference)
-
-
--- | Currently we use Bitcoin alphabet for representing addresses in base58
-addrAlphabet :: Alphabet
-addrAlphabet = bitcoinAlphabet
-
-addrToBase58 :: C.Address _ -> ByteString
-addrToBase58 = encodeBase58 addrAlphabet . serialize'
--}
-
 toCardanoAddressInEra :: C.NetworkId -> P.Address -> Either ToCardanoError (C.AddressInEra C.AlonzoEra)
 toCardanoAddressInEra networkId (P.Address addressCredential addressStakingCredential) =
     C.AddressInEra (C.ShelleyAddressInEra C.ShelleyBasedEraAlonzo) <$>
         (C.makeShelleyAddress networkId
             <$> toCardanoPaymentCredential addressCredential
             <*> toCardanoStakeAddressReference addressStakingCredential)
-{-
-fromCardanoPaymentCredential :: C.PaymentCredential -> Credential.Credential
-fromCardanoPaymentCredential (C.PaymentCredentialByKey paymentKeyHash) = Credential.PubKeyCredential (fromCardanoPaymentKeyHash paymentKeyHash)
-fromCardanoPaymentCredential (C.PaymentCredentialByScript scriptHash) = Credential.ScriptCredential (fromCardanoScriptHash scriptHash)
--}
+
 toCardanoPaymentCredential :: Credential.Credential -> Either ToCardanoError C.PaymentCredential
 toCardanoPaymentCredential (Credential.PubKeyCredential pubKeyHash) = C.PaymentCredentialByKey <$> toCardanoPaymentKeyHash (P.PaymentPubKeyHash pubKeyHash)
 toCardanoPaymentCredential (Credential.ScriptCredential validatorHash) = C.PaymentCredentialByScript <$> toCardanoScriptHash validatorHash
-
-fromCardanoPaymentKeyHash :: C.Hash C.PaymentKey -> P.PubKeyHash
-fromCardanoPaymentKeyHash paymentKeyHash = P.PubKeyHash $ PlutusTx.toBuiltin $ C.serialiseToRawBytes paymentKeyHash
 
 toCardanoPaymentKeyHash :: P.PaymentPubKeyHash -> Either ToCardanoError (C.Hash C.PaymentKey)
 toCardanoPaymentKeyHash (P.PaymentPubKeyHash (P.PubKeyHash bs)) =
     let bsx = PlutusTx.fromBuiltin bs
         tg = "toCardanoPaymentKeyHash (" <> show (BS.length bsx) <> " bytes)"
     in tag tg $ deserialiseFromRawBytes (C.AsHash C.AsPaymentKey) bsx
-{-
-fromCardanoScriptHash :: C.ScriptHash -> P.ValidatorHash
-fromCardanoScriptHash scriptHash = P.ValidatorHash $ PlutusTx.toBuiltin $ C.serialiseToRawBytes scriptHash
--}
+
 toCardanoScriptHash :: P.ValidatorHash -> Either ToCardanoError C.ScriptHash
 toCardanoScriptHash (P.ValidatorHash bs) = tag "toCardanoScriptHash" $ deserialiseFromRawBytes C.AsScriptHash $ PlutusTx.fromBuiltin bs
-{-
-fromCardanoStakeAddressReference :: C.StakeAddressReference -> Either FromCardanoError (Maybe Credential.StakingCredential)
-fromCardanoStakeAddressReference C.NoStakeAddress = pure Nothing
-fromCardanoStakeAddressReference (C.StakeAddressByValue stakeCredential) =
-    pure $ Just (Credential.StakingHash $ fromCardanoStakeCredential stakeCredential)
-fromCardanoStakeAddressReference C.StakeAddressByPointer{} = pure Nothing
--}
+
 toCardanoStakeAddressReference :: Maybe Credential.StakingCredential -> Either ToCardanoError C.StakeAddressReference
 toCardanoStakeAddressReference Nothing = pure C.NoStakeAddress
 toCardanoStakeAddressReference (Just (Credential.StakingHash credential)) =
     C.StakeAddressByValue <$> toCardanoStakeCredential credential
 toCardanoStakeAddressReference (Just Credential.StakingPtr{}) = Left StakingPointersNotSupported
-{-
-fromCardanoStakeCredential :: C.StakeCredential -> Credential.Credential
-fromCardanoStakeCredential (C.StakeCredentialByKey stakeKeyHash) = Credential.PubKeyCredential (fromCardanoStakeKeyHash stakeKeyHash)
-fromCardanoStakeCredential (C.StakeCredentialByScript scriptHash) = Credential.ScriptCredential (fromCardanoScriptHash scriptHash)
--}
+
 toCardanoStakeCredential :: Credential.Credential -> Either ToCardanoError C.StakeCredential
 toCardanoStakeCredential (Credential.PubKeyCredential pubKeyHash) = C.StakeCredentialByKey <$> toCardanoStakeKeyHash pubKeyHash
 toCardanoStakeCredential (Credential.ScriptCredential validatorHash) = C.StakeCredentialByScript <$> toCardanoScriptHash validatorHash
-{-
-fromCardanoStakeKeyHash :: C.Hash C.StakeKey -> P.PubKeyHash
-fromCardanoStakeKeyHash stakeKeyHash = P.PubKeyHash $ PlutusTx.toBuiltin $ C.serialiseToRawBytes stakeKeyHash
--}
+
 toCardanoStakeKeyHash :: P.PubKeyHash -> Either ToCardanoError (C.Hash C.StakeKey)
 toCardanoStakeKeyHash (P.PubKeyHash bs) = tag "toCardanoStakeKeyHash" $ deserialiseFromRawBytes (C.AsHash C.AsStakeKey) (PlutusTx.fromBuiltin bs)
-{-
-fromCardanoTxOutValue :: C.TxOutValue era -> P.Value
-fromCardanoTxOutValue (C.TxOutAdaOnly _ lovelace) = fromCardanoLovelace lovelace
-fromCardanoTxOutValue (C.TxOutValue _ value)      = fromCardanoValue value
--}
+
 toCardanoTxOutValue :: P.Value -> Either ToCardanoError (C.TxOutValue C.AlonzoEra)
 toCardanoTxOutValue value = do
     when (Ada.fromValue value == mempty) (Left OutputHasZeroAda)
@@ -579,13 +375,6 @@ toCardanoTxOutValue value = do
 toCardanoTxOutValueUnsafe :: P.Value -> Either ToCardanoError (C.TxOutValue C.AlonzoEra)
 toCardanoTxOutValueUnsafe value = C.TxOutValue C.MultiAssetInAlonzoEra <$> toCardanoValue value
 
-{-
-fromCardanoTxOutDatum :: C.TxOutDatum C.CtxTx era -> Maybe P.DatumHash
-fromCardanoTxOutDatum C.TxOutDatumNone       = Nothing
-fromCardanoTxOutDatum (C.TxOutDatumHash _ h) = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes h)
-fromCardanoTxOutDatum (C.TxOutDatum _ d)     = Just $ P.DatumHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes (C.hashScriptData d))
--}
-
 toCardanoTxOutDatumHash :: Maybe P.DatumHash -> Either ToCardanoError (C.TxOutDatum ctx C.AlonzoEra)
 toCardanoTxOutDatumHash Nothing          = pure C.TxOutDatumNone
 toCardanoTxOutDatumHash (Just datumHash) = C.TxOutDatumHash C.ScriptDataInAlonzoEra <$> toCardanoScriptDataHash datumHash
@@ -593,22 +382,11 @@ toCardanoTxOutDatumHash (Just datumHash) = C.TxOutDatumHash C.ScriptDataInAlonzo
 toCardanoScriptDataHash :: P.DatumHash -> Either ToCardanoError (C.Hash C.ScriptData)
 toCardanoScriptDataHash (P.DatumHash bs) = tag "toCardanoTxOutDatumHash" (deserialiseFromRawBytes (C.AsHash C.AsScriptData) (PlutusTx.fromBuiltin bs))
 
-fromCardanoMintValue :: C.TxMintValue build era -> P.Value
-fromCardanoMintValue C.TxMintNone              = mempty
-fromCardanoMintValue (C.TxMintValue _ value _) = fromCardanoValue value
-
 toCardanoMintValue :: P.Redeemers -> P.Value -> Set.Set P.MintingPolicy -> Either ToCardanoError (C.TxMintValue C.BuildTx C.AlonzoEra)
 toCardanoMintValue redeemers value mps =
     C.TxMintValue C.MultiAssetInAlonzoEra
         <$> toCardanoValue value
         <*> (C.BuildTxWith . Map.fromList <$> traverse (\(idx, mp) -> (,) <$> (toCardanoPolicyId . P.mintingPolicyHash) mp <*> toCardanoMintWitness redeemers idx mp) (Prelude.zip [0..] $ Set.toList mps))
-
-fromCardanoValue :: C.Value -> P.Value
-fromCardanoValue (C.valueToList -> list) = foldMap toValue list
-    where
-        toValue (C.AdaAssetId, C.Quantity q) = Ada.lovelaceValueOf q
-        toValue (C.AssetId policyId assetName, C.Quantity q)
-            = Value.singleton (Value.mpsSymbol $ fromCardanoPolicyId policyId) (fromCardanoAssetName assetName) q
 
 toCardanoValue :: P.Value -> Either ToCardanoError C.Value
 toCardanoValue = fmap C.valueFromList . traverse fromValue . Value.flattenValue
@@ -619,42 +397,22 @@ toCardanoValue = fmap C.valueFromList . traverse fromValue . Value.flattenValue
             | otherwise =
                 (,) <$> (C.AssetId <$> toCardanoPolicyId (Value.currencyMPSHash currencySymbol) <*> pure (toCardanoAssetName tokenName)) <*> pure (C.Quantity amount)
 
-fromCardanoPolicyId :: C.PolicyId -> P.MintingPolicyHash
-fromCardanoPolicyId (C.PolicyId scriptHash) = P.MintingPolicyHash $ PlutusTx.toBuiltin (C.serialiseToRawBytes scriptHash)
-
 toCardanoPolicyId :: P.MintingPolicyHash -> Either ToCardanoError C.PolicyId
 toCardanoPolicyId (P.MintingPolicyHash bs) = C.PolicyId <$> tag "toCardanoPolicyId" (tag (show (BS.length (PlutusTx.fromBuiltin bs)) <> " bytes") (deserialiseFromRawBytes C.AsScriptHash (PlutusTx.fromBuiltin bs)))
-
-fromCardanoAssetName :: C.AssetName -> Value.TokenName
-fromCardanoAssetName (C.AssetName bs) = Value.TokenName $ PlutusTx.toBuiltin bs
 
 toCardanoAssetName :: Value.TokenName -> C.AssetName
 toCardanoAssetName (Value.TokenName bs) = C.AssetName $ PlutusTx.fromBuiltin bs
 
-fromCardanoFee :: C.TxFee era -> P.Value
-fromCardanoFee (C.TxFeeImplicit _)          = mempty
-fromCardanoFee (C.TxFeeExplicit _ lovelace) = fromCardanoLovelace lovelace
-
 toCardanoFee :: P.Value -> Either ToCardanoError (C.TxFee C.AlonzoEra)
 toCardanoFee value = C.TxFeeExplicit C.TxFeesExplicitInAlonzoEra <$> toCardanoLovelace value
-
-fromCardanoLovelace :: C.Lovelace -> P.Value
-fromCardanoLovelace (C.lovelaceToQuantity -> C.Quantity lovelace) = Ada.lovelaceValueOf lovelace
 
 toCardanoLovelace :: P.Value -> Either ToCardanoError C.Lovelace
 toCardanoLovelace value = if value == Ada.lovelaceValueOf lovelace then pure . C.quantityToLovelace . C.Quantity $ lovelace else Left ValueNotPureAda
     where
         Ada.Lovelace lovelace = Ada.fromValue value
 
-fromCardanoValidityRange :: (C.TxValidityLowerBound era, C.TxValidityUpperBound era) -> P.SlotRange
-fromCardanoValidityRange (l, u) = P.Interval (fromCardanoValidityLowerBound l) (fromCardanoValidityUpperBound u)
-
 toCardanoValidityRange :: P.SlotRange -> Either ToCardanoError (C.TxValidityLowerBound C.AlonzoEra, C.TxValidityUpperBound C.AlonzoEra)
 toCardanoValidityRange (P.Interval l u) = (,) <$> toCardanoValidityLowerBound l <*> toCardanoValidityUpperBound u
-
-fromCardanoValidityLowerBound :: C.TxValidityLowerBound era -> P.LowerBound P.Slot
-fromCardanoValidityLowerBound C.TxValidityNoLowerBound = P.LowerBound P.NegInf True
-fromCardanoValidityLowerBound (C.TxValidityLowerBound _ slotNo) = P.LowerBound (P.Finite $ fromCardanoSlotNo slotNo) True
 
 toCardanoValidityLowerBound :: P.LowerBound P.Slot -> Either ToCardanoError (C.TxValidityLowerBound C.AlonzoEra)
 toCardanoValidityLowerBound (P.LowerBound P.NegInf _) = pure C.TxValidityNoLowerBound
@@ -662,43 +420,21 @@ toCardanoValidityLowerBound (P.LowerBound (P.Finite slotNo) closed)
     = pure . C.TxValidityLowerBound C.ValidityLowerBoundInAlonzoEra . toCardanoSlotNo $ if slotNo < 0 then 0 else if closed then slotNo else slotNo + 1
 toCardanoValidityLowerBound (P.LowerBound P.PosInf _) = Left InvalidValidityRange
 
-fromCardanoValidityUpperBound :: C.TxValidityUpperBound era -> P.UpperBound P.Slot
-fromCardanoValidityUpperBound (C.TxValidityNoUpperBound _) = P.UpperBound P.PosInf True
-fromCardanoValidityUpperBound (C.TxValidityUpperBound _ slotNo) = P.UpperBound (P.Finite $ fromCardanoSlotNo slotNo) False
-
 toCardanoValidityUpperBound :: P.UpperBound P.Slot -> Either ToCardanoError (C.TxValidityUpperBound C.AlonzoEra)
 toCardanoValidityUpperBound (P.UpperBound P.PosInf _) = pure $ C.TxValidityNoUpperBound C.ValidityNoUpperBoundInAlonzoEra
 toCardanoValidityUpperBound (P.UpperBound (P.Finite slotNo) closed)
     = pure . C.TxValidityUpperBound C.ValidityUpperBoundInAlonzoEra . toCardanoSlotNo $ if closed then slotNo + 1 else slotNo
 toCardanoValidityUpperBound (P.UpperBound P.NegInf _) = Left InvalidValidityRange
 
-fromCardanoSlotNo :: C.SlotNo -> P.Slot
-fromCardanoSlotNo (C.SlotNo w64) = P.Slot (toInteger w64)
-
 toCardanoSlotNo :: P.Slot -> C.SlotNo
 toCardanoSlotNo (P.Slot i) = C.SlotNo (fromInteger i)
-
-fromCardanoScriptData :: C.ScriptData -> Api.BuiltinData
-fromCardanoScriptData = Api.dataToBuiltinData . C.toPlutusData
 
 toCardanoScriptData :: Api.BuiltinData -> C.ScriptData
 toCardanoScriptData = C.fromPlutusData . Api.builtinDataToData
 
-{-
-fromCardanoScriptInEra :: C.ScriptInEra era -> Maybe P.Script
-fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV1InAlonzo (C.PlutusScript C.PlutusScriptV1 script)) =
-    Just $ fromCardanoPlutusScript script
-fromCardanoScriptInEra (C.ScriptInEra C.PlutusScriptV2InAlonzo (C.PlutusScript C.PlutusScriptV2 script)) =
-    Just $ fromCardanoPlutusScript script
-fromCardanoScriptInEra (C.ScriptInEra _ C.SimpleScript{}) = Nothing
--}
-
 toCardanoScriptInEra :: P.Script -> Either ToCardanoError (C.ScriptInEra C.AlonzoEra)
 toCardanoScriptInEra script = C.ScriptInEra C.PlutusScriptV1InAlonzo . C.PlutusScript C.PlutusScriptV1 <$> toCardanoPlutusScript script
-{-
-fromCardanoPlutusScript :: C.HasTypeProxy lang => C.PlutusScript lang -> P.Script
-fromCardanoPlutusScript = Codec.deserialise . BSL.fromStrict . C.serialiseToRawBytes
--}
+
 toCardanoPlutusScript :: P.Script -> Either ToCardanoError (C.PlutusScript C.PlutusScriptV1)
 toCardanoPlutusScript =
     tag "toCardanoPlutusScript"
@@ -732,7 +468,6 @@ data ToCardanoError
     | ScriptPurposeNotSupported P.ScriptTag
     | Tag String ToCardanoError
     deriving stock (Show, Eq, Generic)
---    deriving anyclass (FromJSON, ToJSON)
 
 instance Pretty ToCardanoError where
     pretty (TxBodyError err)                  = "TxBodyError" <> colon <+> pretty err
