@@ -124,6 +124,7 @@ import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
 import Data.Vector qualified as V
 import Data.Maybe
+import Data.Map.Strict qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as S
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -157,14 +158,16 @@ import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Interval ()
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Tx qualified as P
+import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Tx (TxIn)
 import Plutus.V1.Ledger.Value (AssetClass, valueOf)
 import PlutusTx.Prelude qualified as Plutus
 import Basement.Compat.Natural
-import qualified Ledger                as P
-import qualified Ledger.Ada            as Ada
-import Ledger.Typed.Scripts (TypedValidator, validatorAddress, ValidatorTypes(..))
-import Ledger (PaymentPubKeyHash(..), Slot (..), SlotRange, txId)
+-- import qualified Ledger                as P
+import Plutus.Test.Model.Fork.Ledger.Scripts (validatorHash)
+import qualified Plutus.Test.Model.Fork.Ledger.Ada            as Ada
+-- import Ledger.Typed.Scripts (TypedValidator, validatorAddress, ValidatorTypes(..))
+-- import Ledger (PaymentPubKeyHash(..), Slot (..), SlotRange, txId)
 
 import Ouroboros.Consensus.Block.Abstract (EpochNo (..), EpochSize (..))
 import Ouroboros.Consensus.HardFork.History.EraParams
@@ -182,13 +185,16 @@ import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Ledger.Hashes as Ledger (EraIndependentTxBody)
 import qualified Cardano.Ledger.Alonzo.Data as Alonzo
-import Ledger.Crypto (PubKey (..), Signature (..), pubKeyHash)
-import Ledger.TimeSlot (SlotConfig (..))
-import Ledger.Tx.CardanoAPI qualified as Cardano
+import Plutus.Test.Model.Fork.Ledger.Address (PaymentPubKeyHash(..))
+import Plutus.Test.Model.Fork.Ledger.Slot
+import Plutus.Test.Model.Fork.Ledger.Crypto (PubKey (..), Signature (..), pubKeyHash)
+import Plutus.Test.Model.Fork.Ledger.TimeSlot (SlotConfig (..))
+import Plutus.Test.Model.Fork.Ledger.Tx.CardanoAPI qualified as Cardano
 import Paths_plutus_simple_model
 import Plutus.Test.Model.Fork.CardanoAPI qualified as Fork
 import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Stake
+import PlutusCore (defaultCostModelParams)
 
 class HasAddress a where
   toAddress :: a -> Address
@@ -202,8 +208,8 @@ instance HasAddress PubKeyHash where
 instance HasAddress ValidatorHash where
   toAddress = scriptHashAddress
 
-instance HasAddress (TypedValidator a) where
-  toAddress = validatorAddress
+instance HasAddress Validator where
+  toAddress = toAddress . validatorHash
 
 class HasStakingCredential a where
   toStakingCredential :: a -> StakingCredential
@@ -220,14 +226,6 @@ instance HasStakingCredential StakeValidator where
 -- | Encodes appening of staking address
 data AppendStaking a =
   AppendStaking StakingCredential a
-
-instance ValidatorTypes (TypedValidator a) where
-   type DatumType    (TypedValidator a) = DatumType a
-   type RedeemerType (TypedValidator a) = RedeemerType a
-
-instance ValidatorTypes (AppendStaking (TypedValidator a)) where
-   type DatumType    (AppendStaking (TypedValidator a)) = DatumType a
-   type RedeemerType (AppendStaking (TypedValidator a)) = RedeemerType a
 
 instance HasAddress a => HasAddress (AppendStaking a) where
   toAddress (AppendStaking stakeCred a) = appendStake (toAddress a)
@@ -272,7 +270,7 @@ data TxStat = TxStat
 
 -- | Gets Tx's hash
 txStatId :: TxStat -> TxId
-txStatId = txId . tx'plutus . txStatTx
+txStatId = P.txId . tx'plutus . txStatTx
 
 -- | Config for the blockchain.
 data BchConfig = BchConfig
@@ -303,6 +301,21 @@ readDefaultBchConfig = do
   paramsFile <- getDataFileName "data/protocol-params.json"
   readBchConfig paramsFile
 
+setDefaultCostModel :: ProtocolParameters -> ProtocolParameters
+setDefaultCostModel params = params
+  { protocolParamCostModels = update $ protocolParamCostModels params
+  }
+  where
+    update = maybe id (\x -> const (toMap x)) defaultCostModelParams
+
+    plutus1 = Cardano.AnyPlutusScriptVersion Cardano.PlutusScriptV1
+    plutus2 = Cardano.AnyPlutusScriptVersion Cardano.PlutusScriptV2
+    toMap cost = Map.fromList
+      [ (plutus1, Cardano.CostModel cost)
+      , (plutus2, Cardano.CostModel cost)
+      ]
+
+
 -- | Default blockchain config.
 defaultBchConfig :: ProtocolParameters -> BchConfig
 defaultBchConfig params =
@@ -332,7 +345,7 @@ forceLimits cfg = cfg { bchConfigCheckLimits = ErrorLimits }
 -}
 readBchConfig :: FilePath -> IO BchConfig
 readBchConfig paramsFile =
-  defaultBchConfig <$> readProtocolParameters paramsFile
+  defaultBchConfig . setDefaultCostModel <$> readProtocolParameters paramsFile
 
 -- | Reads protocol parameters from file.
 readProtocolParameters :: FilePath -> IO ProtocolParameters
@@ -484,7 +497,7 @@ data LimitOverflow
 
 -- | State monad wrapper to run blockchain.
 newtype Run a = Run (State Blockchain a)
-  deriving (Functor, Applicative, Monad, MonadState Blockchain)
+  deriving newtype (Functor, Applicative, Monad, MonadState Blockchain)
 
 -- | Dummy instance to be able to use partial pattern matching
 -- in do-notation
@@ -528,7 +541,7 @@ writeCurrencySymbolName cs name = modifyBchNames $ \ns ->
 
 -- | Assigns human-readable name to a transaction
 writeTxName :: Tx -> String -> Run ()
-writeTxName (txId . tx'plutus -> ident) name = modifyBchNames $ \ns ->
+writeTxName (P.txId . tx'plutus -> ident) name = modifyBchNames $ \ns ->
   ns {bchNameTxns = M.insert ident name (bchNameTxns ns)}
 
 -- | Gets human-readable name of user
@@ -832,7 +845,7 @@ getUTxO tid tx = do
     fromOutTxOut networkId (ix, tout) = do
       cin <- Cardano.toCardanoTxIn $ TxOutRef tid ix
       cout <- fmap toCtxUTxOTxOut $ Cardano.TxOut
-                <$> Cardano.toCardanoAddress networkId (txOutAddress tout)
+                <$> Cardano.toCardanoAddressInEra networkId (txOutAddress tout)
                 <*> toCardanoTxOutValue (txOutValue tout)
                 <*> pure (fromMaybe Cardano.TxOutDatumNone $ do
                        dh <- txOutDatumHash tout

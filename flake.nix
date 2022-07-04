@@ -47,14 +47,8 @@
     optparse-applicative.flake = false;
     ouroboros-network.url = "github:input-output-hk/ouroboros-network/04245dbd69387da98d3a37de9f400965e922bb0e";
     ouroboros-network.flake = false;
-    plutus-apps.url = "github:input-output-hk/plutus-apps/a9763f89f65ec4c17b11a40de37a4824c3a7a201";
-    plutus-apps.flake = false;
     plutus.url = "github:input-output-hk/plutus/d24a7540e4659b57ce2ab25dadb968991e232191";
     plutus.flake = false;
-    purescript-bridge.url = "github:input-output-hk/purescript-bridge/47a1f11825a0f9445e0f98792f79172efef66c00";
-    purescript-bridge.flake = false;
-    servant-purescript.url = "github:input-output-hk/servant-purescript/44e7cacf109f84984cd99cd3faf185d161826963";
-    servant-purescript.flake = false;
     typed-protocols.url = "github:input-output-hk/typed-protocols/181601bc3d9e9d21a671ce01e0b481348b3ca104";
     typed-protocols.flake = false;
     Win32-network.url = "github:input-output-hk/Win32-network/3825d3abf75f83f406c1f7161883c438dac7277d";
@@ -164,24 +158,6 @@
           "${inputs.ouroboros-network}/ouroboros-network"
           "${inputs.ouroboros-network}/ouroboros-network-framework"
           "${inputs.ouroboros-network}/ouroboros-network-testing"
-          "${inputs.plutus-apps}/doc"
-          "${inputs.plutus-apps}/freer-extras"
-          "${inputs.plutus-apps}/playground-common"
-          "${inputs.plutus-apps}/plutus-chain-index"
-          "${inputs.plutus-apps}/plutus-chain-index-core"
-          "${inputs.plutus-apps}/plutus-contract"
-          "${inputs.plutus-apps}/plutus-contract-certification"
-          "${inputs.plutus-apps}/plutus-example"
-          "${inputs.plutus-apps}/plutus-ledger"
-          "${inputs.plutus-apps}/plutus-ledger-constraints"
-          "${inputs.plutus-apps}/plutus-pab"
-          "${inputs.plutus-apps}/plutus-pab-executables"
-          "${inputs.plutus-apps}/plutus-playground-server"
-          "${inputs.plutus-apps}/plutus-script-utils"
-          "${inputs.plutus-apps}/plutus-streaming"
-          "${inputs.plutus-apps}/plutus-use-cases"
-          "${inputs.plutus-apps}/quickcheck-dynamic"
-          "${inputs.plutus-apps}/web-ghc"
           "${inputs.plutus}/plutus-core"
           "${inputs.plutus}/plutus-ledger-api"
           "${inputs.plutus}/plutus-tx"
@@ -189,8 +165,6 @@
           "${inputs.plutus}/prettyprinter-configurable"
           "${inputs.plutus}/stubs/plutus-ghc-stub"
           "${inputs.plutus}/word-array"
-          "${inputs.purescript-bridge}"
-          "${inputs.servant-purescript}"
           "${inputs.typed-protocols}/typed-protocols"
           "${inputs.typed-protocols}/typed-protocols-cborg"
           "${inputs.typed-protocols}/typed-protocols-examples"
@@ -262,6 +236,7 @@
                 tools.haskell-language-server = { };
 
                 additional = ps: [
+                  ps.newtype-generics
                   ps.cardano-api
                   ps.cardano-binary
                   ps.cardano-crypto-class
@@ -271,11 +246,9 @@
                   ps.cardano-ledger-shelley-ma
                   ps.cardano-prelude
                   ps.cardano-slotting
-                  ps.generics-sop
                   ps.ouroboros-consensus
                   ps.ouroboros-consensus-shelley
                   ps.plutus-core
-                  ps.plutus-ledger
                   ps.plutus-ledger-api
                   ps.plutus-tx
                   ps.plutus-tx-plugin

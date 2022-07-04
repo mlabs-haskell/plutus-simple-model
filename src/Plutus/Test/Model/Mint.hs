@@ -10,7 +10,8 @@ import Prelude (undefined)
 import PlutusTx.Prelude
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Value
-import Ledger
+import Plutus.V1.Ledger.Contexts
+import Plutus.Test.Model.Fork.Ledger.Scripts
 
 newtype FakeCoin = FakeCoin { fakeCoin'tag :: BuiltinByteString }
 
@@ -24,7 +25,7 @@ fakeCoin (FakeCoin tag) = assetClass sym tok
     sym = scriptCurrencySymbol $ fakeMintingPolicy tag
     tok = TokenName tag
 
-fakeMintingPolicy :: BuiltinByteString -> Ledger.MintingPolicy
+fakeMintingPolicy :: BuiltinByteString -> MintingPolicy
 fakeMintingPolicy _mintParams = undefined -- FIXME
 
 -- FICME

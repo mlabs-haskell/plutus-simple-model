@@ -14,6 +14,7 @@ import Test.Tasty.HUnit
 import Plutus.V1.Ledger.Api
 import PlutusTx.Prelude qualified as Plutus
 import Suites.Plutus.Model.Script.Onchain.Game
+import Suites.Plutus.Model.Script.Onchain.Game.Script
 import Suites.Plutus.Model.Util
 
 import Plutus.Test.Model
@@ -40,8 +41,8 @@ initGuessGame = do
   initGame u1 prize answer
   isOk <- noErrors
   val1 <- valueAt u1
-  gameVal <- valueAt gameAddress
-  gameUtxos <- utxoAt gameAddress
+  gameVal <- valueAt gameScript
+  gameUtxos <- utxoAt gameScript
   let [(gameRef, gameOut)] = gameUtxos
   mDat <- datumAt @GameDatum gameRef
   pure $
@@ -89,7 +90,7 @@ initGameTx usp val answer =
 
 guess :: PubKeyHash -> BuiltinByteString -> Run Bool
 guess pkh answer = do
-  utxos <- utxoAt gameAddress
+  utxos <- utxoAt gameScript
   let [(gameRef, gameOut)] = utxos
   mDat <- datumAt @GameDatum gameRef
   case mDat of

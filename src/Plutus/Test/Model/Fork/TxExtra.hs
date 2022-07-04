@@ -15,9 +15,10 @@ module Plutus.Test.Model.Fork.TxExtra (
 
 import Data.Monoid
 import Prelude
-import Ledger qualified as P
+import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Api
 import qualified Data.Map.Strict as M
+import Plutus.Test.Model.Fork.Ledger.Scripts qualified as P
 
 -- | Plutus TX with extra fields for Cardano TX fields that are missing
 -- in native Plutus TX (staking and certificates).
@@ -92,3 +93,5 @@ scriptToStaking :: StakeValidator -> StakingCredential
 scriptToStaking validator = StakingHash $ ScriptCredential vh
   where
     vh = P.validatorHash $ Validator $ getStakeValidator validator
+
+

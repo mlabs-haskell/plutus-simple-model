@@ -785,40 +785,6 @@
         "type": "github"
       }
     },
-    "plutus-apps": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1656430862,
-        "narHash": "sha256-wTFEoA0t5JA8VL6NI553By7NhSNGRWlMTGqI7VU0+DM=",
-        "owner": "input-output-hk",
-        "repo": "plutus-apps",
-        "rev": "a9763f89f65ec4c17b11a40de37a4824c3a7a201",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "plutus-apps",
-        "rev": "a9763f89f65ec4c17b11a40de37a4824c3a7a201",
-        "type": "github"
-      }
-    },
-    "purescript-bridge": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1642802224,
-        "narHash": "sha256-/SbnmXrB9Y2rrPd6E79Iu5RDaKAKozIl685HQ4XdQTU=",
-        "owner": "input-output-hk",
-        "repo": "purescript-bridge",
-        "rev": "47a1f11825a0f9445e0f98792f79172efef66c00",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "purescript-bridge",
-        "rev": "47a1f11825a0f9445e0f98792f79172efef66c00",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "Win32-network": "Win32-network",
@@ -849,27 +815,7 @@
         "optparse-applicative": "optparse-applicative",
         "ouroboros-network": "ouroboros-network",
         "plutus": "plutus",
-        "plutus-apps": "plutus-apps",
-        "purescript-bridge": "purescript-bridge",
-        "servant-purescript": "servant-purescript",
         "typed-protocols": "typed-protocols"
-      }
-    },
-    "servant-purescript": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1642798070,
-        "narHash": "sha256-DH9ISydu5gxvN4xBuoXVv1OhYCaqGOtzWlACdJ0H64I=",
-        "owner": "input-output-hk",
-        "repo": "servant-purescript",
-        "rev": "44e7cacf109f84984cd99cd3faf185d161826963",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "servant-purescript",
-        "rev": "44e7cacf109f84984cd99cd3faf185d161826963",
-        "type": "github"
       }
     },
     "stackage": {

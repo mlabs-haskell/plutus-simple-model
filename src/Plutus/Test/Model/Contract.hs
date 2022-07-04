@@ -30,7 +30,6 @@ module Plutus.Test.Model.Contract (
   txBoxDatumHash,
   txBoxValue,
   boxAt,
-  scriptBoxAt,
   nftAt,
   currentSlot,
   currentTime,
@@ -40,8 +39,6 @@ module Plutus.Test.Model.Contract (
   payToPubKey,
   payWithDatumToPubKey,
   payToScript,
-  payToScriptAddress,
-  payToPubKeyAddress,
   payFee,
   userSpend,
   spendPubKey,
@@ -97,6 +94,14 @@ module Plutus.Test.Model.Contract (
   HasAddress(..),
   owns,
   gives,
+
+  -- * Utils
+  toBuiltinValidator,
+
+  -- * Typed validators
+  TypedValidator(..),
+  TypedPolicy(..),
+  IsValidator(..),
 ) where
 
 import Control.Monad.State.Strict
@@ -114,22 +119,26 @@ import Data.Sequence qualified as Seq (drop, length)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
 
-import Ledger.Crypto (pubKeyHash)
-import Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
-import Ledger.Typed.Scripts
+import Plutus.Test.Model.Fork.Ledger.Scripts
+import Plutus.Test.Model.Fork.Ledger.Crypto (pubKeyHash)
+import Plutus.Test.Model.Fork.Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
+-- import Ledger.Typed.Scripts
 import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Interval ()
 import Plutus.V1.Ledger.Value
 import PlutusTx.Prelude qualified as Plutus
-import Ledger (Slot (..))
-import Ledger qualified as P
+import Plutus.Test.Model.Fork.Ledger.Slot (Slot (..))
+-- import Ledger qualified as P
 
 import Plutus.Test.Model.Blockchain
 import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Pretty
 import Prettyprinter (Doc, vcat, indent, (<+>), pretty)
 import Plutus.Test.Model.Stake qualified as Stake
+import Plutus.V1.Ledger.Tx qualified as P
+import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
+import Plutus.Test.Model.Validator as X
 
 ------------------------------------------------------------------------
 -- modify blockchain
@@ -289,13 +298,6 @@ spend' pkh expected = do
 ------------------------------------------------------------------------
 -- build Tx
 
--- | Pay value to the owner of PubKeyHash.
-payToPubKey :: PubKeyHash -> Value -> Tx
-payToPubKey pkh val = toExtra $
-  mempty
-    { P.txOutputs = [TxOut (pubKeyHashAddress pkh) val Nothing]
-    }
-
 payWithDatumToPubKey :: ToData a => PubKeyHash -> a -> Value -> Tx
 payWithDatumToPubKey pkh dat val = toExtra $
   mempty
@@ -308,30 +310,17 @@ payWithDatumToPubKey pkh dat val = toExtra $
 
 -- | Pay value to the owner of PubKeyHash.
 -- We use address to supply staking credential if we need it.
-payToPubKeyAddress :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
-payToPubKeyAddress pkh val = toExtra $
+payToPubKey :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
+payToPubKey pkh val = toExtra $
   mempty
     { P.txOutputs = [TxOut (toAddress pkh) val Nothing]
     }
 
 -- | Pay to the script.
 -- We can use TypedValidator as argument and it will be checked that the datum is correct.
-payToScript :: ToData (DatumType a) =>
-  TypedValidator a -> DatumType a -> Value -> Tx
-payToScript tv dat val = toExtra $
-  mempty
-    { P.txOutputs = [TxOut (toAddress tv) val (Just dh)]
-    , P.txData = M.singleton dh datum
-    }
-  where
-    dh = datumHash datum
-    datum = Datum $ toBuiltinData dat
-
--- | Pay to the script.
--- We can use TypedValidator as argument and it will be checked that the datum is correct.
-payToScriptAddress :: (HasAddress script, ToData datum) =>
+payToScript :: (HasAddress script, ToData datum) =>
   script -> datum -> Value -> Tx
-payToScriptAddress script dat val = toExtra $
+payToScript script dat val = toExtra $
   mempty
     { P.txOutputs = [TxOut (toAddress script) val (Just dh)]
     , P.txData = M.singleton dh datum
@@ -356,46 +345,46 @@ spendPubKey ref = toExtra $
 
 -- | Spend script input.
 spendScript ::
-  (ToData (DatumType a), ToData (RedeemerType a)) =>
-  TypedValidator a ->
+  (IsValidator script) =>
+  script ->
   TxOutRef ->
-  RedeemerType a ->
-  DatumType a ->
+  RedeemerType script ->
+  DatumType script ->
   Tx
 spendScript tv ref red dat = toExtra $
   mempty
-    { P.txInputs = S.singleton $ P.TxIn ref (Just $ P.ConsumeScriptAddress (validatorScript tv) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
+    { P.txInputs = S.singleton $ P.TxIn ref (Just $ P.ConsumeScriptAddress (toValidator tv) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
     }
 
 -- | Spend script input.
 spendBox ::
-  (ToData (DatumType a), ToData (RedeemerType a)) =>
-  TypedValidator a ->
-  RedeemerType a ->
-  TxBox a ->
+  (IsValidator script) =>
+  script ->
+  RedeemerType script ->
+  TxBox script ->
   Tx
 spendBox tv red TxBox{..} =
   spendScript tv txBoxRef red txBoxDatum
 
 -- | Specify that box is used as oracle (read-only). Spends value to itself and uses the same datum.
-readOnlyBox :: (ToData (DatumType a), ToData (RedeemerType a))
-  => TypedValidator a
-  -> TxBox a
-  -> RedeemerType a
+readOnlyBox :: (IsValidator script)
+  => script
+  -> TxBox script
+  -> RedeemerType script
   -> Tx
 readOnlyBox tv box act = modifyBox tv box act id id
 
 -- | Modifies the box. We specify how script box datum and value are updated.
-modifyBox :: (ToData (DatumType a), ToData (RedeemerType a))
-  => TypedValidator a
-  -> TxBox a
-  -> RedeemerType a
-  -> (DatumType a -> DatumType a)
+modifyBox :: (IsValidator script)
+  => script
+  -> TxBox script
+  -> RedeemerType script
+  -> (DatumType script -> DatumType script)
   -> (Value -> Value)
   -> Tx
 modifyBox tv box act modDatum modValue = mconcat
   [ spendBox tv act box
-  , payToScriptAddress box (modDatum $ txBoxDatum box) (modValue $ txOutValue $ txBoxOut box)
+  , payToScript tv (modDatum $ txBoxDatum box) (modValue $ txBoxValue box)
   ]
 
 -- | Spend value for the user and also include change in the outputs.
@@ -455,7 +444,7 @@ data TxBox a = TxBox
   }
 
 deriving instance Show (DatumType a) => Show (TxBox a)
-deriving instance Eq (DatumType a)   => Eq (TxBox a)
+deriving instance Eq (DatumType a) => Eq (TxBox a)
 
 instance HasAddress (TxBox a) where
   toAddress = txBoxAddress
@@ -473,19 +462,15 @@ txBoxValue :: TxBox a -> Value
 txBoxValue = txOutValue . txBoxOut
 
 -- | Read UTXOs with datums.
-boxAt :: (HasAddress addr, FromData (DatumType a)) => addr -> Run [TxBox a]
+boxAt :: (IsValidator script) => script -> Run [TxBox script]
 boxAt addr = do
   utxos <- utxoAt (toAddress addr)
   fmap catMaybes $ mapM (\(ref, tout) -> fmap (\dat -> TxBox ref tout dat) <$> datumAt ref) utxos
 
--- | Reads the Box for the script.
-scriptBoxAt :: FromData (DatumType a) => TypedValidator a -> Run [TxBox a]
-scriptBoxAt tv = boxAt (validatorAddress tv)
-
 -- | It expects that Typed validator can have only one UTXO
 -- which is NFT.
-nftAt :: FromData (DatumType a) => TypedValidator a -> Run (TxBox a)
-nftAt tv = head <$> scriptBoxAt tv
+nftAt :: IsValidator script => script -> Run (TxBox script)
+nftAt tv = head <$> boxAt tv
 
 ----------------------------------------------------------------------
 -- time helpers
@@ -726,3 +711,15 @@ delegateStakeScript :: ToData redeemer =>
   StakeValidator -> redeemer -> PoolId -> Tx
 delegateStakeScript script red (PoolId poolKey) = certTx $
   Certificate (DCertDelegDelegate (scriptToStaking script) poolKey) (withStakeScript script red)
+
+
+
+
+-- | The GeroGov validator script instance
+toBuiltinValidator :: forall datum redeemer . (UnsafeFromData datum, UnsafeFromData redeemer)
+  => (datum -> redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> BuiltinData -> ())
+toBuiltinValidator script =
+  \datum act ctx -> Plutus.check (
+        script (unsafeFromBuiltinData datum)
+               (unsafeFromBuiltinData act)
+               (unsafeFromBuiltinData ctx))
