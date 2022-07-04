@@ -643,8 +643,9 @@ withdrawTx w = mempty { tx'extra = mempty { extra'withdraws = [w] } }
 toRedeemer :: ToData red => red -> Redeemer
 toRedeemer = Redeemer . toBuiltinData
 
-withStakeScript :: ToData red => StakeValidator -> red -> Maybe (Redeemer, StakeValidator)
-withStakeScript script red = Just (toRedeemer red, script)
+withStakeScript :: (IsValidator (TypedStake red))
+  => TypedStake red -> red -> Maybe (Redeemer, StakeValidator)
+withStakeScript (TypedStake script) red = Just (toRedeemer red, script)
 
 -- | Add staking withdrawal based on pub key hash
 withdrawStakeKey :: PubKeyHash -> Integer -> Tx
@@ -652,10 +653,10 @@ withdrawStakeKey key amount = withdrawTx $
   Withdraw (keyToStaking key) amount Nothing
 
 -- | Add staking withdrawal based on script
-withdrawStakeScript :: ToData redeemer
-  => StakeValidator -> redeemer -> Integer -> Tx
-withdrawStakeScript validator red amount = withdrawTx $
-  Withdraw (scriptToStaking validator) amount (withStakeScript validator red)
+withdrawStakeScript :: (IsValidator (TypedStake redeemer))
+  => TypedStake redeemer -> redeemer -> Integer -> Tx
+withdrawStakeScript (TypedStake validator) red amount = withdrawTx $
+  Withdraw (scriptToStaking validator) amount (withStakeScript (TypedStake validator) red)
 
 certTx :: Certificate -> Tx
 certTx cert = mempty { tx'extra = mempty { extra'certificates = [cert] } }
@@ -666,10 +667,10 @@ registerStakeKey pkh = certTx $
   Certificate (DCertDelegRegKey $ keyToStaking pkh) Nothing
 
 -- | Register staking credential by stake validator
-registerStakeScript :: ToData redeemer =>
-  StakeValidator -> redeemer -> Tx
+registerStakeScript :: IsValidator (TypedStake redeemer) =>
+  TypedStake redeemer -> redeemer -> Tx
 registerStakeScript script red = certTx $
-  Certificate (DCertDelegRegKey $ scriptToStaking script) (withStakeScript script red)
+  Certificate (DCertDelegRegKey $ scriptToStaking $ unTypedStake script) (withStakeScript script red)
 
 -- | DeRegister staking credential by key
 deregisterStakeKey :: PubKeyHash -> Tx
@@ -677,10 +678,10 @@ deregisterStakeKey pkh = certTx $
   Certificate (DCertDelegDeRegKey $ keyToStaking pkh) Nothing
 
 -- | DeRegister staking credential by stake validator
-deregisterStakeScript :: ToData redeemer =>
-  StakeValidator -> redeemer -> Tx
+deregisterStakeScript :: IsValidator (TypedStake redeemer) =>
+  TypedStake redeemer -> redeemer -> Tx
 deregisterStakeScript script red = certTx $
-  Certificate (DCertDelegDeRegKey $ scriptToStaking script) (withStakeScript script red)
+  Certificate (DCertDelegDeRegKey $ scriptToStaking $ unTypedStake script) (withStakeScript script red)
 
 -- | Register staking pool
 -- TODO: thois does not work on TX level.
@@ -710,9 +711,9 @@ delegateStakeKey stakeKey (PoolId poolKey) = certTx $
   Certificate (DCertDelegDelegate (keyToStaking stakeKey) poolKey) Nothing
 
 -- | Delegates staking credential (specified by stakevalidator) to pool
-delegateStakeScript :: ToData redeemer =>
-  StakeValidator -> redeemer -> PoolId -> Tx
+delegateStakeScript :: IsValidator (TypedStake redeemer) =>
+  TypedStake redeemer -> redeemer -> PoolId -> Tx
 delegateStakeScript script red (PoolId poolKey) = certTx $
-  Certificate (DCertDelegDelegate (scriptToStaking script) poolKey) (withStakeScript script red)
+  Certificate (DCertDelegDelegate (scriptToStaking $ unTypedStake script) poolKey) (withStakeScript script red)
 
 

@@ -9,12 +9,8 @@
     haskell-nix-extra-hackage.inputs.haskell-nix.follows = "haskell-nix";
     haskell-nix-extra-hackage.inputs.nixpkgs.follows = "nixpkgs";
 
-    cardano-addresses.url = "github:input-output-hk/cardano-addresses/b9f424cc64459a95a2f190a1839ec9bc94cc778c";
-    cardano-addresses.flake = false;
     cardano-base.url = "github:input-output-hk/cardano-base/631cb6cf1fa01ab346233b610a38b3b4cba6e6ab";
     cardano-base.flake = false;
-    cardano-config.url = "github:input-output-hk/cardano-config/1646e9167fab36c0bff82317743b96efa2d3adaa";
-    cardano-config.flake = false;
     cardano-crypto.url = "github:input-output-hk/cardano-crypto/f73079303f663e028288f9f4a9e08bcca39a923e";
     cardano-crypto.flake = false;
     cardano-ledger.url = "github:input-output-hk/cardano-ledger/e290bf8d0ea272a51e9acd10adc96b4e12e00d37";
@@ -62,8 +58,6 @@
 
       myhackages = system: compiler-nix-name: haskell-nix-extra-hackage.mkHackagesFor system compiler-nix-name (
         [
-          "${inputs.cardano-addresses}/command-line"
-          "${inputs.cardano-addresses}/core"
           "${inputs.cardano-base}/base-deriving-via"
           "${inputs.cardano-base}/binary"
           "${inputs.cardano-base}/binary/test"
@@ -74,7 +68,6 @@
           "${inputs.cardano-base}/orphans-deriving-via"
           "${inputs.cardano-base}/slotting"
           "${inputs.cardano-base}/strict-containers"
-          "${inputs.cardano-config}"
           "${inputs.cardano-crypto}"
           "${inputs.cardano-ledger}/eras/alonzo/impl"
           "${inputs.cardano-ledger}/eras/babbage/impl"
@@ -155,9 +148,6 @@
               plutus-contract.flags.defer-plugin-errors = true;
               cardano-crypto-praos.components.library.pkgconfig = pkgs.lib.mkForce [ [ pkgs.libsodium-vrf ] ];
               cardano-crypto-class.components.library.pkgconfig = pkgs.lib.mkForce [ [ pkgs.libsodium-vrf ] ];
-              cardano-config.components.library.build-tools = [
-                pkgs.buildPackages.buildPackages.gitMinimal
-              ];
             };
           }
         )

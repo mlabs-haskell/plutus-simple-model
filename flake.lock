@@ -84,23 +84,6 @@
         "type": "github"
       }
     },
-    "cardano-addresses": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1654501304,
-        "narHash": "sha256-aXnrl0iGi+eqJQNxcgj6DnmHE40dNF/KtbiHhfG9H0c=",
-        "owner": "input-output-hk",
-        "repo": "cardano-addresses",
-        "rev": "b9f424cc64459a95a2f190a1839ec9bc94cc778c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "cardano-addresses",
-        "rev": "b9f424cc64459a95a2f190a1839ec9bc94cc778c",
-        "type": "github"
-      }
-    },
     "cardano-base": {
       "flake": false,
       "locked": {
@@ -115,23 +98,6 @@
         "owner": "input-output-hk",
         "repo": "cardano-base",
         "rev": "631cb6cf1fa01ab346233b610a38b3b4cba6e6ab",
-        "type": "github"
-      }
-    },
-    "cardano-config": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1642737642,
-        "narHash": "sha256-TNbpnR7llUgBN2WY7CryMxNVupBIUH01h1hRNHoxboY=",
-        "owner": "input-output-hk",
-        "repo": "cardano-config",
-        "rev": "1646e9167fab36c0bff82317743b96efa2d3adaa",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "cardano-config",
-        "rev": "1646e9167fab36c0bff82317743b96efa2d3adaa",
         "type": "github"
       }
     },
@@ -686,9 +652,7 @@
     "root": {
       "inputs": {
         "Win32-network": "Win32-network",
-        "cardano-addresses": "cardano-addresses",
         "cardano-base": "cardano-base",
-        "cardano-config": "cardano-config",
         "cardano-crypto": "cardano-crypto",
         "cardano-ledger": "cardano-ledger",
         "cardano-node": "cardano-node",
