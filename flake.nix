@@ -27,8 +27,6 @@
     flat.flake = false;
     goblins.url = "github:input-output-hk/goblins/cde90a2b27f79187ca8310b6549331e59595e7ba";
     goblins.flake = false;
-    hw-aeson.url = "github:haskell-works/hw-aeson/d99d2f3e39a287607418ae605b132a3deb2b753f";
-    hw-aeson.flake = false;
     iohk-monitoring-framework.url = "github:input-output-hk/iohk-monitoring-framework/066f7002aac5a0efc20e49643fea45454f226caa";
     iohk-monitoring-framework.flake = false;
     io-sim.url = "github:input-output-hk/io-sim/57e888b1894829056cb00b7b5785fdf6a74c3271";
@@ -111,7 +109,6 @@
           "${inputs.cardano-prelude}/cardano-prelude-test"
           "${inputs.flat}"
           "${inputs.goblins}"
-          "${inputs.hw-aeson}"
           "${inputs.iohk-monitoring-framework}/contra-tracer"
           "${inputs.iohk-monitoring-framework}/iohk-monitoring"
           "${inputs.iohk-monitoring-framework}/plugins/backend-aggregation"

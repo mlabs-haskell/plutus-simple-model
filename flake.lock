@@ -379,23 +379,6 @@
         "type": "github"
       }
     },
-    "hw-aeson": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1649341404,
-        "narHash": "sha256-xO4/zPMBmZtBXFwHF8p3nw4TilrJHxH54mfg9CRnuO8=",
-        "owner": "haskell-works",
-        "repo": "hw-aeson",
-        "rev": "d99d2f3e39a287607418ae605b132a3deb2b753f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "haskell-works",
-        "repo": "hw-aeson",
-        "rev": "d99d2f3e39a287607418ae605b132a3deb2b753f",
-        "type": "github"
-      }
-    },
     "hydra": {
       "inputs": {
         "nix": "nix",
@@ -714,7 +697,6 @@
         "goblins": "goblins",
         "haskell-nix": "haskell-nix",
         "haskell-nix-extra-hackage": "haskell-nix-extra-hackage",
-        "hw-aeson": "hw-aeson",
         "io-sim": "io-sim",
         "iohk-monitoring-framework": "iohk-monitoring-framework",
         "iohk-nix": "iohk-nix",
