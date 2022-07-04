@@ -27,8 +27,6 @@
     cardano-wallet.flake = false;
     ekg-forward.url = "github:input-output-hk/ekg-forward/297cd9db5074339a2fb2e5ae7d0780debb670c63";
     ekg-forward.flake = false;
-    ekg-json.url = "github:vshabanov/ekg-json/00ebe7211c981686e65730b7144fbf5350462608";
-    ekg-json.flake = false;
     flat.url = "github:Quid2/flat/ee59880f47ab835dbd73bea0847dab7869fc20d8";
     flat.flake = false;
     goblins.url = "github:input-output-hk/goblins/cde90a2b27f79187ca8310b6549331e59595e7ba";
@@ -130,7 +128,6 @@
           "${inputs.cardano-wallet}/lib/test-utils"
           "${inputs.cardano-wallet}/lib/text-class"
           "${inputs.ekg-forward}"
-          "${inputs.ekg-json}"
           "${inputs.flat}"
           "${inputs.goblins}"
           "${inputs.hedgehog-extras}"
@@ -238,7 +235,6 @@
                 additional = ps: [
                   ps.newtype-generics
                   ps.cardano-api
-                  ps.cardano-binary
                   ps.cardano-crypto-class
                   ps.cardano-ledger-alonzo
                   ps.cardano-ledger-core

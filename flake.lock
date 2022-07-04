@@ -253,23 +253,6 @@
         "type": "github"
       }
     },
-    "ekg-json": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1642583945,
-        "narHash": "sha256-VT8Ur585TCn03P2TVi6t92v2Z6tl8vKijICjse6ocv8=",
-        "owner": "vshabanov",
-        "repo": "ekg-json",
-        "rev": "00ebe7211c981686e65730b7144fbf5350462608",
-        "type": "github"
-      },
-      "original": {
-        "owner": "vshabanov",
-        "repo": "ekg-json",
-        "rev": "00ebe7211c981686e65730b7144fbf5350462608",
-        "type": "github"
-      }
-    },
     "flake-utils": {
       "locked": {
         "lastModified": 1644229661,
@@ -797,7 +780,6 @@
         "cardano-prelude": "cardano-prelude",
         "cardano-wallet": "cardano-wallet",
         "ekg-forward": "ekg-forward",
-        "ekg-json": "ekg-json",
         "flat": "flat",
         "goblins": "goblins",
         "haskell-nix": "haskell-nix",

@@ -1,18 +1,12 @@
 -- | Simple counter that increments internal counter on every usage in TX.
 module Suites.Plutus.Model.Script.Onchain.Counter(
-  Counter,
   CounterDatum(..),
   CounterAct(..),
   counterContract,
-  counterScript,
-  counterValidator,
-  counterAddress,
 ) where
 
 import Prelude
 
-import Ledger qualified
-import Ledger.Typed.Scripts qualified as Scripts
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
 
@@ -24,14 +18,8 @@ import Suites.Plutus.Model.Script.Onchain.Util (datumOf)
 ----------------------------------------------------------------------------
 -- types
 
-data Counter
-
-instance Scripts.ValidatorTypes Counter where
-  type DatumType Counter = CounterDatum
-  type RedeemerType Counter = CounterAct
-
-newtype CounterDatum = CounterDatum { getCounterDatum :: Integer }
-  deriving (ToData, FromData, UnsafeFromData, Plutus.Eq, Eq, Show)
+newtype CounterDatum = CounterDatum { getCounterDatum :: Plutus.Integer }
+  deriving newtype (ToData, FromData, UnsafeFromData, Plutus.Eq, Eq, Show)
 
 data CounterAct = Bump
 
@@ -47,26 +35,6 @@ counterContract (CounterDatum n) Bump ctx =
   where
     !info = scriptContextTxInfo ctx
     [!counterOut] = getContinuingOutputs ctx
-
-----------------------------------------------------------------------------
--- compiled code
-
--- | The GeroGov validator script instance
-counterScript :: Scripts.TypedValidator Counter
-counterScript =
-  Scripts.mkTypedValidator @Counter
-    $$(PlutusTx.compile [||counterContract||])
-    $$(PlutusTx.compile [||wrap||])
-  where
-    wrap = Scripts.wrapValidator @CounterDatum @CounterAct
-
--- | The validator of the GeroGov script
-counterValidator :: Scripts.Validator
-counterValidator = Scripts.validatorScript counterScript
-
--- | The script address of the GeroGov script
-counterAddress :: Ledger.Address
-counterAddress = Ledger.scriptAddress counterValidator
 
 ----------------------------------------------------------------------------
 -- instances
