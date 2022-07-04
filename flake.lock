@@ -470,23 +470,6 @@
         "type": "indirect"
       }
     },
-    "hysterical-screams": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1653758250,
-        "narHash": "sha256-NLgHKpCFPExmm6YgQwbsTf0/LhgQNp2iPrzv8PWgyes=",
-        "owner": "raduom",
-        "repo": "hysterical-screams",
-        "rev": "f3bbd38a19f99de5c8ddc650c94330b2d09a865b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "raduom",
-        "repo": "hysterical-screams",
-        "rev": "f3bbd38a19f99de5c8ddc650c94330b2d09a865b",
-        "type": "github"
-      }
-    },
     "io-sim": {
       "flake": false,
       "locked": {
@@ -786,7 +769,6 @@
         "haskell-nix-extra-hackage": "haskell-nix-extra-hackage",
         "hedgehog-extras": "hedgehog-extras",
         "hw-aeson": "hw-aeson",
-        "hysterical-screams": "hysterical-screams",
         "io-sim": "io-sim",
         "iohk-monitoring-framework": "iohk-monitoring-framework",
         "iohk-nix": "iohk-nix",

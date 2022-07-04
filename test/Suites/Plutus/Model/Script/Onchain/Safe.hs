@@ -3,20 +3,14 @@
  can spend it only when time is due.
 -}
 module Suites.Plutus.Model.Script.Onchain.Safe (
-  Safe,
   SafeDatum (..),
   SafeAct (..),
   SafeParams (..),
   safeContract,
-  safeScript,
-  safeValidator,
-  safeAddress,
 ) where
 
 import Prelude
 
-import Ledger qualified
-import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Contexts (
   findDatum,
@@ -29,8 +23,6 @@ import Plutus.V1.Ledger.Value (gt)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
 
-data Safe
-
 data SafeDatum = Safe PubKeyHash
   deriving (Eq)
 
@@ -41,12 +33,8 @@ data SafeAct = Spend | Deposit
 
 data SafeParams = SafeParams POSIXTime
 
-instance Scripts.ValidatorTypes Safe where
-  type DatumType Safe = SafeDatum
-  type RedeemerType Safe = SafeAct
-
 {-# INLINEABLE safeContract #-}
-safeContract :: SafeParams -> SafeDatum -> SafeAct -> Ledger.ScriptContext -> Bool
+safeContract :: SafeParams -> SafeDatum -> SafeAct -> ScriptContext -> Bool
 safeContract (SafeParams _spendTime) (Safe pkh) act ctx =
   txSignedBy (scriptContextTxInfo ctx) pkh
     && keyIsSame
@@ -87,25 +75,6 @@ safeContract (SafeParams _spendTime) (Safe pkh) act ctx =
     ownOutput = case getContinuingOutputs ctx of
       [o] -> o
       _ -> Plutus.error ()
-
--- | The GeroGov validator script instance
-safeScript :: SafeParams -> Scripts.TypedValidator Safe
-safeScript sp =
-  Scripts.mkTypedValidator @Safe
-    ( $$(PlutusTx.compile [||safeContract||])
-        `PlutusTx.applyCode` PlutusTx.liftCode sp
-    )
-    $$(PlutusTx.compile [||wrap||])
-  where
-    wrap = Scripts.wrapValidator @SafeDatum @SafeAct
-
--- | The validator of the GeroGov script
-safeValidator :: SafeParams -> Scripts.Validator
-safeValidator = Scripts.validatorScript . safeScript
-
--- | The script address of the GeroGov script
-safeAddress :: SafeParams -> Ledger.Address
-safeAddress = Ledger.scriptAddress . safeValidator
 
 PlutusTx.unstableMakeIsData ''SafeDatum
 PlutusTx.unstableMakeIsData ''SafeAct
