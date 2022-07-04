@@ -11,17 +11,16 @@ module Suites.Plutus.Model.Script.Onchain.Nft (
 
 import Prelude
 
-import Ledger qualified
-import Ledger.Typed.Scripts qualified as Scripts
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Contexts (ownCurrencySymbol)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
+import Plutus.Test.Model
 
 data NftParams = NftParams TxOutRef TokenName
 
 {-# INLINEABLE nftContract #-}
-nftContract :: NftParams -> () -> Ledger.ScriptContext -> Bool
+nftContract :: NftParams -> () -> ScriptContext -> Bool
 nftContract (NftParams ref tok) _ ctx =
   {- check that ref is in the inputs
      and that we minted given token with value that equals to 1
@@ -41,14 +40,14 @@ nftContract (NftParams ref tok) _ ctx =
 ----------------------------------------------------------
 -- compiled code
 
-nftMintingPolicy :: NftParams -> Scripts.MintingPolicy
+nftMintingPolicy :: NftParams -> TypedPolicy ()
 nftMintingPolicy nftp =
-  mkMintingPolicyScript $
-    $$(PlutusTx.compile [||Scripts.wrapMintingPolicy . nftContract||])
+  mkTypedPolicy $
+    $$(PlutusTx.compile [|| \param -> toBuiltinPolicy (nftContract param)||])
       `PlutusTx.applyCode` PlutusTx.liftCode nftp
 
 nftCurrencySymbol :: NftParams -> CurrencySymbol
-nftCurrencySymbol = Ledger.scriptCurrencySymbol . nftMintingPolicy
+nftCurrencySymbol = scriptCurrencySymbol . nftMintingPolicy
 
 nftValue :: NftParams -> Value
 nftValue nftp@(NftParams _ tok) = singleton (nftCurrencySymbol nftp) tok 1

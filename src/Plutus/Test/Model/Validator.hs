@@ -11,6 +11,8 @@ module Plutus.Test.Model.Validator(
   toBuiltinValidator,
   toBuiltinPolicy,
   toBuiltinStake,
+
+  scriptCurrencySymbol,
 ) where
 
 import Prelude
@@ -20,6 +22,7 @@ import PlutusTx.Code (CompiledCode)
 import Plutus.V1.Ledger.Api
 import Plutus.Test.Model.Blockchain (HasAddress(..), AppendStaking(..))
 import PlutusTx.Prelude qualified as Plutus
+import Plutus.Test.Model.Fork.Ledger.Scripts qualified as Fork
 
 class (HasAddress script, ToData (DatumType script), FromData (DatumType script), ToData (RedeemerType script), FromData (RedeemerType script))
   => IsValidator script where
@@ -54,6 +57,9 @@ instance HasAddress (TypedValidator datum redeemer) where
 -- | Phantom type to annotate types
 newtype TypedPolicy redeemer = TypedPolicy
   { unTypedPolicy :: MintingPolicy }
+
+scriptCurrencySymbol :: TypedPolicy a -> CurrencySymbol
+scriptCurrencySymbol (TypedPolicy script) = Fork.scriptCurrencySymbol script
 
 instance (ToData redeemer, FromData redeemer) => HasAddress (TypedPolicy redeemer) where
   toAddress = toAddress . toValidator

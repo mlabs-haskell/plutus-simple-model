@@ -389,8 +389,8 @@ userSpend (UserSpend ins mChange) = toExtra $
     }
 
 -- | Mints value. To use redeemer see function @addMintRedeemer@.
-mintValue :: MintingPolicy -> Value -> Tx
-mintValue policy val = toExtra $
+mintValue :: TypedPolicy redeemer -> Value -> Tx
+mintValue (TypedPolicy policy) val = toExtra $
   mempty
     { P.txMint = val
     , P.txMintScripts = S.singleton policy
@@ -408,8 +408,9 @@ mintValue policy val = toExtra $
  >
  > tx = addMintRedeemer mp red $ mconcat [mintValue mp val, ... other parts of tx... ]
 -}
-addMintRedeemer :: ToData redeemer => MintingPolicy -> redeemer -> Tx -> Tx
-addMintRedeemer policy red = liftPlutusTx $ \tx ->
+addMintRedeemer :: IsValidator (TypedPolicy redeemer)
+  => TypedPolicy redeemer -> redeemer -> Tx -> Tx
+addMintRedeemer (TypedPolicy policy) red = liftPlutusTx $ \tx ->
   maybe tx (setRedeemer tx . fst) $ L.find ((== policy) . snd) $ zip [0 ..] $ S.toList $ P.txMintScripts tx
   where
     setRedeemer tx ix =
