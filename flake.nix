@@ -23,14 +23,10 @@
     cardano-node.flake = false;
     cardano-prelude.url = "github:input-output-hk/cardano-prelude/bb4ed71ba8e587f672d06edf9d2e376f4b055555";
     cardano-prelude.flake = false;
-    ekg-forward.url = "github:input-output-hk/ekg-forward/297cd9db5074339a2fb2e5ae7d0780debb670c63";
-    ekg-forward.flake = false;
     flat.url = "github:Quid2/flat/ee59880f47ab835dbd73bea0847dab7869fc20d8";
     flat.flake = false;
     goblins.url = "github:input-output-hk/goblins/cde90a2b27f79187ca8310b6549331e59595e7ba";
     goblins.flake = false;
-    hedgehog-extras.url = "github:input-output-hk/hedgehog-extras/967d79533c21e33387d0227a5f6cc185203fe658";
-    hedgehog-extras.flake = false;
     hw-aeson.url = "github:haskell-works/hw-aeson/d99d2f3e39a287607418ae605b132a3deb2b753f";
     hw-aeson.flake = false;
     iohk-monitoring-framework.url = "github:input-output-hk/iohk-monitoring-framework/066f7002aac5a0efc20e49643fea45454f226caa";
@@ -113,10 +109,8 @@
           "${inputs.cardano-node}/trace-resources"
           "${inputs.cardano-prelude}/cardano-prelude"
           "${inputs.cardano-prelude}/cardano-prelude-test"
-          "${inputs.ekg-forward}"
           "${inputs.flat}"
           "${inputs.goblins}"
-          "${inputs.hedgehog-extras}"
           "${inputs.hw-aeson}"
           "${inputs.iohk-monitoring-framework}/contra-tracer"
           "${inputs.iohk-monitoring-framework}/iohk-monitoring"

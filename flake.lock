@@ -219,23 +219,6 @@
         "type": "github"
       }
     },
-    "ekg-forward": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1642052814,
-        "narHash": "sha256-jwj/gh/A/PXhO6yVESV27k4yx9I8Id8fTa3m4ofPnP0=",
-        "owner": "input-output-hk",
-        "repo": "ekg-forward",
-        "rev": "297cd9db5074339a2fb2e5ae7d0780debb670c63",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "ekg-forward",
-        "rev": "297cd9db5074339a2fb2e5ae7d0780debb670c63",
-        "type": "github"
-      }
-    },
     "flake-utils": {
       "locked": {
         "lastModified": 1644229661,
@@ -377,23 +360,6 @@
         "owner": "mlabs-haskell",
         "ref": "separate-hackages",
         "repo": "haskell-nix-extra-hackage",
-        "type": "github"
-      }
-    },
-    "hedgehog-extras": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1647260073,
-        "narHash": "sha256-TR9i1J3HUYz3QnFQbfJPr/kGDahxZPojDsorYtRZeGU=",
-        "owner": "input-output-hk",
-        "repo": "hedgehog-extras",
-        "rev": "967d79533c21e33387d0227a5f6cc185203fe658",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "hedgehog-extras",
-        "rev": "967d79533c21e33387d0227a5f6cc185203fe658",
         "type": "github"
       }
     },
@@ -744,12 +710,10 @@
         "cardano-ledger": "cardano-ledger",
         "cardano-node": "cardano-node",
         "cardano-prelude": "cardano-prelude",
-        "ekg-forward": "ekg-forward",
         "flat": "flat",
         "goblins": "goblins",
         "haskell-nix": "haskell-nix",
         "haskell-nix-extra-hackage": "haskell-nix-extra-hackage",
-        "hedgehog-extras": "hedgehog-extras",
         "hw-aeson": "hw-aeson",
         "io-sim": "io-sim",
         "iohk-monitoring-framework": "iohk-monitoring-framework",
