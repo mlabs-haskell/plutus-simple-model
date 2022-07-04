@@ -95,16 +95,6 @@ module Plutus.Test.Model.Contract (
   owns,
   gives,
 
-  -- * Utils
-  toBuiltinValidator,
-  toBuiltinPolicy,
-
-  -- * Typed validators
-  TypedValidator(..),
-  TypedPolicy(..),
-  IsValidator(..),
-  mkTypedValidator,
-  mkTypedPolicy,
 ) where
 
 import Control.Monad.State.Strict

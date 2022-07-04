@@ -416,3 +416,4 @@ import Plutus.Test.Model.Blockchain as X
 import Plutus.Test.Model.Contract   as X
 import Plutus.Test.Model.Mint       as X
 import Plutus.Test.Model.Pretty     as X
+import Plutus.Test.Model.Validator  as X

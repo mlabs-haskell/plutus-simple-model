@@ -159,13 +159,13 @@ test-suite plutus-simple-model-test
 --    Suites.Plutus.Model.Script.Onchain.Nft
     Suites.Plutus.Model.Script.Onchain.Safe
     Suites.Plutus.Model.Script.Onchain.Safe.Script
---    Suites.Plutus.Model.Script.Onchain.Staking
+    Suites.Plutus.Model.Script.Onchain.Staking
     Suites.Plutus.Model.Script.Onchain.Util
     Suites.Plutus.Model.Script.Test.Counter
     Suites.Plutus.Model.Script.Test.Game
 --    Suites.Plutus.Model.Script.Test.Nft
     Suites.Plutus.Model.Script.Test.Safe
---    Suites.Plutus.Model.Script.Test.Staking
+    Suites.Plutus.Model.Script.Test.Staking
     Suites.Plutus.Model.User
     Suites.Plutus.Model.Util
   build-depends:    plutus-simple-model
