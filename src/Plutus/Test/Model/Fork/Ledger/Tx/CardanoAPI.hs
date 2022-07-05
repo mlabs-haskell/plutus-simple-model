@@ -2,12 +2,9 @@
 {-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE GADTs              #-}
-{-# LANGUAGE NamedFieldPuns     #-}
 {-# LANGUAGE OverloadedLists    #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE RankNTypes         #-}
-{-# LANGUAGE RecordWildCards    #-}
-{-# LANGUAGE ViewPatterns       #-}
 
 {-# OPTIONS_GHC -Wno-orphans        #-}
 {-# OPTIONS_GHC -Wno-incomplete-patterns  #-}
