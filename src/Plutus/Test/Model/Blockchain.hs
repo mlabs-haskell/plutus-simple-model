@@ -697,14 +697,14 @@ noLogInfo act = do
 -- | Send block of TXs to blockchain.
 sendBlock :: [Tx] -> Run (Either FailReason [Stat])
 sendBlock txs = do
-  res <- sequence <$> mapM sendSingleTx txs
+  res <- sequence <$> mapM (sendSingleTx . processMints) txs
   when (isRight res) bumpSlot
   pure res
 
 -- | Sends block with single TX to blockchai
 sendTx :: Tx -> Run (Either FailReason Stat)
 sendTx tx = do
-  res <- sendSingleTx tx
+  res <- sendSingleTx (processMints tx)
   when (isRight res) bumpSlot
   pure res
 

@@ -47,7 +47,6 @@ module Plutus.Test.Model.Contract (
   readOnlyBox,
   modifyBox,
   mintValue,
-  addMintRedeemer,
   validateIn,
 
   -- ** Staking valdiators primitives
@@ -101,7 +100,6 @@ import Control.Monad.State.Strict
 import Prelude
 
 import Data.Bifunctor (second)
-import Data.List qualified as L
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
 import Data.Maybe
@@ -115,14 +113,12 @@ import Test.Tasty.HUnit
 import Plutus.Test.Model.Fork.Ledger.Scripts
 import Plutus.Test.Model.Fork.Ledger.Crypto (pubKeyHash)
 import Plutus.Test.Model.Fork.Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
--- import Ledger.Typed.Scripts
 import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Interval ()
 import Plutus.V1.Ledger.Value
 import PlutusTx.Prelude qualified as Plutus
 import Plutus.Test.Model.Fork.Ledger.Slot (Slot (..))
--- import Ledger qualified as P
 
 import Plutus.Test.Model.Blockchain
 import Plutus.Test.Model.Fork.TxExtra
@@ -388,35 +384,14 @@ userSpend (UserSpend ins mChange) = toExtra $
     , P.txOutputs = maybe [] pure mChange
     }
 
+mintTx :: Mint -> Tx
+mintTx m = mempty { tx'extra = mempty { extra'mints = [m] } }
+
 -- | Mints value. To use redeemer see function @addMintRedeemer@.
-mintValue :: TypedPolicy redeemer -> Value -> Tx
-mintValue (TypedPolicy policy) val = toExtra $
-  mempty
-    { P.txMint = val
-    , P.txMintScripts = S.singleton policy
-    }
-
-{- | Adds redeemr to the minting policy.
- Note that this should be done only as all mint values are specified.
- Otherwise it won't be attached and you should not attach any new mint values after it's done.
-
- So to mint value with redeemer first specify it with @mintValue@ and later on attach the redeemer:
-
- > mp = getmintinPolicy args
- > val = getMintVal args
- > red = getMintRedeemer args
- >
- > tx = addMintRedeemer mp red $ mconcat [mintValue mp val, ... other parts of tx... ]
--}
-addMintRedeemer :: IsValidator (TypedPolicy redeemer)
-  => TypedPolicy redeemer -> redeemer -> Tx -> Tx
-addMintRedeemer (TypedPolicy policy) red = liftPlutusTx $ \tx ->
-  maybe tx (setRedeemer tx . fst) $ L.find ((== policy) . snd) $ zip [0 ..] $ S.toList $ P.txMintScripts tx
-  where
-    setRedeemer tx ix =
-      tx
-        { P.txRedeemers = M.insert (P.RedeemerPtr P.Mint ix) (Redeemer $ toBuiltinData red) $ P.txRedeemers tx
-        }
+mintValue :: IsValidator (TypedPolicy redeemer)
+  => TypedPolicy redeemer -> redeemer -> Value -> Tx
+mintValue (TypedPolicy policy) redeemer val =
+  mintTx (Mint val (Redeemer $ toBuiltinData redeemer) policy)
 
 -- | Set validation time
 validateIn :: POSIXTimeRange -> Tx -> Run Tx
