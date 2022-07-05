@@ -20,7 +20,11 @@ import Data.Kind (Type)
 
 import PlutusTx.Code (CompiledCode)
 import Plutus.V1.Ledger.Api
-import Plutus.Test.Model.Blockchain (HasAddress(..), AppendStaking(..))
+import Plutus.Test.Model.Blockchain (
+  HasAddress(..),
+  AppendStaking(..),
+  HasStakingCredential(..),
+  )
 import PlutusTx.Prelude qualified as Plutus
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as Fork
 
@@ -82,6 +86,9 @@ instance (ToData redeemer, FromData redeemer) => IsValidator (TypedStake redeeme
 
 instance (ToData redeemer, FromData redeemer) => HasAddress (TypedStake redeemer) where
   toAddress = toAddress . toValidator
+
+instance HasStakingCredential (TypedStake redeemer) where
+  toStakingCredential (TypedStake script) = toStakingCredential script
 
 -- | Coverts to low-level validator representation
 {-# INLINABLE toBuiltinValidator #-}
