@@ -14,6 +14,7 @@ import Test.Tasty.HUnit
 
 import Plutus.V1.Ledger.Api
 import Suites.Plutus.Model.Script.Onchain.Counter
+import Suites.Plutus.Model.Script.Onchain.Counter.Script
 import Suites.Plutus.Model.Util
 
 import Plutus.Test.Model
@@ -41,8 +42,8 @@ initCounterTest = do
   initCounter u1 minAda
   isOk <- noErrors
   val1 <- valueAt u1
-  counterVal <- valueAt counterAddress
-  counterUtxos <- utxoAt counterAddress
+  counterVal <- valueAt counterScript
+  counterUtxos <- utxoAt counterScript
   let [(counterRef, counterOut)] = counterUtxos
   mDat <- datumAt @CounterDatum counterRef
   pure $
@@ -88,7 +89,7 @@ initCounterTx usp minAda =
 -- | Increments counter and checks that user and script gathered no new value.
 increment :: PubKeyHash -> Integer -> Run Bool
 increment pkh inc = checkBalance (pkh `owns` mempty <> counterScript `owns` mempty) $ do
-  utxos <- utxoAt counterAddress
+  utxos <- utxoAt counterScript
   let [(counterRef, counterOut)] = utxos
   mDat <- datumAt @CounterDatum counterRef
   case mDat of

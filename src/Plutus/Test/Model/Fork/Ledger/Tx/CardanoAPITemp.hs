@@ -6,7 +6,7 @@
 {-# LANGUAGE NamedFieldPuns           #-}
 -- Code temporarily copied over from cardano-api,
 -- until https://github.com/input-output-hk/cardano-node/pull/2936 or something similar gets merged.
-module Plutus.Test.Model.Fork.CardanoAPITemp (makeTransactionBody') where
+module Plutus.Test.Model.Fork.Ledger.Tx.CardanoAPITemp (makeTransactionBody') where
 
 import Prelude
 

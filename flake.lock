@@ -84,23 +84,6 @@
         "type": "github"
       }
     },
-    "cardano-addresses": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1654501304,
-        "narHash": "sha256-aXnrl0iGi+eqJQNxcgj6DnmHE40dNF/KtbiHhfG9H0c=",
-        "owner": "input-output-hk",
-        "repo": "cardano-addresses",
-        "rev": "b9f424cc64459a95a2f190a1839ec9bc94cc778c",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "cardano-addresses",
-        "rev": "b9f424cc64459a95a2f190a1839ec9bc94cc778c",
-        "type": "github"
-      }
-    },
     "cardano-base": {
       "flake": false,
       "locked": {
@@ -115,23 +98,6 @@
         "owner": "input-output-hk",
         "repo": "cardano-base",
         "rev": "631cb6cf1fa01ab346233b610a38b3b4cba6e6ab",
-        "type": "github"
-      }
-    },
-    "cardano-config": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1642737642,
-        "narHash": "sha256-TNbpnR7llUgBN2WY7CryMxNVupBIUH01h1hRNHoxboY=",
-        "owner": "input-output-hk",
-        "repo": "cardano-config",
-        "rev": "1646e9167fab36c0bff82317743b96efa2d3adaa",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "cardano-config",
-        "rev": "1646e9167fab36c0bff82317743b96efa2d3adaa",
         "type": "github"
       }
     },
@@ -216,57 +182,6 @@
       "original": {
         "owner": "input-output-hk",
         "repo": "cardano-shell",
-        "type": "github"
-      }
-    },
-    "cardano-wallet": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1655673167,
-        "narHash": "sha256-fR+HgAjaenaklt9ChhD9c+aWSOeriYZtXxVHf1pg8uQ=",
-        "owner": "input-output-hk",
-        "repo": "cardano-wallet",
-        "rev": "0cdd1b72a16b2f287b5f1bf137b5eba15bc7f300",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "cardano-wallet",
-        "rev": "0cdd1b72a16b2f287b5f1bf137b5eba15bc7f300",
-        "type": "github"
-      }
-    },
-    "ekg-forward": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1642052814,
-        "narHash": "sha256-jwj/gh/A/PXhO6yVESV27k4yx9I8Id8fTa3m4ofPnP0=",
-        "owner": "input-output-hk",
-        "repo": "ekg-forward",
-        "rev": "297cd9db5074339a2fb2e5ae7d0780debb670c63",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "ekg-forward",
-        "rev": "297cd9db5074339a2fb2e5ae7d0780debb670c63",
-        "type": "github"
-      }
-    },
-    "ekg-json": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1642583945,
-        "narHash": "sha256-VT8Ur585TCn03P2TVi6t92v2Z6tl8vKijICjse6ocv8=",
-        "owner": "vshabanov",
-        "repo": "ekg-json",
-        "rev": "00ebe7211c981686e65730b7144fbf5350462608",
-        "type": "github"
-      },
-      "original": {
-        "owner": "vshabanov",
-        "repo": "ekg-json",
-        "rev": "00ebe7211c981686e65730b7144fbf5350462608",
         "type": "github"
       }
     },
@@ -414,23 +329,6 @@
         "type": "github"
       }
     },
-    "hedgehog-extras": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1647260073,
-        "narHash": "sha256-TR9i1J3HUYz3QnFQbfJPr/kGDahxZPojDsorYtRZeGU=",
-        "owner": "input-output-hk",
-        "repo": "hedgehog-extras",
-        "rev": "967d79533c21e33387d0227a5f6cc185203fe658",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "hedgehog-extras",
-        "rev": "967d79533c21e33387d0227a5f6cc185203fe658",
-        "type": "github"
-      }
-    },
     "hpc-coveralls": {
       "flake": false,
       "locked": {
@@ -444,23 +342,6 @@
       "original": {
         "owner": "sevanspowell",
         "repo": "hpc-coveralls",
-        "type": "github"
-      }
-    },
-    "hw-aeson": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1649341404,
-        "narHash": "sha256-xO4/zPMBmZtBXFwHF8p3nw4TilrJHxH54mfg9CRnuO8=",
-        "owner": "haskell-works",
-        "repo": "hw-aeson",
-        "rev": "d99d2f3e39a287607418ae605b132a3deb2b753f",
-        "type": "github"
-      },
-      "original": {
-        "owner": "haskell-works",
-        "repo": "hw-aeson",
-        "rev": "d99d2f3e39a287607418ae605b132a3deb2b753f",
         "type": "github"
       }
     },
@@ -485,23 +366,6 @@
       "original": {
         "id": "hydra",
         "type": "indirect"
-      }
-    },
-    "hysterical-screams": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1653758250,
-        "narHash": "sha256-NLgHKpCFPExmm6YgQwbsTf0/LhgQNp2iPrzv8PWgyes=",
-        "owner": "raduom",
-        "repo": "hysterical-screams",
-        "rev": "f3bbd38a19f99de5c8ddc650c94330b2d09a865b",
-        "type": "github"
-      },
-      "original": {
-        "owner": "raduom",
-        "repo": "hysterical-screams",
-        "rev": "f3bbd38a19f99de5c8ddc650c94330b2d09a865b",
-        "type": "github"
       }
     },
     "io-sim": {
@@ -785,60 +649,18 @@
         "type": "github"
       }
     },
-    "plutus-apps": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1656430862,
-        "narHash": "sha256-wTFEoA0t5JA8VL6NI553By7NhSNGRWlMTGqI7VU0+DM=",
-        "owner": "input-output-hk",
-        "repo": "plutus-apps",
-        "rev": "a9763f89f65ec4c17b11a40de37a4824c3a7a201",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "plutus-apps",
-        "rev": "a9763f89f65ec4c17b11a40de37a4824c3a7a201",
-        "type": "github"
-      }
-    },
-    "purescript-bridge": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1642802224,
-        "narHash": "sha256-/SbnmXrB9Y2rrPd6E79Iu5RDaKAKozIl685HQ4XdQTU=",
-        "owner": "input-output-hk",
-        "repo": "purescript-bridge",
-        "rev": "47a1f11825a0f9445e0f98792f79172efef66c00",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "purescript-bridge",
-        "rev": "47a1f11825a0f9445e0f98792f79172efef66c00",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "Win32-network": "Win32-network",
-        "cardano-addresses": "cardano-addresses",
         "cardano-base": "cardano-base",
-        "cardano-config": "cardano-config",
         "cardano-crypto": "cardano-crypto",
         "cardano-ledger": "cardano-ledger",
         "cardano-node": "cardano-node",
         "cardano-prelude": "cardano-prelude",
-        "cardano-wallet": "cardano-wallet",
-        "ekg-forward": "ekg-forward",
-        "ekg-json": "ekg-json",
         "flat": "flat",
         "goblins": "goblins",
         "haskell-nix": "haskell-nix",
         "haskell-nix-extra-hackage": "haskell-nix-extra-hackage",
-        "hedgehog-extras": "hedgehog-extras",
-        "hw-aeson": "hw-aeson",
-        "hysterical-screams": "hysterical-screams",
         "io-sim": "io-sim",
         "iohk-monitoring-framework": "iohk-monitoring-framework",
         "iohk-nix": "iohk-nix",
@@ -849,27 +671,7 @@
         "optparse-applicative": "optparse-applicative",
         "ouroboros-network": "ouroboros-network",
         "plutus": "plutus",
-        "plutus-apps": "plutus-apps",
-        "purescript-bridge": "purescript-bridge",
-        "servant-purescript": "servant-purescript",
         "typed-protocols": "typed-protocols"
-      }
-    },
-    "servant-purescript": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1642798070,
-        "narHash": "sha256-DH9ISydu5gxvN4xBuoXVv1OhYCaqGOtzWlACdJ0H64I=",
-        "owner": "input-output-hk",
-        "repo": "servant-purescript",
-        "rev": "44e7cacf109f84984cd99cd3faf185d161826963",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "servant-purescript",
-        "rev": "44e7cacf109f84984cd99cd3faf185d161826963",
-        "type": "github"
       }
     },
     "stackage": {

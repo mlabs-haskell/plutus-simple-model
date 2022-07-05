@@ -12,6 +12,7 @@ import Test.Tasty.HUnit
 import Plutus.Test.Model
 import Plutus.V1.Ledger.Api
 import Suites.Plutus.Model.Script.Onchain.Safe
+import Suites.Plutus.Model.Script.Onchain.Safe.Script
 import Suites.Plutus.Model.Util
 
 tests :: BchConfig -> TestTree
@@ -28,6 +29,12 @@ tests cfg =
     bad = check False
     check res msg act = testCase msg $ fst (runBch act (initBch cfg $ adaValue 10_000_000)) @?= res
 
+safe :: Safe
+safe = safeScript safeParams
+
+safeParams :: SafeParams
+safeParams = SafeParams 1_635_180_185_200
+
 initSafe :: Run Bool
 initSafe = do
   users <- setupUsers
@@ -36,8 +43,8 @@ initSafe = do
   initSafe' u1 deposit
   isOk <- noErrors
   val1 <- valueAt u1
-  safeVal <- valueAt $ safeAddress safeParams
-  safeUtxos <- utxoAt $ safeAddress safeParams
+  safeVal <- valueAt safe
+  safeUtxos <- utxoAt safe
   let [(safeRef, safeOut)] = safeUtxos
   mDat <- datumAt @SafeDatum safeRef
   pure $
@@ -77,7 +84,7 @@ spendSafe timeAhead validInterval = do
       deposit = adaValue 100
   initSafe' u1 deposit
   waitUntil timeAhead
-  utxos <- utxoAt $ safeAddress safeParams
+  utxos <- utxoAt safe
   let [(safeRef, safeOut)] = utxos
       tx = spendTx u1 safeRef (txOutValue safeOut)
   isRight <$> (sendTx =<< signTx u1 =<< validateIn validInterval tx)
@@ -89,7 +96,7 @@ depositSafe timeAhead validInterval = do
       deposit = adaValue 100
   initSafe' u1 deposit
   waitUntil timeAhead
-  utxos <- utxoAt $ safeAddress safeParams
+  utxos <- utxoAt safe
   sp <- spend u1 deposit
   let [(safeRef, safeOut)] = utxos
       tx = depositTx sp deposit u1 safeRef (txOutValue safeOut)
@@ -99,24 +106,21 @@ initSafeTx :: UserSpend -> Value -> PubKeyHash -> Tx
 initSafeTx usp val pkh =
   mconcat
     [ userSpend usp
-    , payToScript (safeScript safeParams) (Safe pkh) val
+    , payToScript safe (Safe pkh) val
     ]
 
 spendTx :: PubKeyHash -> TxOutRef -> Value -> Tx
 spendTx pkh safeRef safeVal =
   mconcat
-    [ spendScript (safeScript safeParams) safeRef Spend (Safe pkh)
+    [ spendScript safe safeRef Spend (Safe pkh)
     , payToPubKey pkh (safeVal <> adaValue (-1))
-    , payToScript (safeScript safeParams) (Safe pkh) (adaValue 1)
+    , payToScript safe (Safe pkh) (adaValue 1)
     ]
 
 depositTx :: UserSpend -> Value -> PubKeyHash -> TxOutRef -> Value -> Tx
 depositTx sp dep pkh safeRef safeVal =
   mconcat
     [ userSpend sp
-    , spendScript (safeScript safeParams) safeRef Deposit (Safe pkh)
-    , payToScript (safeScript safeParams) (Safe pkh) (safeVal <> dep)
+    , spendScript safe safeRef Deposit (Safe pkh)
+    , payToScript safe (Safe pkh) (safeVal <> dep)
     ]
-
-safeParams :: SafeParams
-safeParams = SafeParams 1_635_180_185_200

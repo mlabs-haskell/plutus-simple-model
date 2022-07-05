@@ -28,13 +28,16 @@ import Data.Bifunctor (first)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Set qualified as Set
-import Ledger qualified as P
 import Plutus.V1.Ledger.Api qualified as P
+import Plutus.V1.Ledger.Tx qualified as P
 import Codec.Serialise qualified as Codec
 
-import Plutus.Test.Model.Fork.CardanoAPITemp (makeTransactionBody')
+
+import Plutus.Test.Model.Fork.Ledger.Address qualified as P
+import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
+import Plutus.Test.Model.Fork.Ledger.Tx.CardanoAPITemp (makeTransactionBody')
 import Prelude
-import Ledger.Tx.CardanoAPI hiding (toCardanoTxBody)
+import Plutus.Test.Model.Fork.Ledger.Tx.CardanoAPI
 import Plutus.Test.Model.Fork.TxExtra
 import PlutusTx.Prelude qualified as PlutusTx
 
@@ -192,6 +195,3 @@ lookupDatum datums datumHash =
   case flip Map.lookup datums =<< datumHash of
     Just datum -> pure $ C.TxOutDatumInTx C.ScriptDataInAlonzoEra (toCardanoScriptData $ P.getDatum datum)
     Nothing    -> toCardanoTxOutDatumHash datumHash
-
-toCardanoScriptData :: P.BuiltinData -> C.ScriptData
-toCardanoScriptData = C.fromPlutusData . P.builtinDataToData
