@@ -27,6 +27,7 @@ common lang
     DeriveFunctor
     DeriveGeneric
     DeriveTraversable
+    DeriveAnyClass
     DerivingStrategies
     DerivingVia
     DuplicateRecordFields
@@ -67,29 +68,42 @@ common deps
   build-depends:
     , base                     ^>=4.14
     , aeson
+    , base16-bytestring
+    , base58-bytestring
     , basement
     , bytestring
+    , data-default
+    , hashable
+    , http-api-data
     , cardano-api
     , cardano-binary
+    , cardano-crypto
     , cardano-crypto-class
     , cardano-ledger-alonzo
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
     , cardano-slotting
+    , cborg
+    , cryptonite
     , containers
+    , lens
+    , memory
     , mtl
+    , newtype-generics
     , serialise
     , ouroboros-consensus
     , ouroboros-consensus-shelley
     , prettyprinter
-    , plutus-ledger
+    , plutus-core
     , plutus-ledger-api
     , plutus-tx
     , plutus-tx-plugin
     , strict-containers
     , vector
+    , tagged
     , time
+    , text
     , deepseq
 
 common test-deps
@@ -109,8 +123,19 @@ library
     Plutus.Test.Model.Mint
     Plutus.Test.Model.Pretty
     Plutus.Test.Model.Stake
+    Plutus.Test.Model.Validator
+  other-modules:
+    Plutus.Test.Model.Fork.Data.Aeson.Extras
     Plutus.Test.Model.Fork.CardanoAPI
-    Plutus.Test.Model.Fork.CardanoAPITemp
+    Plutus.Test.Model.Fork.Ledger.Address
+    Plutus.Test.Model.Fork.Ledger.Crypto
+    Plutus.Test.Model.Fork.Ledger.Slot
+    Plutus.Test.Model.Fork.Ledger.Tx
+    Plutus.Test.Model.Fork.Ledger.TimeSlot
+    Plutus.Test.Model.Fork.Ledger.Ada
+    Plutus.Test.Model.Fork.Ledger.Scripts
+    Plutus.Test.Model.Fork.Ledger.Tx.CardanoAPI
+    Plutus.Test.Model.Fork.Ledger.Tx.CardanoAPITemp
     Plutus.Test.Model.Fork.TxExtra
   build-depends:    tasty
                   , tasty-hunit
@@ -128,9 +153,12 @@ test-suite plutus-simple-model-test
     Suites.Plutus.Model.FakeCoin
     Suites.Plutus.Model.Script
     Suites.Plutus.Model.Script.Onchain.Counter
+    Suites.Plutus.Model.Script.Onchain.Counter.Script
     Suites.Plutus.Model.Script.Onchain.Game
+    Suites.Plutus.Model.Script.Onchain.Game.Script
     Suites.Plutus.Model.Script.Onchain.Nft
     Suites.Plutus.Model.Script.Onchain.Safe
+    Suites.Plutus.Model.Script.Onchain.Safe.Script
     Suites.Plutus.Model.Script.Onchain.Staking
     Suites.Plutus.Model.Script.Onchain.Util
     Suites.Plutus.Model.Script.Test.Counter

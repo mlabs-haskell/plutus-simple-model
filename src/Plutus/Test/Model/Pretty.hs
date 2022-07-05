@@ -22,8 +22,8 @@ import Text.Printf (printf)
 
 import Cardano.Api.Shelley (Error (..))
 import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Slot
 import Plutus.V1.Ledger.Value (assetClass, flattenValue, toString)
+import Plutus.Test.Model.Fork.Ledger.Slot (Slot (..))
 
 import Plutus.Test.Model.Blockchain
 import Plutus.Test.Model.Fork.TxExtra
@@ -255,9 +255,10 @@ newtype TxStatFull = TxStatFull TxStat
 
 instance Pretty TxStatFull where
   pretty (TxStatFull txStat) =
-    let TxStat { txStatTx = Tx { tx'plutus = tx}} = txStat
-    in vcat
-         [ pretty tx
+    -- let TxStat { txStatTx = Tx { tx'plutus = tx}} = txStat
+    -- in
+       vcat
+         [ {- pretty tx -} "pretty TX"
          , pretty txStat
          ]
 

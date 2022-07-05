@@ -66,12 +66,11 @@ nftTx p sp pkh =
 nftTxWith :: Value -> NftParams -> UserSpend -> PubKeyHash -> Tx
 nftTxWith mintVal p sp pkh =
   let mp = nftMintingPolicy p
-   in addMintRedeemer mp () $
-        mconcat
-          [ mintValue mp mintVal
-          , userSpend sp
-          , payToPubKey pkh (adaValue 1 <> mintVal)
-          ]
+   in mconcat
+        [ mintValue mp () mintVal
+        , userSpend sp
+        , payToPubKey pkh (adaValue 1 <> mintVal)
+        ]
 
 tn :: TokenName
 tn = TokenName "MLABS"

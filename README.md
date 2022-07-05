@@ -176,16 +176,158 @@ submitTx :: PubKeyHash -> Tx -> Run ()
 submitTx pkh tx = void $ sendTx =<< signTx pkh tx
 ```
 
-Let's create Tx and submit it. We will use example of guess hash game script. See code of contracts in the test suite
-(see `Suites.Plutus.Model.Onchain.Game`). Basic description is that anybody can create a Hash puzzle.
-We can hash something and post the hash to blockchain alongside with the prize value. Anyone who can guess
-the origin of hash can take the value.
+Let's create Tx and submit it. 
 
-For the game we need two TXs. One is to propose the puzzle and another one to solve it and get the prize.
-Let's start with posting a puzzle. For that we need to give something out of our own value and
-create UTXO that is protected by the Game contract.
+## Typed validators
 
-Here is the definition:
+You might be familiar with the notion of `TypedValdiator` from the library `plutus-ledger`
+which comes from the repo `plutus-apps`. In practice `plutus-apps` is heavy-weight and 
+often becomes obsolete. To mitigate it's shortcomings in this library we stay at the 
+plutus level. We work with types that are supported by `plutus-ledger-api` and
+don't use higher-level types from `plutus-ledger`.
+
+Nonetheless it's great to have type-safety and watch out for which datums and redeemers are
+applied to specific validators. For that the library `plutus-simple-model` uses 
+lightweight wrappers to enforce types for datums and redeemers based on scripts. 
+They are defined in the module `Plutus.Test.Model.Validator`.
+
+There are three types of typed valdiators:
+
+* typed validators for scripts: 
+
+  ```haskell
+  newtype TypedValidator datum redeemer = TypedValdiator Validator
+  ```
+
+* typed minting policies:
+
+  ```haskell
+  newtype TypedPolicy redeemer = TypedPolicy MintingPolicy
+  ```
+
+* typed stake validators:
+
+  ```haskell
+  newtype StakeValidator redeemer = TypedStake StakeValdiator
+  ```
+
+We use trick with phantom types to attach type info to the underlying script.
+Also we have type class that can extract the type info:
+
+```haskell
+class IsValidator script where
+  type DatumType    script :: Type
+  type RedeemerType script :: Type
+  toValidator :: script -> Validator
+```
+
+In `plutus-ledger` we created a special tag for example `Game` and we 
+instanciated similiar type class called `ValidatorTypes` to specify datum and redeemer tpyes.
+
+In `plutus-simple-model` we have instances of type class `IsValidator` for all typed scripts:
+`TypedValidator`, `TypedPolciy` and `TypedStake`. Instead of defining a type tag we
+just use it as type synonym for:
+
+```haskell
+type Game = TypedValidator GameDatum GameRedeemer
+```
+
+We can create validator with plutus or plutarch and wrap it to `TypedValidator`:
+
+```haskell
+gameScript :: Game
+gameScript = TypedValidator $ mkValidatorScript $$(PlutusTx.compile [|| gameContract ||])
+```
+
+We have alias `mkTypedValidator` which combines wrappers:
+
+```haskell
+gameScript = mkTypedValidator $$(PlutusTx.compile [|| gameContract ||])
+```
+
+Based on this `gameContract` should have type `BuiltinData -> BuiltinData -> BuiltinData -> ()`.
+But in plutus development we used to write typed valdiators and then wrap them `mkTypedValidator`.
+
+For plutus development there is function to make script defined in type-safe way 
+to work on raw builtin data:
+
+```haskell
+toBuiltinValidator :: (UnsafeFromData datum, UnsafeFromData redeemer) 
+  => (datum -> redeemer -> ScriptContext -> Bool)
+  -> (BuiltinData -> BuiltinData -> BuiltinData -> ()) 
+```
+
+So in plutus development we can define validator:
+
+```haskell
+gameContract :: GameDatum -> GameRedeemer -> ScriptContext -> Bool
+gameContract = ...
+
+gameScript :: Game
+gameScript = TypedValidator $ 
+  mkValidatorScript $$(PlutusTx.compile [|| toBuiltinValidator gameContract ||])
+```
+
+Similiar functions are defined for minting policies and stake valdiators:
+
+```haskell
+mkTypedPolicy :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedPolicy redeemer
+mkTypedStake  :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedStake redeemer
+
+toBuiltinPolicy :: (UnsafeFromData redeemer)
+  => (redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> ())
+
+toBuiltinStake :: (UnsafeFromData redeemer)
+  => (redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> ())
+```
+
+## Example of typed validator
+
+Let's define a game of hash guessing. 
+
+```haskell
+newtype GameDatum = GuessHash Plutus.BuiltinByteString
+  deriving (Eq)
+
+newtype GameAct = Guess Plutus.BuiltinByteString
+
+PlutusTx.unstableMakeIsData ''GameDatum
+PlutusTx.unstableMakeIsData ''GameAct```
+```
+
+We have some secret bytestring that is hashed with SHA256 and result of hashing
+is open to everybody. If user can guess the origin user can take the value of the UTXO.
+
+Let's define a contract for this logic:
+
+```haskell
+gameContract :: GameDatum -> GameAct -> ScriptContext -> Bool
+gameContract (GuessHash h) (Guess answer) _ =
+  Plutus.sha2_256 answer Plutus.== h
+```
+
+Let's compile the script and create `TypedValdiator` for testing with our library:
+
+```haskell
+import Plutus.Test.Model (toBuiltinValidator, TypedValidator, mkTypedValidator)
+
+type Game = TypedValidator GameDatum GameAct
+
+-- | The GeroGov validator script instance
+gameScript :: Game
+gameScript = mkTypedValidator $$(PlutusTx.compile [|| toBuiltinValidator gameContract ||])
+```
+
+We have to define it in separate module than the types definition otherwise GHC
+complains on mixing compilation with QuasiQuotes with derivation of `UnsafeData` instances
+with template haskell.
+
+That's it! This is our contract that we are going to test.
+
+## Testing hash game script
+
+Let's initialise the game. For that we spend a prize to the UTXO guarded
+by game validator:
 
 ```haskell
 initGame :: PubKeyHash -> Value -> BuiltinByteString -> Run ()
@@ -195,7 +337,7 @@ initGame pkh prize answer = do                   -- arguments: user, value for t
   void $ sendTx tx                               -- post TX to blockchain
 
 -- pure function ot create TX
-initGameTx :: Userspend -> Value -> BuiltinByteString -> Tx
+initGameTx :: UserSpend -> Value -> BuiltinByteString -> Tx
 ```
 
 also we can write it with `submitTx`:
@@ -217,7 +359,7 @@ spend :: PubKeyHash -> Value -> Run UserSpend
 
 For a given user and value it returns a value of `UserSpend` which holds
 a set of input UTXOs that cover the value that we want to spend, and also it has change to spend back to user.
-In the UTXO model we can not split the input if it's bigger than we need. We have to destroy it
+In the UTXO model we can not split the input. If it's bigger than we need we have to destroy it
 and create one UTXO that is given to someone else and another one that is spent back to user.
 We can think about the latter UTXO as a change.
 
@@ -249,7 +391,7 @@ initGameTx usp val answer =
 We create transaction by accumulation of monoidal parts. As Plutus Tx is monoid it's convenient
 to assemble it from tiny parts. For our task there are just two parts:
 
-* for inputs and outputs for user spend
+* for inputs and outputs of user spend
 * pay prize to the script and form right datum for it.
 
 We use function to make right part for spending the user inputs and sending change back to user:
@@ -261,11 +403,12 @@ userSpend :: UserSpend -> Tx
 To pay to script we use function:
 
 ```haskell
-payToScript :: TypedValidator a -> DatumType a -> Value -> Tx
+payToScript :: IsValidator script => script -> DatumType script -> Value -> Tx
 ```
 
 So it uses validator, datum for it (of proper type) and value to protect with the contract.
-As simple as that.
+As simple as that. Our type `Game` is `TypedValidator GameDatum GameRedeemer` and
+for typed valdiator first tpye argument corresponds to `DatumType`.
 
 Let's create another Tx to post solution to the puzzle. It seems to be more involved but don't be scary.
 We will take it bit by bit:
@@ -273,7 +416,7 @@ We will take it bit by bit:
 ```haskell
 guess :: PubKeyHash -> BuiltinByteString -> Run Bool
 guess pkh answer = do
-  utxos <- utxoAt gameAddress            -- get game script UTXO
+  utxos <- utxoAt gameScript             -- get game script UTXO
   let [(gameRef, gameOut)] = utxos       --   we know there is only one game UTXO
   mDat <- datumAt @GameDatum gameRef     -- read game's datum
   case mDat of                           -- if there is a datum
@@ -294,6 +437,7 @@ utxoAt  :: HasAddress addr => addr -> Run [(TxOutRef, TxOut)]
 datumAt :: TxOutRef -> Run (Maybe a)
 ```
 
+Our `gameScript` has instance of `HasAddress`. It is an address of underlying script.
 We should query the datum separately because `TxOut` contains only hash of it.
 Let's look at the pure function that creates TX. Again we assemble TX from monoidal parts:
 
@@ -314,7 +458,8 @@ We do two things:
 To spend script we use function:
 
 ```haskell
-spendScript :: TypedValidator a -> TxOutRef -> RedeemerType a -> DatumType a -> Tx
+spendScript :: IsValidator script 
+  => script -> TxOutRef -> RedeemerType script -> DatumType script -> Tx
 ```
 
 We provide validator definition, reference to the UTXO of the script, and its redeemer and datum type.
@@ -632,25 +777,19 @@ Enter the Box - typed `TxOut`. The `Box` is `TxOut` augmented with typed datum.
 We can read Box for the script with the function:
 
 ```haskell
-boxAt :: (HasAddress addr, FromData (DatumType a)) => addr -> Run [TxBox a]
+boxAt :: (IsValidator script) => script -> Run [TxBox script]
 ```
 
 It reads the typed box. We can use it like this: 
 
 ```haskell
-gameBox <- head <$> boxAt @GameDatum gameScript
-```
-
-There is type safe variant that derives type of the datum from the type of the `TypedValidator`:
-
-```haskell
-scriptBoxAt :: FromData (DatumType a) => TypedValidator a -> Run [TxBox a]
+gameBox <- head <$> boxAt @Game gameScript
 ```
 
 Sometimes it's useful to read the box by NFT, since often scripts are identified by unque NFTs:
 
 ```haskell
-nftAt :: FromData (DatumType a) => TypedValidator a -> Run (TxBox a)
+nftAt :: (IsValidator script) => script -> Run (TxBox script)
 nftAt tv = ...
 ```
 
@@ -667,30 +806,24 @@ data TxBox a = TxBox
 txBoxValue :: TxBox a -> Value
 ```
 
-It has everything that TxOut has, but also we have our typed datum.
+It has everything that `TxOut` has, but also we have our typed datum.
 There are functions that provide typical script usage. 
 
 We can just spend boxes as scripts:
 
 ```haskell
-spendBox ::
-  (ToData (DatumType a), ToData (RedeemerType a)) =>
-  TypedValidator a ->
-  RedeemerType a ->
-  TxBox a ->
-  Tx
+spendBox :: (IsValidator v) => 
+  v -> RedeemerType v -> TxBox v -> Tx
 spendBox tv redeemer box
 ```
 
 The most generic function is `modifyBox`:
 
 ```haskell
-modifyBox :: (ToData (DatumType a), ToData (RedeemerType a))
-  => TypedValidator a
-  -> TxBox a
-  -> RedeemerType a
-  -> (DatumType a -> DatumType a)
-  -> (Value -> Value)
+modifyBox :: (IsValidator v) 
+  => v -> TxBox v -> RedeemerType v 
+  -> (DatumType v -> DatumType v) 
+  -> (Value -> Value) 
   -> Tx
 modifyBox tv box redeemer updateDatum updateValue
 ```
@@ -699,11 +832,8 @@ It specifies how we update the box datum and value.
 Also, often we use boxes as oracles:
 
 ```haskell
-readOnlyBox :: (ToData (DatumType a), ToData (RedeemerType a))
-  => TypedValidator a
-  -> TxBox a
-  -> RedeemerType a
-  -> Tx
+readOnlyBox :: (IsValidator v)
+  => v -> TxBox v -> RedeemerType v -> Tx
 ```
 
 It keeps the datum and value the same.
@@ -719,21 +849,24 @@ append `PubKeyHash` and `ValidatorHash` as staking credential.
 For example, we can append it to the `TypeValidator` of the script:
 
 ```haskell
-payToScriptAddress (appendStakingPubKey stakingKey typedValidator) datum value
+payToScript (appendStakingPubKey stakingKey typedValidator) datum value
 ```
 
-We use more generic version of `payToScript` which pays to 
-anything convertible to address:
+That's why we use not `TypedValidator` in the payToScript and similiar functions.
+It turns out that if `v` is `IsValidator` and `HasAddress` then `AppendStaking v` 
+is also `IsValidator` and `HasAddress` and correct datum and redeemer types are set up.
+
+So we can use the same functions with scritps that have some staking info attached to them.
+Let's recall the type:
 
 ```haskell
-payToScriptAddress :: (HasAddress script, ToData datum) =>
-  script -> datum -> Value -> Tx
+payToScript :: (IsValidator v) => v -> DatumType v -> Value -> Tx
 ```
 
 The same function exists to pay to pub key hash:
 
 ```haskell
-payToPubKeyAddress :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
+payToPubKey :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
 ```
 
 ### Certificates and withdrawals of the rewards
@@ -788,14 +921,18 @@ for staking credential. For the key we require that TX is signed by the given ke
 
 ```haskell
 registerStakeKey    :: PubKeyHash -> Tx
-registerStakeScript :: ToData redeemer => StakeValidator -> redeemer -> Tx
+
+registerStakeScript :: IsValidator (TypedStake redeemer) =>
+  TypedStake redeemer -> redeemer -> Tx
 ```
 
 Also we can deregistrate the staking credential:
 
 ```haskell
 deregisterStakeKey    :: PubKeyHash -> Tx
-deregisterStakeScript :: ToData redeemer => StakeValidator -> redeemer -> Tx
+
+deregisterStakeScript :: IsValidator (TypedStake redeemer) => 
+  TypedStake redeemer -> redeemer -> Tx
 ```
 
 A staking credential can get rewards only over a pool. To associate it with pool
@@ -803,7 +940,9 @@ we use the function delegate:
 
 ```haskell
 delegateStakeKey    :: PubKeyHash -> PoolId -> Tx
-delegateStakeScript :: ToData redeemer => StakeValidator -> redeemer -> PoolId -> Tx
+
+delegateStakeScript :: IsValidator (TypedStake redeemer) => 
+  TypedStake redeemer -> redeemer -> PoolId -> Tx
 ```
 
 The type `PoolId` is just a `newtype` wrapper for `PubKeyHash`:
@@ -868,7 +1007,7 @@ getPools :: Run [PoolId]
 -- get staking credential by pool
 stakesAt :: PoolId -> Run [StakingCredential]
 
--- get rewards for a StakingCredential, PubKeyHash and StakeValidator
+-- get rewards for a StakingCredential, PubKeyHash and StakeValidator or TypedStake
 rewardAt :: HasStakingCredential cred => cred -> Run Integer
 
 -- query if pool is registered
@@ -905,7 +1044,9 @@ To get rewards we need to include in transaction this part:
 
 ```haskell
 withdrawStakeKey    :: PubKeyHash -> Integer -> Tx
-withdrawStakeScript :: ToData redeemer => StakeValidator -> redeemer -> Integer -> Tx
+
+withdrawStakeScript :: (IsValidator script) => 
+  TypedStake script -> RedeemerType script -> Integer -> Tx
 ```
 
 As with certificates we can withdraw by pub key hash (needs to be signed by that key)

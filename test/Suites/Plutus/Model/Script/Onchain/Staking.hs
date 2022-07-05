@@ -2,12 +2,11 @@ module Suites.Plutus.Model.Script.Onchain.Staking (
   stakeValidator
 ) where
 
-import           Ledger
-import           Ledger.Typed.Scripts        as Scripts
-import           Plutus.V1.Ledger.Ada        (Ada (..), fromValue)
-import           Plutus.V1.Ledger.Credential (StakingCredential)
+import           Plutus.V1.Ledger.Api
+import           Plutus.V1.Ledger.Value
 import qualified PlutusTx
 import           PlutusTx.Prelude
+import Plutus.Test.Model
 
 {-# INLINABLE mkStakingValidator #-}
 mkStakingValidator :: Address -> () -> ScriptContext -> Bool
@@ -33,11 +32,11 @@ mkStakingValidator addr () ctx = case scriptContextPurpose ctx of
       where
         f :: Integer -> TxOut -> Integer
         f n o
-            | txOutAddress o == addr = n + getLovelace (fromValue $ txOutValue o)
+            | txOutAddress o == addr = n + valueOf (txOutValue o) adaSymbol adaToken
             | otherwise              = n
 
-stakeValidator :: Address -> StakeValidator
-stakeValidator addr = mkStakeValidatorScript $
-    $$(PlutusTx.compile [|| wrapStakeValidator . mkStakingValidator ||])
+stakeValidator :: Address -> TypedStake ()
+stakeValidator addr = mkTypedStake $
+    $$(PlutusTx.compile [|| \param -> toBuiltinStake (mkStakingValidator param) ||])
     `PlutusTx.applyCode`
     PlutusTx.liftCode addr

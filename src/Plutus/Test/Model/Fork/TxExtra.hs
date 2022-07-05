@@ -4,6 +4,7 @@ module Plutus.Test.Model.Fork.TxExtra (
   Extra(..),
   Withdraw(..),
   toExtra,
+  Mint(..),
   Certificate(..),
   getCertificateValidators,
   -- * utils
@@ -11,13 +12,18 @@ module Plutus.Test.Model.Fork.TxExtra (
   liftPlutusTx,
   keyToStaking,
   scriptToStaking,
+  processMints,
 ) where
 
 import Data.Monoid
+import Data.List qualified as L
+import Data.Set qualified as S
 import Prelude
-import Ledger qualified as P
+import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Api
 import qualified Data.Map.Strict as M
+import Plutus.Test.Model.Fork.Ledger.Scripts qualified as P
+import Plutus.V1.Ledger.Tx qualified as P
 
 -- | Plutus TX with extra fields for Cardano TX fields that are missing
 -- in native Plutus TX (staking and certificates).
@@ -39,16 +45,45 @@ toExtra = Tx mempty
 
 -- | Extra fields for Cardano TX
 data Extra = Extra
-  { extra'withdraws      :: [Withdraw]
+  { extra'mints          :: [Mint]
+  , extra'withdraws      :: [Withdraw]
   , extra'certificates   :: [Certificate]
   }
   deriving (Show, Eq)
 
 instance Semigroup Extra where
-  (<>) (Extra a1 a2) (Extra b1 b2) = Extra (a1 <> b1) (a2 <> b2)
+  (<>) (Extra a1 a2 a3) (Extra b1 b2 b3) = Extra (a1 <> b1) (a2 <> b2) (a3 <> b3)
 
 instance Monoid Extra where
-  mempty = Extra [] []
+  mempty = Extra [] [] []
+
+data Mint = Mint
+  { mint'value    :: Value
+  , mint'redeemer :: Redeemer
+  , mint'policy   :: MintingPolicy
+  }
+  deriving (Show, Eq)
+
+-- | Converts mints from TxExtra to Plutus.Tx
+processMints :: Tx -> Tx
+processMints tx = tx { tx'plutus = appendMints mints $ tx'plutus tx }
+  where
+    mints = extra'mints $ tx'extra tx
+
+appendMints :: [Mint] -> P.Tx -> P.Tx
+appendMints mints ptx =
+  L.foldl' addMintRedeemer (foldMap toMintTx mints <> ptx) mints
+  where
+    toMintTx (Mint value _redeemer policy) =
+      mempty { P.txMint = value, P.txMintScripts = S.singleton policy }
+
+    addMintRedeemer resTx (Mint _value redeemer policy) =
+      maybe resTx (setRedeemer resTx . fst) $ L.find ((== policy) . snd) $ zip [0 ..] $ S.toList $ P.txMintScripts resTx
+      where
+        setRedeemer tx ix =
+          tx
+            { P.txRedeemers = M.insert (P.RedeemerPtr P.Mint ix) redeemer $ P.txRedeemers tx
+            }
 
 data Certificate = Certificate
   { certificate'dcert  :: DCert
@@ -69,7 +104,6 @@ getCertificateValidators = foldMap go
       DCertMir                              -> mempty
       where
         fromCred cred = maybe mempty (M.singleton cred) certificate'script
-
 
 -- | Stake withdrawal
 data Withdraw = Withdraw
@@ -92,3 +126,5 @@ scriptToStaking :: StakeValidator -> StakingCredential
 scriptToStaking validator = StakingHash $ ScriptCredential vh
   where
     vh = P.validatorHash $ Validator $ getStakeValidator validator
+
+

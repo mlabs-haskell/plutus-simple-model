@@ -32,7 +32,7 @@ stakingTest = do
   sp2 <- spend u1 fee2
   submitTx u1 (withdrawTx stakeScript u1 u2 sp2 fee2)
 
-withdrawTx :: StakeValidator -> PubKeyHash -> PubKeyHash -> UserSpend -> Value -> Tx
+withdrawTx :: TypedStake () -> PubKeyHash -> PubKeyHash -> UserSpend -> Value -> Tx
 withdrawTx stakeScript u1 u2 sp fee =
   mconcat
     [ userSpend sp
@@ -42,7 +42,7 @@ withdrawTx stakeScript u1 u2 sp fee =
     , withdrawStakeScript stakeScript () 50
     ]
 
-registerCredentialTx :: StakeValidator -> PoolId -> UserSpend -> Value -> Tx
+registerCredentialTx :: TypedStake () -> PoolId -> UserSpend -> Value -> Tx
 registerCredentialTx stakeScript poolId sp fee =
   mconcat
     [ userSpend sp
