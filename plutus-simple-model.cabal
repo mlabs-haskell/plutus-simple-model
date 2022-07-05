@@ -124,6 +124,8 @@ library
     Plutus.Test.Model.Pretty
     Plutus.Test.Model.Stake
     Plutus.Test.Model.Validator
+    Plutus.Test.Model.Ledger.Ada
+    Plutus.Test.Model.Ledger.Scripts
   other-modules:
     Plutus.Test.Model.Fork.Data.Aeson.Extras
     Plutus.Test.Model.Fork.CardanoAPI

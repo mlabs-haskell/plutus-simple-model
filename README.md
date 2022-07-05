@@ -1054,3 +1054,12 @@ and also by validator.
 
 To test withdraws we need to have rewards. We can easily generate rewards by 
 making transactions that contain fees granted with `payFee` function.
+
+## Ledger reexports
+
+As plutus-ledger is not available with removing plutus-apps dependency. 
+We still provide some useful functionality from it. It's placed under `Plutus.Test.Model.Ledger`:
+
+* `Ledger.Ada`  - `Ada` type wrapper and functions for it
+* `Ledger.Scripts` - useful functions to calculate hashes
+
