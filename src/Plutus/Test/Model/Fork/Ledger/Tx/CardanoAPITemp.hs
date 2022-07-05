@@ -97,7 +97,7 @@ makeTransactionBody'
 
     scripts :: [Ledger.Script (ShelleyLedgerEra AlonzoEra)]
     scripts = catMaybes
-      [ toShelleyScript <$> (scriptWitnessScript scriptwitness)
+      [ toShelleyScript <$> scriptWitnessScript scriptwitness
       | (_, AnyScriptWitness scriptwitness) <- witnesses
       ]
 
@@ -153,7 +153,7 @@ toShelleyTxOut (TxOut addr (TxOutValue MultiAssetInAlonzoEra value) txoutdata _)
     Alonzo.TxOut (toShelleyAddr addr) (toMaryValue value)
                  (toAlonzoTxOutDataHash txoutdata)
 
-toShelleyTxOut (TxOut _ _ _ _) = undefined
+toShelleyTxOut TxOut {} = undefined
 
 toAlonzoTxOutDataHash :: TxOutDatum CtxTx era
                       -> StrictMaybe (Alonzo.DataHash StandardCrypto)

@@ -94,29 +94,28 @@ instance HasStakingCredential (TypedStake redeemer) where
 {-# INLINABLE toBuiltinValidator #-}
 toBuiltinValidator :: (UnsafeFromData datum, UnsafeFromData redeemer)
   => (datum -> redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> BuiltinData -> ())
-toBuiltinValidator script =
-  \datum act ctx -> Plutus.check (
-        script (unsafeFromBuiltinData datum)
-               (unsafeFromBuiltinData act)
-               (unsafeFromBuiltinData ctx))
+toBuiltinValidator script datum act ctx =
+  Plutus.check (
+    script (unsafeFromBuiltinData datum)
+            (unsafeFromBuiltinData act)
+            (unsafeFromBuiltinData ctx))
 
 
 -- | Coverts to low-level validator representation
 {-# INLINABLE toBuiltinPolicy #-}
 toBuiltinPolicy :: (UnsafeFromData redeemer)
   => (redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> ())
-toBuiltinPolicy script =
-  \act ctx -> Plutus.check (
-        script (unsafeFromBuiltinData act)
-               (unsafeFromBuiltinData ctx))
+toBuiltinPolicy script act ctx =
+  Plutus.check (
+    script (unsafeFromBuiltinData act)
+            (unsafeFromBuiltinData ctx))
 
 -- | Coverts to low-level validator representation
 {-# INLINABLE toBuiltinStake #-}
 toBuiltinStake :: (UnsafeFromData redeemer)
   => (redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> ())
-toBuiltinStake script =
-  \act ctx -> Plutus.check (
-        script (unsafeFromBuiltinData act)
-               (unsafeFromBuiltinData ctx))
-
+toBuiltinStake script act ctx =
+  Plutus.check (
+    script (unsafeFromBuiltinData act)
+            (unsafeFromBuiltinData ctx))
 

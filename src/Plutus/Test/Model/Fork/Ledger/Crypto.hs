@@ -1,6 +1,5 @@
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE DerivingStrategies #-}
 {-# LANGUAGE DerivingVia        #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE TemplateHaskell    #-}
@@ -46,7 +45,7 @@ import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Api (LedgerBytes (LedgerBytes), TxId (TxId), fromBuiltin, toBuiltin, fromBytes)
 import Plutus.V1.Ledger.Bytes qualified as KB
 import Plutus.V1.Ledger.Crypto as Export
-import PlutusTx qualified as PlutusTx
+import PlutusTx qualified
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude qualified as PlutusTx
 import Prettyprinter (Pretty)
@@ -96,7 +95,7 @@ instance FromJSON Signature where
     JSON.withObject "Signature" $ \object -> do
       raw <- object .: "getSignature"
       bytes <- JSON.decodeByteString raw
-      pure . Signature $ PlutusTx.toBuiltin $ bytes
+      pure . Signature $ PlutusTx.toBuiltin bytes
 
 newtype PubKey = PubKey { getPubKey :: LedgerBytes }
     deriving stock (Eq, Ord, Generic)
