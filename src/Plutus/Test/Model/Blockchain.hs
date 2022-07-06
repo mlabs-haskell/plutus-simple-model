@@ -81,6 +81,7 @@ module Plutus.Test.Model.Blockchain (
   -- * Blockchain config
   readBchConfig,
   readProtocolParameters,
+  defaultAlonzoBch,
   defaultBchConfig,
   readDefaultBchConfig,
   skipLimits,
@@ -113,7 +114,7 @@ module Plutus.Test.Model.Blockchain (
 
 import Prelude
 
-import Data.Aeson (decodeFileStrict')
+import Control.Monad.Identity
 import Data.ByteString qualified as BS
 import Data.Coerce (coerce)
 import Data.Either
@@ -122,36 +123,35 @@ import Data.Function (on)
 import Data.List qualified as L
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
+import qualified Data.Map as Map
+import qualified Data.Array as Array
+import Data.Text (Text)
+
 import Data.Vector qualified as V
 import Data.Maybe
-import Data.Map.Strict qualified as Map
 import Data.Set (Set)
 import Data.Set qualified as S
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Sequence (Seq(..))
 import Data.Sequence qualified as Seq
 
+import Cardano.Api.Shelley qualified as Cardano
+
 import Cardano.Api.Shelley (
   AlonzoEra,
-  ConsensusMode (..),
-  EraHistory (..),
-  EraInMode (..),
+  -- BabbageEra,
   ExecutionUnits (..),
   NetworkId (..),
-  ProtocolParameters (..),
-  ScriptExecutionError,
   TransactionValidityError(..),
   UTxO (..),
   ReferenceScript (..),
-  evaluateTransactionBalance,
-  evaluateTransactionExecutionUnits,
   fromAlonzoData,
   serialiseToCBOR,
   toCtxUTxOTxOut,
-  txOutValueToValue,
  )
-import Cardano.Slotting.Slot (SlotNo (..))
-import Cardano.Slotting.Time (RelativeTime (..), SystemStart (..), slotLengthFromMillisec)
+
+import Cardano.Slotting.EpochInfo.Impl (fixedEpochInfo)
+import Cardano.Slotting.Time (SystemStart (..), slotLengthFromMillisec)
 import Control.Monad.State.Strict
 import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api
@@ -162,25 +162,11 @@ import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Tx (TxIn)
 import Plutus.V1.Ledger.Value (AssetClass, valueOf)
 import PlutusTx.Prelude qualified as Plutus
-import Basement.Compat.Natural
--- import qualified Ledger                as P
+import GHC.Natural
 import Plutus.Test.Model.Fork.Ledger.Scripts (validatorHash)
 import qualified Plutus.Test.Model.Fork.Ledger.Ada            as Ada
--- import Ledger.Typed.Scripts (TypedValidator, validatorAddress, ValidatorTypes(..))
--- import Ledger (PaymentPubKeyHash(..), Slot (..), SlotRange, txId)
 
-import Ouroboros.Consensus.Block.Abstract (EpochNo (..), EpochSize (..))
-import Ouroboros.Consensus.HardFork.History.EraParams
-import Ouroboros.Consensus.HardFork.History.Qry (mkInterpreter)
-import Ouroboros.Consensus.HardFork.History.Summary (
-  Bound (..),
-  EraEnd (..),
-  EraSummary (..),
-  Summary (..),
- )
-import Ouroboros.Consensus.Util.Counting (NonEmpty (..))
-
-import Cardano.Api qualified as Cardano
+import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Ledger.Hashes as Ledger (EraIndependentTxBody)
@@ -194,7 +180,13 @@ import Paths_plutus_simple_model
 import Plutus.Test.Model.Fork.CardanoAPI qualified as Fork
 import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Stake
-import PlutusCore (defaultCostModelParams)
+import Plutus.Test.Model.Blockchain.ProtocolParameters
+
+import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
+import Cardano.Ledger.Shelley.API.Wallet (evaluateTransactionBalance)
+import qualified Cardano.Ledger.Alonzo.Language as Alonzo
+import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
+import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 
 class HasAddress a where
   toAddress :: a -> Address
@@ -274,11 +266,11 @@ txStatId = P.txId . tx'plutus . txStatTx
 
 -- | Config for the blockchain.
 data BchConfig = BchConfig
-  { bchConfigCheckLimits  :: !CheckLimits             -- ^ limits check mode
-  , bchConfigLimitStats   :: !Stat                    -- ^ TX execution resources limits
-  , bchConfigProtocol     :: !ProtocolParameters      -- ^ Protocol parameters
-  , bchConfigNetworkId    :: !NetworkId               -- ^ Network id (mainnet / testnet)
-  , bchConfigSlotConfig   :: !SlotConfig              -- ^ Slot config
+  { bchConfigCheckLimits  :: !CheckLimits       -- ^ limits check mode
+  , bchConfigLimitStats   :: !Stat              -- ^ TX execution resources limits
+  , bchConfigProtocol     :: !PParams           -- ^ Protocol parameters
+  , bchConfigNetworkId    :: !NetworkId         -- ^ Network id (mainnet / testnet)
+  , bchConfigSlotConfig   :: !SlotConfig        -- ^ Slot config
   }
 
 data CheckLimits
@@ -298,26 +290,14 @@ defaultSlotConfig =
 -- | Loads default config for the blockchain. Uses presaved era history and protocol parameters.
 readDefaultBchConfig :: IO BchConfig
 readDefaultBchConfig = do
-  paramsFile <- getDataFileName "data/protocol-params.json"
+  paramsFile <- getDataFileName "data/alonzo-params.json"
   readBchConfig paramsFile
 
-setDefaultCostModel :: ProtocolParameters -> ProtocolParameters
-setDefaultCostModel params = params
-  { protocolParamCostModels = update $ protocolParamCostModels params
-  }
-  where
-    update = maybe id (\x -> const (toMap x)) defaultCostModelParams
-
-    plutus1 = Cardano.AnyPlutusScriptVersion Cardano.PlutusScriptV1
-    plutus2 = Cardano.AnyPlutusScriptVersion Cardano.PlutusScriptV2
-    toMap cost = Map.fromList
-      [ (plutus1, Cardano.CostModel cost)
-      , (plutus2, Cardano.CostModel cost)
-      ]
-
+defaultAlonzoBch :: BchConfig
+defaultAlonzoBch = defaultBchConfig defaultAlonzoParams
 
 -- | Default blockchain config.
-defaultBchConfig :: ProtocolParameters -> BchConfig
+defaultBchConfig :: PParams -> BchConfig
 defaultBchConfig params =
   BchConfig
     { bchConfigLimitStats = mainnetTxLimits
@@ -345,17 +325,12 @@ forceLimits cfg = cfg { bchConfigCheckLimits = ErrorLimits }
 -}
 readBchConfig :: FilePath -> IO BchConfig
 readBchConfig paramsFile =
-  defaultBchConfig . setDefaultCostModel <$> readProtocolParameters paramsFile
-
--- | Reads protocol parameters from file.
-readProtocolParameters :: FilePath -> IO ProtocolParameters
-readProtocolParameters file =
-  fmap fromJust $ decodeFileStrict' file
+  defaultBchConfig {- TODO . setDefaultCostModel -} <$> readAlonzoParams paramsFile
 
 -- | Stats of TX execution onchain.
 data Stat = Stat
   { statSize           :: !Integer          -- ^ TX-size in bytes
-  , statExecutionUnits :: !ExecutionUnits   -- ^ execution units of TX
+  , statExecutionUnits :: !Alonzo.ExUnits    -- ^ execution units of TX
   }
   deriving (Show, Eq)
 
@@ -380,8 +355,8 @@ toStatPercent maxStat stat =
   StatPercent
     { statPercentSize = percent statSize
     , statPercentExecutionUnits = PercentExecutionUnits
-        { percentExecutionSteps  = percentNat executionSteps
-        , percentExecutionMemory = percentNat executionMemory
+        { percentExecutionSteps  = percentNat (\(Alonzo.ExUnits _ steps) -> steps)
+        , percentExecutionMemory = percentNat (\(Alonzo.ExUnits mem _)   -> mem)
         }
     }
   where
@@ -475,8 +450,6 @@ data FailReason
     FailToReadUtxo
   | -- | failed to convert plutus TX to cardano TX. TX is malformed.
     FailToCardano Cardano.ToCardanoError
-  | -- | execution of the script failure
-    TxScriptFail [ScriptExecutionError]
   | -- | invalid range. TX is submitted with current slot not in valid range
     TxInvalidRange Slot SlotRange
     -- | invalid reward for staking credential, expected and actual values for stake at the moment of reward
@@ -769,18 +742,79 @@ sendSingleTx (Tx extra tx) =
 
     withTxBody cont = do
       cfg <- gets bchConfig
-      case Fork.toCardanoTxBody (fmap PaymentPubKeyHash pkhs) (Just $ bchConfigProtocol cfg) (bchConfigNetworkId cfg) (Tx extra tx) of
+      case Fork.toCardanoTxBody (fmap PaymentPubKeyHash pkhs) Nothing {- <= TODO -} (bchConfigNetworkId cfg) (Tx extra tx) of
         Right txBody -> cont (bchConfigProtocol cfg) txBody
         Left err -> leftFail $ FailToCardano err
 
-    withCheckBalance protocol utxo txBody cont
+    withCheckBalance protocol utxo (Cardano.ShelleyTxBody _era txBody _ _ _ _) cont
       | balanceIsOk = cont
       | otherwise = leftFail NotBalancedTx
       where
-        balanceIsOk = txOutValueToValue (evaluateTransactionBalance protocol S.empty utxo txBody) == mempty
+        balanceIsOk =
+          case protocol of
+            AlonzoParams  params -> alonzoBalance params == mempty
+            BabbageParams _params -> undefined -- babbageBalance params == mempty
 
+        alonzoBalance params = evaluateTransactionBalance params (Cardano.toLedgerUTxO Cardano.ShelleyBasedEraAlonzo utxo) isNewPool txBody
+        -- babbageBalance params = evaluateTransactionBalance params (Cardano.toLedgerUTxO Cardano.ShelleyBasedEraBabbage utxo) isNewPool txBody
+
+        -- | TODO: use pool ids info
+        -- isNewPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
+        isNewPool _kh = True -- StakePoolKeyHash kh `S.notMember` poolids
+    withCheckBalance _protocol _utxo _ _cont = leftFail $ GenericFail "Pre Alonzo Era"
+
+    withCheckUnits ::
+         PParams
+      -> UTxO AlonzoEra
+      -> Cardano.TxBody AlonzoEra
+      -> (Alonzo.ExUnits -> Run (Either FailReason Stat))
+      -> Run (Either FailReason Stat)
     withCheckUnits protocol utxo txBody cont = do
       slotCfg <- gets (bchConfigSlotConfig . bchConfig)
+      let cardanoSystemStart = SystemStart $ posixSecondsToUTCTime $ fromInteger $ (`div` 1000) $ getPOSIXTime $ scSlotZeroTime slotCfg
+          epochSize = EpochSize 1
+          slotLength = slotLengthFromMillisec $ scSlotLength slotCfg
+          history = fixedEpochInfo @(Either Text) epochSize slotLength
+      case protocol of
+        AlonzoParams params   -> alonzoCheck cardanoSystemStart history params
+        BabbageParams _params -> undefined -- TODO
+      where
+        foldErrors = lefts
+        foldCost = foldMap snd . rights
+
+        alonzoCheck systemStart history params =
+          case Cardano.makeSignedTransaction [] txBody of
+            Cardano.ShelleyTx era tx' ->
+              case era of
+                Cardano.ShelleyBasedEraAlonzo  -> evalAlonzo systemStart history params tx'
+
+        evalAlonzo systemStart history params ledgerTx = case
+          evaluateTransactionExecutionUnits
+            params
+            ledgerTx
+            (Cardano.toLedgerUTxO Cardano.ShelleyBasedEraAlonzo utxo)
+            history
+            systemStart
+            (toAlonzoCostModels $ Alonzo._costmdls params)
+          of
+            Left err -> leftFail $ GenericFail $ show err
+            Right res ->
+              let res' = (\(k, v) -> fmap (k,) v) <$> M.toList res
+                  errs = foldErrors res'
+                  cost = foldCost res'
+              in case errs of
+                    [] -> cont cost
+                    _ -> leftFail $ GenericFail $ unlines $ fmap show errs
+
+        toAlonzoCostModels :: Alonzo.CostModels
+                            -> Array.Array Alonzo.Language Alonzo.CostModel
+        toAlonzoCostModels (Alonzo.CostModels costmodels) =
+          Array.array
+            (minBound, maxBound)
+            [ (lang, costmodel)
+            | (lang, costmodel) <- Map.toList costmodels ]
+
+  {-
       let cardanoSystemStart = SystemStart $ posixSecondsToUTCTime $ fromInteger $ (`div` 1000) $ getPOSIXTime $ scSlotZeroTime slotCfg
           -- see EraSummary: http://localhost:8080/file//nix/store/qix63dnd40m23iap66184b4vib426r66-ouroboros-consensus-lib-ouroboros-consensus-0.1.0.0-haddock-doc/share/doc/ouroboros-consensus/html/Ouroboros-Consensus-HardFork-History-Summary.html#t:EraSummary
           eStart = Bound (RelativeTime 0) (SlotNo 0) (EpochNo 0)
@@ -800,6 +834,7 @@ sendSingleTx (Tx extra tx) =
         getExecUnits sysStart eraHistory = evaluateTransactionExecutionUnits AlonzoEraInCardanoMode sysStart eraHistory protocol utxo txBody
         foldErrors = lefts
         foldCost = foldMap snd . rights
+-}
 
     withCheckTxLimits stat cont = do
       maxLimits <- gets (bchConfigLimitStats . bchConfig)
@@ -821,8 +856,8 @@ sendSingleTx (Tx extra tx) =
 compareLimits :: Stat -> Stat -> [LimitOverflow]
 compareLimits maxLimits stat = catMaybes
   [ cmp TxSizeError statSize
-  , cmp ExMemError (naturalToInteger . executionMemory . statExecutionUnits)
-  , cmp ExStepError (naturalToInteger . executionSteps . statExecutionUnits)
+  , cmp ExMemError (naturalToInteger  . (\(Alonzo.ExUnits mem _)   -> mem)   . statExecutionUnits)
+  , cmp ExStepError (naturalToInteger . (\(Alonzo.ExUnits _ steps) -> steps) . statExecutionUnits)
   ]
   where
     cmp cons getter
@@ -994,10 +1029,10 @@ mainnetTxLimits :: Stat
 mainnetTxLimits =
   Stat
     { statSize  = 16 * 1024
-    , statExecutionUnits = ExecutionUnits
-        { executionMemory = 14_000_000
-        , executionSteps = 10_000_000_000
-        }
+    , statExecutionUnits =
+        let memory = 14_000_000
+            steps  = 10_000_000_000
+        in Alonzo.ExUnits memory steps
     }
 
 -- | Limits for Block-execution resources resources on Mainnet
@@ -1005,10 +1040,10 @@ mainnetBlockLimits :: Stat
 mainnetBlockLimits =
   Stat
     { statSize = 65 * 1024
-    , statExecutionUnits = ExecutionUnits
-      { executionMemory = 50_000_000
-      , executionSteps = 40_000_000_000
-      }
+    , statExecutionUnits =
+        let memory = 50_000_000
+            steps = 40_000_000_000
+        in Alonzo.ExUnits memory steps
     }
 
 -- | Limits for TX-execution resources resources on Testnet

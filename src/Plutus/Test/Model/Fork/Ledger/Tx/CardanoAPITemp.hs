@@ -20,7 +20,6 @@ import Cardano.Api
 import Cardano.Api.Shelley hiding (toShelleyTxOut)
 import Cardano.Ledger.BaseTypes (StrictMaybe (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Ouroboros.Consensus.Shelley.Eras (StandardAlonzo)
 
 import Cardano.Ledger.Core qualified as Ledger
 
@@ -101,7 +100,6 @@ makeTransactionBody'
       | (_, AnyScriptWitness scriptwitness) <- witnesses
       ]
 
-    datums :: Alonzo.TxDats StandardAlonzo
     datums =
       Alonzo.TxDats $
         Map.fromList
@@ -118,7 +116,6 @@ makeTransactionBody'
                         _ _ _ (ScriptDatumForTxIn d) _ _)) <- witnesses
               ]
 
-    redeemers :: Alonzo.Redeemers StandardAlonzo
     redeemers =
       Alonzo.Redeemers $
         Map.fromList

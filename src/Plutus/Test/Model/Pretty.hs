@@ -184,8 +184,6 @@ instance Pretty FailReason where
     NotBalancedTx -> "Not balanced transaction"
     FailToReadUtxo -> "UTXO not found"
     FailToCardano err -> "Failed to convert transaction from Plutus to Cardano:" <+> pretty err
-    TxScriptFail errs -> "Script execution error:" <+>
-      hsep (punctuate comma $ fmap (pretty . displayError) errs)
     TxInvalidRange _ range -> "Not in valid range" <+> pretty range
     TxLimitError ovfs _ -> hsep (punctuate comma (fmap ppOverflow ovfs))
     TxInvalidWithdraw err -> pretty err

@@ -16,6 +16,7 @@ tested-with:        GHC ==8.10.4
 extra-source-files: README.md
 data-files:
   data/protocol-params.json
+  data/alonzo-params.json
 
 common lang
   default-language: Haskell2010
@@ -68,9 +69,9 @@ common deps
   build-depends:
     , base                     ^>=4.14
     , aeson
+    , array
     , base16-bytestring
     , base58-bytestring
-    , basement
     , bytestring
     , data-default
     , hashable
@@ -83,17 +84,15 @@ common deps
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
+    , cardano-ledger-babbage
     , cardano-slotting
     , cborg
     , cryptonite
     , containers
-    , lens
     , memory
     , mtl
     , newtype-generics
     , serialise
-    , ouroboros-consensus
-    , ouroboros-consensus-shelley
     , prettyprinter
     , plutus-core
     , plutus-ledger-api
@@ -119,6 +118,7 @@ library
   exposed-modules:
     Plutus.Test.Model
     Plutus.Test.Model.Blockchain
+    Plutus.Test.Model.Blockchain.ProtocolParameters
     Plutus.Test.Model.Contract
     Plutus.Test.Model.Mint
     Plutus.Test.Model.Pretty
