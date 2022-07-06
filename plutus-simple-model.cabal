@@ -13,8 +13,8 @@ copyright:          TODO
 category:           TODO
 build-type:         Simple
 tested-with:        GHC ==8.10.4
-extra-source-files: README.md
-data-files:
+extra-source-files:
+  README.md
   data/protocol-params.json
   data/alonzo-params.json
 
