@@ -80,7 +80,6 @@ module Plutus.Test.Model.Blockchain (
 
   -- * Blockchain config
   readBchConfig,
-  readProtocolParameters,
   defaultAlonzoBch,
   defaultBchConfig,
   readDefaultBchConfig,

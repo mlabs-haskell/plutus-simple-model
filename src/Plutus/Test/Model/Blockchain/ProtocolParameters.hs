@@ -2,9 +2,6 @@ module Plutus.Test.Model.Blockchain.ProtocolParameters(
   PParams(..),
   readAlonzoParams,
   readBabbageParams,
-  getAlonzoParams,
-  setDefaultCostModel,
-  readProtocolParameters,
   defaultAlonzoParams,
 ) where
 
@@ -16,26 +13,19 @@ import Data.Aeson
 import Data.Map.Strict qualified as Map
 
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Api (BabbageEra)
-import Cardano.Api.Shelley (ProtocolParameters(..))
-import Cardano.Api qualified as Cardano
 import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
 import Cardano.Ledger.Babbage.PParams qualified as Babbage
-import PlutusCore (defaultCostModelParams)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.BaseTypes qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Alonzo.Language
 
+import PlutusCore (defaultCostModelParams)
+
 data PParams
   = AlonzoParams (Alonzo.PParams (AlonzoEra StandardCrypto))
-  | BabbageParams (Babbage.PParams BabbageEra)
-
-getAlonzoParams :: PParams -> Maybe (Alonzo.PParams (AlonzoEra StandardCrypto))
-getAlonzoParams = \case
-  AlonzoParams params -> Just params
-  _                   -> Nothing
+  | BabbageParams (Babbage.PParams ())
 
 -- | Reads protocol parameters from file.
 readBabbageParams :: FilePath -> IO PParams
@@ -48,27 +38,13 @@ readAlonzoParams = fmap AlonzoParams . readJson
 readJson :: (FromJSON a) => FilePath -> IO a
 readJson = fmap fromJust . decodeFileStrict'
 
-setDefaultCostModel :: ProtocolParameters -> ProtocolParameters
-setDefaultCostModel params = params
-  { protocolParamCostModels = update $ protocolParamCostModels params
-  }
-  where
-    update = maybe id (\x -> const (toMap x)) defaultCostModelParams
-
-    plutus1 = Cardano.AnyPlutusScriptVersion Cardano.PlutusScriptV1
-    plutus2 = Cardano.AnyPlutusScriptVersion Cardano.PlutusScriptV2
-    toMap cost = Map.fromList
-      [ (plutus1, Cardano.CostModel cost)
-      , (plutus2, Cardano.CostModel cost)
-      ]
-
--- | Reads protocol parameters from file.
-readProtocolParameters :: FilePath -> IO ProtocolParameters
-readProtocolParameters file =
-  fmap fromJust $ decodeFileStrict' file
-
 rational :: Alonzo.BoundedRational r => Rational -> r
 rational = fromJust . Alonzo.boundRational
+
+-----------------------------------------------------------------------
+-- default params
+
+-- Alonzo
 
 defaultAlonzoParams :: PParams
 defaultAlonzoParams = AlonzoParams $ Alonzo.PParams
@@ -108,4 +84,5 @@ defaultCostModels = Alonzo.CostModels $
     toCostModel lang = (lang, fromRight (error "Cost model apply fail") $ Alonzo.mkCostModel lang cost)
     cost = fromJust defaultCostModelParams
 
+-- Babbage (TODO)
 
