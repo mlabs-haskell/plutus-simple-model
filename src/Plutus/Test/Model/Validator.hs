@@ -26,10 +26,7 @@ import Plutus.Test.Model.Blockchain (
   HasStakingCredential(..),
   )
 import PlutusTx.Prelude qualified as Plutus
--- import Plutus.Test.Model.Fork.Ledger.Scripts qualified as Fork
-
-scriptCurrencySymbol' :: MintingPolicy -> CurrencySymbol
-scriptCurrencySymbol' = undefined
+import Plutus.Test.Model.Fork.Ledger.Scripts qualified as Fork
 
 class (HasAddress script, ToData (DatumType script), FromData (DatumType script), ToData (RedeemerType script), FromData (RedeemerType script))
   => IsValidator script where
@@ -66,7 +63,7 @@ newtype TypedPolicy redeemer = TypedPolicy
   { unTypedPolicy :: MintingPolicy }
 
 scriptCurrencySymbol :: TypedPolicy a -> CurrencySymbol
-scriptCurrencySymbol (TypedPolicy script) = scriptCurrencySymbol' script
+scriptCurrencySymbol (TypedPolicy script) = Fork.scriptCurrencySymbol script
 
 instance (ToData redeemer, FromData redeemer) => HasAddress (TypedPolicy redeemer) where
   toAddress = toAddress . toValidator
