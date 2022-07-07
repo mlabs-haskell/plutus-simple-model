@@ -110,7 +110,7 @@ import Data.Sequence qualified as Seq (drop, length)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
 
-import Plutus.Test.Model.Fork.Ledger.Scripts
+-- import Plutus.Test.Model.Fork.Ledger.Scripts
 import Plutus.Test.Model.Fork.Ledger.Crypto (pubKeyHash)
 import Plutus.Test.Model.Fork.Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
 import Plutus.V1.Ledger.Address
@@ -128,6 +128,9 @@ import Plutus.Test.Model.Stake qualified as Stake
 import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Test.Model.Validator as X
+
+datumHash :: Datum -> DatumHash
+datumHash = undefined
 
 ------------------------------------------------------------------------
 -- modify blockchain

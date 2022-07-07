@@ -25,6 +25,7 @@ import qualified Data.Map.Strict as M
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
 
+
 -- | Plutus TX with extra fields for Cardano TX fields that are missing
 -- in native Plutus TX (staking and certificates).
 data Tx = Tx

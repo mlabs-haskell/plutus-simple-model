@@ -2,6 +2,10 @@
 
 module Plutus.Test.Model.Fork.Ledger.Scripts
     (
+    datumHash,
+    validatorHash,
+    scriptCurrencySymbol,
+    {-
     -- * Script data hashes
       PV1.Datum
     , PV1.DatumHash
@@ -23,19 +27,33 @@ module Plutus.Test.Model.Fork.Ledger.Scripts
     , scriptHash
     -- * Script utilities
     , scriptCurrencySymbol
+  -}
     ) where
 
 import Prelude
 
-import Cardano.Api qualified as Script
-import Cardano.Api.Shelley qualified as Script
-import Codec.Serialise (serialise)
-import Data.ByteString.Lazy qualified as BSL
-import Data.ByteString.Short qualified as SBS
+-- import Cardano.Api qualified as Script
+-- import Cardano.Api.Shelley qualified as Script
+-- import Codec.Serialise (serialise)
+-- import Data.ByteString.Lazy qualified as BSL
+-- import Data.ByteString.Short qualified as SBS
 import Plutus.V1.Ledger.Api qualified as PV1
-import Plutus.V1.Ledger.Scripts qualified as PV1
-import PlutusTx.Builtins qualified as Builtins
+-- import Plutus.V1.Ledger.Scripts qualified as PV1
+-- import PlutusTx.Builtins qualified as Builtins
 
+datumHash :: PV1.Datum -> PV1.DatumHash
+datumHash = undefined
+
+-- | Hash a 'PV1.Validator' script.
+validatorHash :: PV1.Validator -> PV1.ValidatorHash
+validatorHash = undefined
+
+{-# INLINABLE scriptCurrencySymbol #-}
+-- | The 'CurrencySymbol' of a 'MintingPolicy'.
+scriptCurrencySymbol :: PV1.MintingPolicy -> PV1.CurrencySymbol
+scriptCurrencySymbol = undefined
+
+{-
 -- | Hash a 'PV1.Datum builtin data.
 datumHash :: PV1.Datum -> PV1.DatumHash
 datumHash = PV1.DatumHash . dataHash . PV1.getDatum
@@ -110,3 +128,4 @@ toCardanoApiScript =
 scriptCurrencySymbol :: PV1.MintingPolicy -> PV1.CurrencySymbol
 scriptCurrencySymbol scrpt =
     let (PV1.MintingPolicyHash hsh) = mintingPolicyHash scrpt in PV1.CurrencySymbol hsh
+  -}

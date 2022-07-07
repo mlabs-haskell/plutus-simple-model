@@ -5,7 +5,6 @@ module Plutus.Test.Model.Mint(
   fakeValue,
 ) where
 
-import Prelude ()
 import PlutusTx.Prelude qualified as PlutusTx
 import PlutusTx qualified
 import PlutusTx.Prelude
