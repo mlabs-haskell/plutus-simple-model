@@ -176,6 +176,7 @@
                   allow-newer:
                       *:aeson
                     , size-based:template-haskell
+
                   constraints:
                       aeson >= 2
                     , hedgehog >= 1.1

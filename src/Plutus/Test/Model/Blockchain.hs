@@ -144,7 +144,6 @@ import Plutus.V1.Ledger.Interval ()
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
-import Plutus.V1.Ledger.Tx (TxIn)
 import Plutus.V1.Ledger.Value (AssetClass, valueOf)
 import PlutusTx.Prelude qualified as Plutus
 import GHC.Natural
@@ -172,7 +171,7 @@ import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import Plutus.Test.Model.Fork.Cardano.Alonzo (toAlonzoTx)
-import Plutus.Test.Model.Fork.Cardano.Alonzo qualified as Alonzo (Era, fromTxId)
+import Plutus.Test.Model.Fork.Cardano.Alonzo qualified as Alonzo (Era, fromTxId, toUtxo)
 import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
@@ -670,7 +669,7 @@ sendSingleTx (Tx extra tx) =
     withCheckRange $
       withTxBody $ \protocol txBody -> do
         let tid = Alonzo.fromTxId $ Ledger.txid (Alonzo.body txBody)
-        withUTxO tid $ \utxo ->
+        withUTxO $ \utxo ->
           withCheckBalance protocol utxo txBody $
             withCheckUnits protocol utxo txBody $ \cost -> do
               let txSize = fromIntegral $ BS.length $ CBOR.serialize' txBody
@@ -713,8 +712,8 @@ sendSingleTx (Tx extra tx) =
         then cont
         else leftFail $ TxInvalidRange curSlot (P.txValidRange tx)
 
-    withUTxO tid cont = do
-      mUtxo <- getUTxO tid tx
+    withUTxO cont = do
+      mUtxo <- getUTxO tx
       case mUtxo of
         Just (Right utxo) -> cont utxo
         Just (Left err) -> leftFail $ FailToCardano err
@@ -819,47 +818,17 @@ compareLimits maxLimits stat = catMaybes
 
 
 -- | Read UTxO relevant to transaction
-getUTxO :: TxId -> P.Tx -> Run (Maybe (Either String (Ledger.UTxO Alonzo.Era)))
-getUTxO _tid tx = do
+getUTxO :: P.Tx -> Run (Maybe (Either String (Ledger.UTxO Alonzo.Era)))
+getUTxO tx = do
   networkId <- bchConfigNetworkId <$> gets bchConfig
   mOuts <- sequence <$> mapM (getTxOut . P.txInRef) ins
-  pure $ fmap (toUtxo networkId . zip ins) mOuts
+  pure $ fmap (Alonzo.toUtxo networkId . zip (P.txInRef <$> ins)) mOuts
   where
     ins = S.toList $ P.txInputs tx
-    outs = zip [(0 :: Integer)..] $ P.txOutputs tx
-{-
-    fromOutTxOut :: Cardano.NetworkId -> (Integer, TxOut) -> Either Cardano.ToCardanoError (Alonzo.TxIn, Alonzo.TxOut )
-    fromOutTxOut networkId (ix, tout) = do
-      cin <- Cardano.toCardanoTxIn $ TxOutRef tid ix
-      cout <- fmap toCtxUTxOTxOut $ Cardano.TxOut
-                <$> Cardano.toCardanoAddressInEra networkId (txOutAddress tout)
-                <*> toCardanoTxOutValue (txOutValue tout)
-                <*> pure (fromMaybe Cardano.TxOutDatumNone $ do
-                       dh <- txOutDatumHash tout
-                       dat <- M.lookup dh (P.txData tx)
-                       pure $ Cardano.TxOutDatumInTx Cardano.ScriptDataInAlonzoEra (toScriptData dat))
-                <*> pure ReferenceScriptNone
-      pure (cin, cout)
 
-    fromTxOut :: Cardano.NetworkId -> () ->  Either Cardano.ToCardanoError ()
-    fromTxOut networkId (tin, tout) = do
-      cin <- Cardano.toCardanoTxIn $ P.txInRef tin
-      cout <- fmap toCtxUTxOTxOut $ Cardano.toCardanoTxOut networkId (Fork.lookupDatum $ P.txData tx) tout
-      pure (cin, cout)
--}
-    fromOutTxOut = undefined
-    fromTxOut = undefined
-
-    toUtxo :: Network -> [(TxIn, TxOut)] -> Either String (Ledger.UTxO Alonzo.Era)
-    toUtxo networkId xs = Ledger.UTxO . M.fromList <$> (mappend <$> mapM (fromTxOut networkId) xs <*> mapM (fromOutTxOut networkId) outs)
 {-
 toScriptData :: ToData a => a -> Cardano.ScriptData
 toScriptData d = fromAlonzoData $ Alonzo.Data $ toData d
-
-toCardanoTxOutValue :: Value -> Either Cardano.ToCardanoError (Cardano.TxOutValue Cardano.AlonzoEra)
-toCardanoTxOutValue value = do
-    when (Ada.fromValue value == mempty) (Left Cardano.OutputHasZeroAda)
-    Cardano.TxOutValue Cardano.MultiAssetInAlonzoEra <$> Cardano.toCardanoValue value
 -}
 
 -- | Reads TxOut by its reference.
