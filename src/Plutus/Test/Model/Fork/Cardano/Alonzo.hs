@@ -12,11 +12,14 @@ module Plutus.Test.Model.Fork.Cardano.Alonzo(
 import Prelude
 import Data.List qualified as L
 import Data.Map qualified as Map
+import Data.Sequence.Strict qualified as Seq
+import Data.Set qualified as Set
 import Data.Bifunctor
 import Data.ByteString qualified as BS
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.TxIn qualified as C
 import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Coin qualified as C
 import Cardano.Ledger.Alonzo (AlonzoEra, PParams)
 import Cardano.Ledger.Alonzo.Tx qualified as C
 import Cardano.Ledger.Alonzo.TxBody qualified as C
@@ -29,13 +32,19 @@ import Cardano.Ledger.Slot qualified as C
 import Cardano.Ledger.Compactible qualified as C
 import Cardano.Ledger.CompactAddress qualified as C
 import Cardano.Ledger.Shelley.UTxO qualified as C
+import Cardano.Ledger.Shelley.API.Types qualified as C (StrictMaybe(..))
+import Cardano.Ledger.Shelley.TxBody qualified as C (DCert(..), Wdrl(..))
+import Cardano.Ledger.ShelleyMA.Timelocks qualified as C
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Plutus.Test.Model.Fork.TxExtra qualified as P
 import Plutus.V1.Ledger.Api qualified as P
+import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Builtins.Internal qualified as P
 import PlutusTx.Builtins qualified as PlutusTx
-
+import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
+import  Plutus.Test.Model.Fork.Ledger.Crypto qualified as P
+import  Plutus.Test.Model.Fork.Ledger.Slot qualified as P
 
 import Cardano.Ledger.SafeHash
 import Cardano.Crypto.Hash.Class
@@ -43,10 +52,111 @@ import Data.ByteString.Short (fromShort, toShort)
 
 type Era = AlonzoEra StandardCrypto
 type ToCardanoError = String
-type To f = Either ToCardanoError (f Era)
 
-toAlonzoTx :: PParams Era -> P.Tx -> To C.ValidatedTx
-toAlonzoTx _params _tx = undefined
+toAlonzoTx :: Network -> PParams Era -> P.Tx -> Either ToCardanoError (C.ValidatedTx Era)
+toAlonzoTx network _params tx = do
+  body <- toBody
+  wits <- toWits
+  isValid <- toIsValid
+  auxData <- toAuxData
+  pure $ C.ValidatedTx body wits isValid auxData
+  where
+    toBody = do
+      inputs <- getInputsBy Plutus.txInputs tx
+      collateral <- getInputsBy Plutus.txCollateral tx
+      outputs <- getOutputs tx
+      let txcerts = getDCerts tx
+          txwdrls = getWdrl tx
+      let txfee = getFee tx
+          txvldt = getInterval tx
+      let txUpdates = C.SNothing
+      reqSignerHashes <- getSignatories tx
+      mint <- getMint tx
+      scriptIntegrityHash <- undefined
+      adHash <- undefined
+      let txnetworkid = C.SJust network
+      pure $
+        C.TxBody
+          inputs
+          collateral
+          outputs
+          txcerts
+          txwdrls
+          txfee
+          txvldt
+          txUpdates
+          reqSignerHashes
+          mint
+          scriptIntegrityHash
+          adHash
+          txnetworkid
+
+    getInputsBy extract =
+        fmap Set.fromList
+      . mapM toTxIn
+      . fmap P.txInRef
+      . Set.toList
+      . extract
+      . P.tx'plutus
+
+    getOutputs =
+        fmap Seq.fromList
+      . mapM (toTxOut network)
+      . Plutus.txOutputs
+      . P.tx'plutus
+
+    getFee = C.Coin . getLovelace . Plutus.txFee . P.tx'plutus
+
+    getInterval = toInterval . Plutus.txValidRange . P.tx'plutus
+
+    getSignatories =
+        fmap Set.fromList
+      . mapM (toPubKeyHash . P.pubKeyHash)
+      . Map.keys
+      . Plutus.txSignatures
+      . P.tx'plutus
+
+    getMint = toValue . Plutus.txMint . P.tx'plutus
+
+    getWdrl =
+        toWdrl
+      . P.extra'withdraws
+      . P.tx'extra
+
+    getDCerts =
+        Seq.fromList
+      . fmap (toDCert . P.certificate'dcert)
+      . P.extra'certificates
+      . P.tx'extra
+
+    toWits = undefined
+
+    toIsValid = undefined
+
+    toAuxData = undefined
+
+    getLovelace v = Value.valueOf v Value.adaSymbol Value.adaToken
+
+-- | TODO: interpret closures
+toInterval :: P.SlotRange -> C.ValidityInterval
+toInterval (P.Interval (P.LowerBound from _) (P.UpperBound to _)) = C.ValidityInterval before after
+  where
+    before = case from of
+      P.Finite a -> C.SJust (toSlot a)
+      _        -> C.SNothing
+
+    after = case to of
+      P.Finite a -> C.SJust  (toSlot a)
+      _        -> C.SNothing
+
+toSlot :: P.Slot -> C.SlotNo
+toSlot (P.Slot n) = C.SlotNo (fromInteger n)
+
+toWdrl :: [P.Withdraw] -> C.Wdrl StandardCrypto
+toWdrl = undefined
+
+toDCert :: P.DCert -> C.DCert StandardCrypto
+toDCert = undefined
 
 fromTxId :: C.TxId StandardCrypto -> P.TxId
 fromTxId (C.TxId safeHash) =

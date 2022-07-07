@@ -723,7 +723,7 @@ sendSingleTx (Tx extra tx) =
       cfg <- gets bchConfig
       case bchConfigProtocol cfg of
         AlonzoParams params   -> do
-          case toAlonzoTx params (Tx extra tx) of
+          case toAlonzoTx (bchConfigNetworkId cfg) params (Tx extra tx) of
             Right txBody -> cont params txBody
             Left err -> leftFail $ GenericFail err
 
