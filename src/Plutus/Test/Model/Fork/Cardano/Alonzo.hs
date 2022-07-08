@@ -15,6 +15,8 @@ import Data.Map qualified as Map
 import Data.Sequence.Strict qualified as Seq
 import Data.Set qualified as Set
 import Data.Bifunctor
+import Data.Default (def)
+import Cardano.Crypto.Hash.Class qualified as C
 import Data.ByteString qualified as BS
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.TxIn qualified as C
@@ -32,9 +34,12 @@ import Cardano.Ledger.Slot qualified as C
 import Cardano.Ledger.Compactible qualified as C
 import Cardano.Ledger.CompactAddress qualified as C
 import Cardano.Ledger.Shelley.UTxO qualified as C
+import Cardano.Ledger.Shelley.API.Types qualified as Shelley (Hash)
 import Cardano.Ledger.Shelley.API.Types qualified as C (StrictMaybe(..))
 import Cardano.Ledger.Shelley.TxBody qualified as C (DCert(..), Wdrl(..))
 import Cardano.Ledger.ShelleyMA.Timelocks qualified as C
+import Cardano.Ledger.Shelley.API.Types qualified as C (PoolParams(..), PoolCert(..), DelegCert(..), Delegation(..))
+import Cardano.Ledger.Alonzo.PParams qualified as C
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Plutus.Test.Model.Fork.TxExtra qualified as P
 import Plutus.V1.Ledger.Api qualified as P
@@ -54,27 +59,27 @@ type Era = AlonzoEra StandardCrypto
 type ToCardanoError = String
 
 toAlonzoTx :: Network -> PParams Era -> P.Tx -> Either ToCardanoError (C.ValidatedTx Era)
-toAlonzoTx network _params tx = do
+toAlonzoTx network params tx = do
   body <- toBody
   wits <- toWits
-  isValid <- toIsValid
-  auxData <- toAuxData
+  let isValid = C.IsValid True -- TODO or maybe False
+      auxData = C.SNothing
   pure $ C.ValidatedTx body wits isValid auxData
   where
     toBody = do
       inputs <- getInputsBy Plutus.txInputs tx
       collateral <- getInputsBy Plutus.txCollateral tx
       outputs <- getOutputs tx
-      let txcerts = getDCerts tx
-          txwdrls = getWdrl tx
+      txcerts <- getDCerts tx
+      txwdrls <- getWdrl tx
       let txfee = getFee tx
           txvldt = getInterval tx
-      let txUpdates = C.SNothing
+          txUpdates = C.SNothing
       reqSignerHashes <- getSignatories tx
       mint <- getMint tx
-      scriptIntegrityHash <- undefined
-      adHash <- undefined
-      let txnetworkid = C.SJust network
+      let scriptIntegrityHash = C.SNothing
+          adHash = C.SNothing
+          txnetworkid = C.SJust network
       pure $
         C.TxBody
           inputs
@@ -119,21 +124,18 @@ toAlonzoTx network _params tx = do
     getMint = toValue . Plutus.txMint . P.tx'plutus
 
     getWdrl =
-        toWdrl
+        toWdrl network
       . P.extra'withdraws
       . P.tx'extra
 
     getDCerts =
-        Seq.fromList
-      . fmap (toDCert . P.certificate'dcert)
+        fmap Seq.fromList
+      . mapM (toDCert network params . P.certificate'dcert)
       . P.extra'certificates
       . P.tx'extra
 
     toWits = undefined
 
-    toIsValid = undefined
-
-    toAuxData = undefined
 
     getLovelace v = Value.valueOf v Value.adaSymbol Value.adaToken
 
@@ -152,11 +154,41 @@ toInterval (P.Interval (P.LowerBound from _) (P.UpperBound to _)) = C.ValidityIn
 toSlot :: P.Slot -> C.SlotNo
 toSlot (P.Slot n) = C.SlotNo (fromInteger n)
 
-toWdrl :: [P.Withdraw] -> C.Wdrl StandardCrypto
-toWdrl = undefined
+toWdrl :: Network -> [P.Withdraw] -> Either ToCardanoError (C.Wdrl StandardCrypto)
+toWdrl network ws = C.Wdrl . Map.fromList <$> mapM to ws
+  where
+    to (P.Withdraw scred amount _) =
+      case scred of
+        P.StakingHash cred -> (\x -> (C.RewardAcnt network x, C.Coin amount)) <$> toCredential cred
+        _                  -> Left "Not supported staking cred in withdraw"
 
-toDCert :: P.DCert -> C.DCert StandardCrypto
-toDCert = undefined
+toDCert :: Network -> PParams Era -> P.DCert -> Either ToCardanoError (C.DCert StandardCrypto)
+toDCert network params = \case
+  P.DCertDelegRegKey (P.StakingHash stakingCredential) -> C.DCertDeleg . C.RegKey <$> toCredential stakingCredential
+  P.DCertDelegDeRegKey (P.StakingHash stakingCredential) -> C.DCertDeleg . C.DeRegKey <$> toCredential stakingCredential
+  P.DCertDelegDelegate (P.StakingHash stakingCredential) pubKeyHash -> C.DCertDeleg . C.Delegate <$> (C.Delegation <$> toCredential stakingCredential <*> toPubKeyHash pubKeyHash)
+  P.DCertPoolRegister poolKeyHash poolVfr -> C.DCertPool . C.RegPool <$> toPoolParams poolKeyHash poolVfr
+  P.DCertPoolRetire pkh n -> C.DCertPool . (\key -> C.RetirePool key (C.EpochNo (fromIntegral n)) ) <$> toPubKeyHash pkh
+  P.DCertGenesis -> Left "DCertGenesis is not supported"
+  P.DCertMir -> Left "DCertMir is not supported"
+  other -> Left ("not supported DCert: " <> show other)
+  where
+    toPoolParams pkh vfr = do
+      cpkh <- toPubKeyHash pkh
+      cpkh2 <- toPubKeyHash pkh
+      cpkh3 <- toPubKeyHash pkh
+      cvfr <- toVrf vfr
+      pure $ C.PoolParams
+                cpkh
+                (C.castHash cvfr)
+                (C._poolDeposit params)
+                (C._minPoolCost params)
+                def
+                (C.RewardAcnt network (C.KeyHashObj cpkh3))
+                (Set.singleton $ cpkh2)
+                Seq.empty
+                C.SNothing
+
 
 fromTxId :: C.TxId StandardCrypto -> P.TxId
 fromTxId (C.TxId safeHash) =
@@ -256,6 +288,12 @@ toPubKeyHash (P.PubKeyHash bs) =
     let bsx = PlutusTx.fromBuiltin bs
         tg = "toPubKeyHash (" <> show (BS.length bsx) <> " bytes)"
     in tag tg $ maybe (Left "Failed to get Hash") Right $ C.KeyHash <$> Crypto.hashFromBytes bsx
+
+toVrf :: P.PubKeyHash -> Either ToCardanoError (Shelley.Hash StandardCrypto (C.VerKeyVRF StandardCrypto))
+toVrf (P.PubKeyHash bs) =
+    let bsx = PlutusTx.fromBuiltin bs
+        tg = "toVrfHash (" <> show (BS.length bsx) <> " bytes)"
+    in tag tg $ maybe (Left "Failed to get VRF Hash") Right $ Crypto.hashFromBytes bsx
 
 toScriptHash :: P.ValidatorHash -> Either ToCardanoError (C.ScriptHash StandardCrypto)
 toScriptHash (P.ValidatorHash bs) =
