@@ -20,9 +20,10 @@ import PlutusTx.Lattice
 import Cardano.Crypto.Hash (SHA256, digest)
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise
+import Cardano.Ledger.Keys qualified as C
+import Cardano.Ledger.Crypto qualified as C (StandardCrypto)
 
 import Plutus.Test.Model.Fork.Ledger.Slot
-import Plutus.Test.Model.Fork.Ledger.Crypto
 
 -- | A transaction, including witnesses for its inputs.
 data Tx = Tx {
@@ -40,13 +41,13 @@ data Tx = Tx {
     -- ^ The 'SlotRange' during which this transaction may be validated.
     txMintScripts :: Set.Set MintingPolicy,
     -- ^ The scripts that must be run to check minting conditions.
-    txSignatures  :: Map PubKey Signature,
+    txSignatures  :: Map PubKeyHash (C.KeyPair 'C.Witness C.StandardCrypto),
     -- ^ Signatures of this transaction.
     txRedeemers   :: Redeemers,
     -- ^ Redeemers of the minting scripts.
     txData        :: Map DatumHash Datum
     -- ^ Datum objects recorded on this transaction.
-    } deriving stock (Show, Eq, Generic)
+    } deriving stock (Show, Generic)
       deriving anyclass ({-ToJSON, FromJSON, Serialise, -} NFData)
 
 

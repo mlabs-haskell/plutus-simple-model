@@ -32,7 +32,7 @@ data Tx = Tx
   { tx'extra  :: Extra
   , tx'plutus :: P.Tx
   }
-  deriving (Show, Eq)
+  deriving (Show)
 
 instance Semigroup Tx where
   (<>) (Tx a1 a2) (Tx b1 b2) = Tx (a1 <> b1) (a2 <> b2)

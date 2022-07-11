@@ -129,7 +129,7 @@ library
   other-modules:
     Plutus.Test.Model.Fork.Cardano.Alonzo
     Plutus.Test.Model.Fork.Data.Aeson.Extras
-    Plutus.Test.Model.Fork.Ledger.Crypto
+--    Plutus.Test.Model.Fork.Ledger.Crypto
     Plutus.Test.Model.Fork.Ledger.Slot
     Plutus.Test.Model.Fork.Ledger.Tx
     Plutus.Test.Model.Fork.Ledger.TimeSlot

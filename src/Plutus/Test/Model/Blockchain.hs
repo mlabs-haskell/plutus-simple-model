@@ -76,7 +76,6 @@ module Plutus.Test.Model.Blockchain (
   hasStake,
   getPools,
   waitNSlots,
-  getUserPubKey,
 
   -- * Blockchain config
   readBchConfig,
@@ -108,7 +107,8 @@ module Plutus.Test.Model.Blockchain (
   MustFailLog(..),
 
   -- * internal
-  intToPubKey,
+  intToUser,
+  userPubKeyHash,
 ) where
 
 import Prelude
@@ -124,6 +124,7 @@ import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
 import qualified Data.Map as Map
 import qualified Data.Array as Array
+import Data.String
 import Data.Text (Text)
 
 import Data.Vector qualified as V
@@ -134,6 +135,11 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Sequence (Seq(..))
 import Data.Sequence qualified as Seq
 
+import Cardano.Ledger.Shelley.API.Types qualified as C
+import Cardano.Crypto.Seed qualified as C
+import Cardano.Crypto.DSIGN.Class qualified as C
+import Cardano.Crypto.Hash.Class qualified as C
+import Cardano.Ledger.Crypto qualified as C
 import Cardano.Ledger.BaseTypes
 import Cardano.Slotting.EpochInfo.Impl (fixedEpochInfo)
 import Cardano.Slotting.Time (SystemStart (..), slotLengthFromMillisec)
@@ -145,7 +151,6 @@ import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value (AssetClass, valueOf)
-import PlutusTx.Prelude qualified as Plutus
 import GHC.Natural
 import Plutus.Test.Model.Fork.Ledger.Scripts (validatorHash)
 
@@ -156,7 +161,6 @@ import Cardano.Ledger.Hashes as Ledger (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash qualified as Ledger (unsafeMakeSafeHash)
 -- import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import Plutus.Test.Model.Fork.Ledger.Slot
-import Plutus.Test.Model.Fork.Ledger.Crypto (PubKey (..), Signature (..), pubKeyHash)
 import Plutus.Test.Model.Fork.Ledger.TimeSlot (SlotConfig (..))
 -- import Plutus.Test.Model.Fork.Ledger.Tx.CardanoAPI qualified as Cardano
 import Paths_plutus_simple_model
@@ -228,7 +232,7 @@ data PercentExecutionUnits = PercentExecutionUnits
   deriving (Show, Eq)
 
 newtype User = User
-  { userPubKey :: PubKey
+  { userSignKey :: C.KeyPair 'C.Witness C.StandardCrypto
   }
   deriving (Show)
 
@@ -523,7 +527,7 @@ readTxName names cs = M.lookup cs (bchNameTxns names)
  It can be useful to distribute funds to the users.
 -}
 getMainUser :: Run PubKeyHash
-getMainUser = pure $ pubKeyHash $ intToPubKey 0
+getMainUser = pure $ userPubKeyHash $ intToUser 0
 
 -- | Run blockchain.
 runBch :: Run a -> Blockchain -> (a, Blockchain)
@@ -553,9 +557,8 @@ initBch cfg initVal =
                   M.empty
     }
   where
-    genesisUserId = pubKeyHash genesisPubKey
-    genesisPubKey = intToPubKey 0
-    genesisUser = User genesisPubKey
+    genesisUserId = userPubKeyHash genesisUser
+    genesisUser = intToUser 0
     genesisAddress = pubKeyHashAddress genesisUserId
 
     genesisTxOutRef = TxOutRef genesisTxId 0
@@ -579,19 +582,27 @@ dummyHash = Crypto.castHash $ Crypto.hashWith CBOR.serialize' ()
 genesisTxId :: TxId
 genesisTxId = Alonzo.fromTxId . Ledger.TxId $ Ledger.unsafeMakeSafeHash $ dummyHash
 
-intToPubKey :: Integer -> PubKey
-intToPubKey n = PubKey $ LedgerBytes $ Plutus.sha2_256 $ Plutus.consByteString n Plutus.mempty
+userPubKeyHash :: User -> PubKeyHash
+userPubKeyHash (User (C.KeyPair vk _sk)) =
+  case C.hashKey vk of
+    C.KeyHash h -> PubKeyHash $ toBuiltin $ C.hashToBytes h
 
-getUserPubKey :: PubKeyHash -> Run (Maybe PubKey)
-getUserPubKey pkh =
-  fmap userPubKey . M.lookup pkh <$> gets bchUsers
+intToUser :: Integer -> User
+intToUser n = User $ C.KeyPair vk sk
+  where
+    sk = C.genKeyDSIGN $ C.mkSeedFromBytes $ fromString $ show n
+    vk = C.VKey $ C.deriveVerKeyDSIGN sk
+
+getUserSignKey :: PubKeyHash -> Run (Maybe (C.KeyPair 'C.Witness C.StandardCrypto))
+getUserSignKey pkh =
+  fmap userSignKey . M.lookup pkh <$> gets bchUsers
 
 -- | Sign TX for the user.
 signTx :: PubKeyHash -> Tx -> Run Tx
 signTx pkh = updatePlutusTx $ \tx -> do
-  mPk <- getUserPubKey pkh
-  case mPk of
-    Just pk -> pure $ tx { P.txSignatures = M.insert pk (Signature $ getPubKeyHash pkh) $ P.txSignatures tx}
+  mKeys <- getUserSignKey pkh
+  case mKeys of
+    Just keys -> pure $ tx { P.txSignatures = M.insert pkh keys $ P.txSignatures tx}
     Nothing -> do
       logFail (NoUser pkh)
       pure tx
@@ -678,7 +689,7 @@ sendSingleTx (Tx extra tx) =
                 applyTx stat tid (Tx extra tx)
                 pure $ Right stat
   where
-    pkhs = fmap pubKeyHash $ M.keys $ P.txSignatures tx
+    pkhs = M.keys $ P.txSignatures tx
 
     withCheckStaking cont = withCheckWithdraw (withCheckCertificates cont )
 

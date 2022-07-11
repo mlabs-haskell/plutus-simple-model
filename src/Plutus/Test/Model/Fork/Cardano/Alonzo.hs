@@ -33,6 +33,7 @@ import Cardano.Ledger.Mary.Value qualified as C
 import Cardano.Ledger.Slot qualified as C
 import Cardano.Ledger.Compactible qualified as C
 import Cardano.Ledger.CompactAddress qualified as C
+import Cardano.Ledger.SafeHash qualified as C (hashAnnotated)
 import Cardano.Ledger.Shelley.UTxO qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as Shelley (Hash)
 import Cardano.Ledger.Shelley.API.Types qualified as C (StrictMaybe(..))
@@ -40,6 +41,7 @@ import Cardano.Ledger.Shelley.TxBody qualified as C (DCert(..), Wdrl(..))
 import Cardano.Ledger.ShelleyMA.Timelocks qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as C (PoolParams(..), PoolCert(..), DelegCert(..), Delegation(..))
 import Cardano.Ledger.Alonzo.PParams qualified as C
+import Cardano.Ledger.Alonzo.TxWitness qualified as C
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Plutus.Test.Model.Fork.TxExtra qualified as P
 import Plutus.V1.Ledger.Api qualified as P
@@ -48,7 +50,6 @@ import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Builtins.Internal qualified as P
 import PlutusTx.Builtins qualified as PlutusTx
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
-import  Plutus.Test.Model.Fork.Ledger.Crypto qualified as P
 import  Plutus.Test.Model.Fork.Ledger.Slot qualified as P
 
 import Cardano.Ledger.SafeHash
@@ -61,7 +62,7 @@ type ToCardanoError = String
 toAlonzoTx :: Network -> PParams Era -> P.Tx -> Either ToCardanoError (C.ValidatedTx Era)
 toAlonzoTx network params tx = do
   body <- toBody
-  wits <- toWits
+  wits <- toWits body
   let isValid = C.IsValid True -- TODO or maybe False
       auxData = C.SNothing
   pure $ C.ValidatedTx body wits isValid auxData
@@ -75,7 +76,7 @@ toAlonzoTx network params tx = do
       let txfee = getFee tx
           txvldt = getInterval tx
           txUpdates = C.SNothing
-      reqSignerHashes <- getSignatories tx
+          reqSignerHashes = getSignatories tx
       mint <- getMint tx
       let scriptIntegrityHash = C.SNothing
           adHash = C.SNothing
@@ -115,9 +116,9 @@ toAlonzoTx network params tx = do
     getInterval = toInterval . Plutus.txValidRange . P.tx'plutus
 
     getSignatories =
-        fmap Set.fromList
-      . mapM (toPubKeyHash . P.pubKeyHash)
-      . Map.keys
+        Set.fromList
+      . fmap (C.hashKey . C.vKey)
+      . Map.elems
       . Plutus.txSignatures
       . P.tx'plutus
 
@@ -134,8 +135,15 @@ toAlonzoTx network params tx = do
       . P.extra'certificates
       . P.tx'extra
 
-    toWits = undefined
-
+    toWits txBody = do
+      let keyWits = Set.fromList $ fmap (C.makeWitnessVKey txBodyHash) $ Map.elems $ Plutus.txSignatures $ P.tx'plutus tx
+          bootstrapWits = mempty
+      scriptWits <- undefined
+      datumWits <- undefined
+      redeemerWits <- undefined
+      pure $ C.TxWitness keyWits bootstrapWits scriptWits datumWits redeemerWits
+      where
+        txBodyHash = C.hashAnnotated txBody
 
     getLovelace v = Value.valueOf v Value.adaSymbol Value.adaToken
 

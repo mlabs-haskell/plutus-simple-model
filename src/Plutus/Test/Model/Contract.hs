@@ -111,7 +111,6 @@ import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
 
 -- import Plutus.Test.Model.Fork.Ledger.Scripts
-import Plutus.Test.Model.Fork.Ledger.Crypto (pubKeyHash)
 import Plutus.Test.Model.Fork.Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
 import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api
@@ -150,11 +149,11 @@ newUser val = do
   where
     emptyUser = do
       userCount <- gets bchUserStep
-      let pk = intToPubKey userCount
-          pkh = pubKeyHash pk
+      let user = intToUser userCount
+          pkh = userPubKeyHash user
           addr = pubKeyHashAddress pkh
           userNo = "User " ++ show userCount
-      modify' $ \s -> s {bchUserStep = userCount + 1, bchUsers = M.insert pkh (User pk) (bchUsers s)}
+      modify' $ \s -> s {bchUserStep = userCount + 1, bchUsers = M.insert pkh user (bchUsers s)}
       writeUserName pkh userNo >> writeAddressName addr userNo
       pure pkh
 
