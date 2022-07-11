@@ -15,26 +15,14 @@
     cardano-crypto.flake = false;
     cardano-ledger.url = "github:input-output-hk/cardano-ledger/e290bf8d0ea272a51e9acd10adc96b4e12e00d37";
     cardano-ledger.flake = false;
-    cardano-node.url = "github:input-output-hk/cardano-node/95c3692cfbd4cdb82071495d771b23e51840fb0e";
-    cardano-node.flake = false;
     cardano-prelude.url = "github:input-output-hk/cardano-prelude/bb4ed71ba8e587f672d06edf9d2e376f4b055555";
     cardano-prelude.flake = false;
     flat.url = "github:Quid2/flat/ee59880f47ab835dbd73bea0847dab7869fc20d8";
     flat.flake = false;
     goblins.url = "github:input-output-hk/goblins/cde90a2b27f79187ca8310b6549331e59595e7ba";
     goblins.flake = false;
-    iohk-monitoring-framework.url = "github:input-output-hk/iohk-monitoring-framework/066f7002aac5a0efc20e49643fea45454f226caa";
-    iohk-monitoring-framework.flake = false;
-    io-sim.url = "github:input-output-hk/io-sim/57e888b1894829056cb00b7b5785fdf6a74c3271";
-    io-sim.flake = false;
-    optparse-applicative.url = "github:input-output-hk/optparse-applicative/7497a29cb998721a9068d5725d49461f2bba0e7a";
-    optparse-applicative.flake = false;
-    ouroboros-network.url = "github:input-output-hk/ouroboros-network/04245dbd69387da98d3a37de9f400965e922bb0e";
-    ouroboros-network.flake = false;
     plutus.url = "github:input-output-hk/plutus/d24a7540e4659b57ce2ab25dadb968991e232191";
     plutus.flake = false;
-    typed-protocols.url = "github:input-output-hk/typed-protocols/181601bc3d9e9d21a671ce01e0b481348b3ca104";
-    typed-protocols.flake = false;
     Win32-network.url = "github:input-output-hk/Win32-network/3825d3abf75f83f406c1f7161883c438dac7277d";
     Win32-network.flake = false;
   };
@@ -89,41 +77,10 @@
           "${inputs.cardano-ledger}/libs/small-steps"
           "${inputs.cardano-ledger}/libs/small-steps-test"
           "${inputs.cardano-ledger}/libs/vector-map"
-          "${inputs.cardano-node}/cardano-api"
-          "${inputs.cardano-node}/cardano-cli"
-          "${inputs.cardano-node}/cardano-git-rev"
-          "${inputs.cardano-node}/cardano-node"
-          "${inputs.cardano-node}/cardano-submit-api"
-          "${inputs.cardano-node}/cardano-testnet"
-          "${inputs.cardano-node}/trace-dispatcher"
-          "${inputs.cardano-node}/trace-forward"
-          "${inputs.cardano-node}/trace-resources"
           "${inputs.cardano-prelude}/cardano-prelude"
           "${inputs.cardano-prelude}/cardano-prelude-test"
           "${inputs.flat}"
           "${inputs.goblins}"
-          "${inputs.iohk-monitoring-framework}/contra-tracer"
-          "${inputs.iohk-monitoring-framework}/iohk-monitoring"
-          "${inputs.iohk-monitoring-framework}/plugins/backend-aggregation"
-          "${inputs.iohk-monitoring-framework}/plugins/backend-ekg"
-          "${inputs.iohk-monitoring-framework}/plugins/backend-monitoring"
-          "${inputs.iohk-monitoring-framework}/plugins/backend-trace-forwarder"
-          "${inputs.iohk-monitoring-framework}/tracer-transformers"
-          "${inputs.io-sim}/io-classes"
-          "${inputs.io-sim}/io-sim"
-          "${inputs.io-sim}/strict-stm"
-          "${inputs.optparse-applicative}"
-          "${inputs.ouroboros-network}/monoidal-synchronisation"
-          "${inputs.ouroboros-network}/network-mux"
-          "${inputs.ouroboros-network}/ntp-client"
-          "${inputs.ouroboros-network}/ouroboros-consensus"
-          "${inputs.ouroboros-network}/ouroboros-consensus-byron"
-          "${inputs.ouroboros-network}/ouroboros-consensus-cardano"
-          "${inputs.ouroboros-network}/ouroboros-consensus-protocol"
-          "${inputs.ouroboros-network}/ouroboros-consensus-shelley"
-          "${inputs.ouroboros-network}/ouroboros-network"
-          "${inputs.ouroboros-network}/ouroboros-network-framework"
-          "${inputs.ouroboros-network}/ouroboros-network-testing"
           "${inputs.plutus}/plutus-core"
           "${inputs.plutus}/plutus-ledger-api"
           "${inputs.plutus}/plutus-tx"
@@ -131,9 +88,6 @@
           "${inputs.plutus}/prettyprinter-configurable"
           "${inputs.plutus}/stubs/plutus-ghc-stub"
           "${inputs.plutus}/word-array"
-          "${inputs.typed-protocols}/typed-protocols"
-          "${inputs.typed-protocols}/typed-protocols-cborg"
-          "${inputs.typed-protocols}/typed-protocols-examples"
           "${inputs.Win32-network}"
         ]
       );
@@ -197,7 +151,6 @@
 
                 additional = ps: [
                   ps.newtype-generics
-                  ps.cardano-api
                   ps.cardano-crypto-class
                   ps.cardano-ledger-alonzo
                   ps.cardano-ledger-core
@@ -205,8 +158,6 @@
                   ps.cardano-ledger-shelley-ma
                   ps.cardano-prelude
                   ps.cardano-slotting
-                  ps.ouroboros-consensus
-                  ps.ouroboros-consensus-shelley
                   ps.plutus-core
                   ps.plutus-ledger-api
                   ps.plutus-tx
