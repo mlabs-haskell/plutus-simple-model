@@ -1037,7 +1037,8 @@ getLog Blockchain{..} =
     txName = readTxName bchNames
 
 
-----------------------------------------
+----------------------------------------------------------------------
+-- seed utilities
 
 newtype RawSeed = RawSeed Integer
    deriving newtype (Eq, Show, CBOR.ToCBOR)
