@@ -46,12 +46,14 @@ import Cardano.Ledger.Shelley.TxBody qualified as C (DCert(..), Wdrl(..))
 import Cardano.Ledger.ShelleyMA.Timelocks qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as C (PoolParams(..), PoolCert(..), DelegCert(..), Delegation(..))
 import Cardano.Ledger.Alonzo.PParams qualified as C
+import Cardano.Ledger.Alonzo.Scripts qualified as C
 import Cardano.Ledger.Alonzo.TxWitness qualified as C
 import Cardano.Ledger.Alonzo.Language qualified as C
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Plutus.Test.Model.Fork.TxExtra qualified as P
 import Plutus.V1.Ledger.Api qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
+import Plutus.V1.Ledger.Tx qualified as Plutus
 import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Builtins.Internal qualified as P
 import PlutusTx.Builtins qualified as PlutusTx
@@ -147,7 +149,7 @@ toAlonzoTx network params tx = do
           bootstrapWits = mempty
       scriptWits <- fmap Map.fromList $ mapM (\(sh, s) -> (, C.toScript C.PlutusV1 s) <$> toScriptHash sh) allScripts
       datumWits <- fmap (C.TxDats . Map.fromList ) $ mapM (\d -> (, toDatum d) <$> (toDataHash $ C.datumHash d)) $  validatorDatums
-      redeemerWits <- undefined
+      let redeemerWits = C.Redeemers $ mintRedeemers <> inputRedeemers <> certRedeemers <> withdrawRedeemers
       pure $ C.TxWitness keyWits bootstrapWits scriptWits datumWits redeemerWits
       where
         txBodyHash = C.hashAnnotated txBody
@@ -167,6 +169,42 @@ toAlonzoTx network params tx = do
           P.ConsumeScriptAddress (P.Validator script) redeemer datum -> Just (script, redeemer, datum)
           _ -> Nothing
 
+
+        mintRedeemers =
+          Map.fromList
+          $ fmap (\(P.RedeemerPtr _tag n, redm) -> (C.RdmrPtr C.Mint (fromInteger n), addDefaultExUnits $ toRedeemer redm))
+          $ filter (isMint . fst) $ Map.toList $ Plutus.txRedeemers $ P.tx'plutus tx
+          where
+            isMint = \case
+              P.RedeemerPtr Plutus.Mint _ -> True
+              _                           -> False
+
+        inputRedeemers =
+          Map.fromList
+          $ mapMaybe toInput
+          $ zip [0..] $ Set.toList
+          $ Plutus.txInputs $ P.tx'plutus tx
+          where
+            toInput (n, tin) =
+              case  P.txInType tin of
+                Just (P.ConsumeScriptAddress _validator redeemer _datum) ->
+                  Just (C.RdmrPtr C.Spend (fromInteger n), addDefaultExUnits $ toRedeemer redeemer)
+                _ -> Nothing
+
+        certRedeemers = redeemersBy C.Cert (fmap P.certificate'script . P.extra'certificates)
+        withdrawRedeemers = redeemersBy C.Rewrd (fmap P.withdraw'script . P.extra'withdraws)
+
+        redeemersBy :: C.Tag -> (P.Extra -> [Maybe (P.Redeemer, a)]) -> Map.Map C.RdmrPtr (C.Data Era, C.ExUnits)
+        redeemersBy scriptTag extract =
+          Map.fromList
+          $ mapMaybe toWithdraw
+          $ zip [0..]
+          $ extract $ P.tx'extra tx
+          where
+            toWithdraw (n, ws) = flip fmap ws $ \(redeemer, _script) ->
+              (C.RdmrPtr scriptTag (fromInteger n), addDefaultExUnits $ toRedeemer redeemer)
+
+        addDefaultExUnits rdm = (rdm, C.ExUnits 1 1)
 
     getLovelace v = Value.valueOf v Value.adaSymbol Value.adaToken
 
@@ -328,6 +366,9 @@ toVrf (P.PubKeyHash bs) =
 
 toDatum :: P.Datum -> C.Data Era
 toDatum (P.Datum (P.BuiltinData d)) = C.Data d
+
+toRedeemer :: P.Redeemer -> C.Data Era
+toRedeemer (P.Redeemer (P.BuiltinData d)) = C.Data d
 
 toScriptHash :: P.ValidatorHash -> Either ToCardanoError (C.ScriptHash StandardCrypto)
 toScriptHash (P.ValidatorHash bs) =
