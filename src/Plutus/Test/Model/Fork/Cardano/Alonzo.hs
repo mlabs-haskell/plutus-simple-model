@@ -10,8 +10,12 @@ module Plutus.Test.Model.Fork.Cardano.Alonzo(
 ) where
 
 import Prelude
+
+import Control.Monad
+
 import Data.List qualified as L
 import Data.Map qualified as Map
+import Data.Maybe (mapMaybe)
 import Data.Sequence.Strict qualified as Seq
 import Data.Set qualified as Set
 import Data.Bifunctor
@@ -42,6 +46,7 @@ import Cardano.Ledger.ShelleyMA.Timelocks qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as C (PoolParams(..), PoolCert(..), DelegCert(..), Delegation(..))
 import Cardano.Ledger.Alonzo.PParams qualified as C
 import Cardano.Ledger.Alonzo.TxWitness qualified as C
+import Cardano.Ledger.Alonzo.Language qualified as C
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Plutus.Test.Model.Fork.TxExtra qualified as P
 import Plutus.V1.Ledger.Api qualified as P
@@ -50,7 +55,8 @@ import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx.Builtins.Internal qualified as P
 import PlutusTx.Builtins qualified as PlutusTx
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
-import  Plutus.Test.Model.Fork.Ledger.Slot qualified as P
+import Plutus.Test.Model.Fork.Ledger.Slot qualified as P
+import Plutus.Test.Model.Fork.Ledger.Scripts qualified as C (validatorHash, toScript)
 
 import Cardano.Ledger.SafeHash
 import Cardano.Crypto.Hash.Class
@@ -138,12 +144,24 @@ toAlonzoTx network params tx = do
     toWits txBody = do
       let keyWits = Set.fromList $ fmap (C.makeWitnessVKey txBodyHash) $ Map.elems $ Plutus.txSignatures $ P.tx'plutus tx
           bootstrapWits = mempty
-      scriptWits <- undefined
+      scriptWits <- fmap Map.fromList $ mapM (\(sh, s) -> (, C.toScript C.PlutusV1 s) <$> toScriptHash sh) allScripts
       datumWits <- undefined
       redeemerWits <- undefined
       pure $ C.TxWitness keyWits bootstrapWits scriptWits datumWits redeemerWits
       where
         txBodyHash = C.hashAnnotated txBody
+
+        allScripts = fmap addHash $ mints <> withdraws <> validators
+          where
+            mints = fmap P.getMintingPolicy $ Set.toList $ Plutus.txMintScripts $ P.tx'plutus tx
+            withdraws = mapMaybe (fmap (P.getStakeValidator . snd) . P.withdraw'script) (P.extra'withdraws $ P.tx'extra tx)
+            validators = mapMaybe (fmap (\(script, _, _) -> script) . (fromInType <=< P.txInType)) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
+
+            fromInType = \case
+              P.ConsumeScriptAddress (P.Validator script) redeemer datum -> Just (script, redeemer, datum)
+              _ -> Nothing
+
+            addHash script = (C.validatorHash (P.Validator script), script)
 
     getLovelace v = Value.valueOf v Value.adaSymbol Value.adaToken
 

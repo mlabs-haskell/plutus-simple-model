@@ -3,6 +3,7 @@ module Plutus.Test.Model.Fork.Ledger.Scripts
     datumHash,
     validatorHash,
     scriptCurrencySymbol,
+    toScript,
     ) where
 
 import Prelude
