@@ -124,7 +124,6 @@ import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
 import qualified Data.Map as Map
 import qualified Data.Array as Array
-import Data.String
 import Data.Text (Text)
 
 import Data.Vector qualified as V
@@ -590,7 +589,7 @@ userPubKeyHash (User (C.KeyPair vk _sk)) =
 intToUser :: Integer -> User
 intToUser n = User $ C.KeyPair vk sk
   where
-    sk = C.genKeyDSIGN $ C.mkSeedFromBytes $ fromString $ show n
+    sk = C.genKeyDSIGN $ mkSeedFromInteger $ RawSeed n
     vk = C.VKey $ C.deriveVerKeyDSIGN sk
 
 getUserSignKey :: PubKeyHash -> Run (Maybe (C.KeyPair 'C.Witness C.StandardCrypto))
@@ -1036,3 +1035,20 @@ getLog Blockchain{..} =
     ]
   where
     txName = readTxName bchNames
+
+
+----------------------------------------
+
+newtype RawSeed = RawSeed Integer
+   deriving newtype (Eq, Show, CBOR.ToCBOR)
+
+-- | Construct a seed from a bunch of Word64s
+--
+--   We multiply these words by some extra stuff to make sure they contain
+--   enough bits for our seed.
+mkSeedFromInteger ::
+  RawSeed ->
+  C.Seed
+mkSeedFromInteger stuff =
+  C.mkSeedFromBytes . Crypto.hashToBytes $ Crypto.hashWithSerialiser @Crypto.Blake2b_256 CBOR.toCBOR stuff
+
