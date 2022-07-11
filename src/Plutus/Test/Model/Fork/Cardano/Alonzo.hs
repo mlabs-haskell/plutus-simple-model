@@ -27,6 +27,7 @@ import Cardano.Ledger.TxIn qualified as C
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Coin qualified as C
 import Cardano.Ledger.Alonzo (AlonzoEra, PParams)
+import Cardano.Ledger.Alonzo.Data qualified as C
 import Cardano.Ledger.Alonzo.Tx qualified as C
 import Cardano.Ledger.Alonzo.TxBody qualified as C
 import Cardano.Ledger.Credential qualified as C
@@ -56,7 +57,7 @@ import PlutusTx.Builtins.Internal qualified as P
 import PlutusTx.Builtins qualified as PlutusTx
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.Test.Model.Fork.Ledger.Slot qualified as P
-import Plutus.Test.Model.Fork.Ledger.Scripts qualified as C (validatorHash, toScript)
+import Plutus.Test.Model.Fork.Ledger.Scripts qualified as C (datumHash, validatorHash, toScript)
 
 import Cardano.Ledger.SafeHash
 import Cardano.Crypto.Hash.Class
@@ -145,7 +146,7 @@ toAlonzoTx network params tx = do
       let keyWits = Set.fromList $ fmap (C.makeWitnessVKey txBodyHash) $ Map.elems $ Plutus.txSignatures $ P.tx'plutus tx
           bootstrapWits = mempty
       scriptWits <- fmap Map.fromList $ mapM (\(sh, s) -> (, C.toScript C.PlutusV1 s) <$> toScriptHash sh) allScripts
-      datumWits <- undefined
+      datumWits <- fmap (C.TxDats . Map.fromList ) $ mapM (\d -> (, toDatum d) <$> (toDataHash $ C.datumHash d)) $  validatorDatums
       redeemerWits <- undefined
       pure $ C.TxWitness keyWits bootstrapWits scriptWits datumWits redeemerWits
       where
@@ -155,13 +156,17 @@ toAlonzoTx network params tx = do
           where
             mints = fmap P.getMintingPolicy $ Set.toList $ Plutus.txMintScripts $ P.tx'plutus tx
             withdraws = mapMaybe (fmap (P.getStakeValidator . snd) . P.withdraw'script) (P.extra'withdraws $ P.tx'extra tx)
-            validators = mapMaybe (fmap (\(script, _, _) -> script) . (fromInType <=< P.txInType)) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
-
-            fromInType = \case
-              P.ConsumeScriptAddress (P.Validator script) redeemer datum -> Just (script, redeemer, datum)
-              _ -> Nothing
+            validators = fmap (\(script, _, _) -> script) validatorInfo
 
             addHash script = (C.validatorHash (P.Validator script), script)
+
+        validatorInfo = mapMaybe (fromInType <=< P.txInType) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
+        validatorDatums = fmap (\(_,_,datum) -> datum) validatorInfo
+
+        fromInType = \case
+          P.ConsumeScriptAddress (P.Validator script) redeemer datum -> Just (script, redeemer, datum)
+          _ -> Nothing
+
 
     getLovelace v = Value.valueOf v Value.adaSymbol Value.adaToken
 
@@ -320,6 +325,9 @@ toVrf (P.PubKeyHash bs) =
     let bsx = PlutusTx.fromBuiltin bs
         tg = "toVrfHash (" <> show (BS.length bsx) <> " bytes)"
     in tag tg $ maybe (Left "Failed to get VRF Hash") Right $ Crypto.hashFromBytes bsx
+
+toDatum :: P.Datum -> C.Data Era
+toDatum (P.Datum (P.BuiltinData d)) = C.Data d
 
 toScriptHash :: P.ValidatorHash -> Either ToCardanoError (C.ScriptHash StandardCrypto)
 toScriptHash (P.ValidatorHash bs) =
