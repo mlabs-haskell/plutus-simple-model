@@ -90,7 +90,6 @@ common deps
     , containers
     , memory
     , mtl
-    , newtype-generics
     , serialise
     , prettyprinter
     , plutus-core

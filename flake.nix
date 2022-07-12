@@ -150,7 +150,6 @@
                 tools.haskell-language-server = { };
 
                 additional = ps: [
-                  ps.newtype-generics
                   ps.cardano-crypto-class
                   ps.cardano-ledger-alonzo
                   ps.cardano-ledger-core
