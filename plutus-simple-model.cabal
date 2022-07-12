@@ -123,17 +123,15 @@ library
     Plutus.Test.Model.Pretty
     Plutus.Test.Model.Stake
     Plutus.Test.Model.Validator
---    Plutus.Test.Model.Ledger.Ada
---    Plutus.Test.Model.Ledger.Scripts
+    Plutus.Test.Model.Ledger.Ada
+    Plutus.Test.Model.Ledger.Scripts
   other-modules:
     Plutus.Test.Model.Fork.Cardano.Alonzo
-    Plutus.Test.Model.Fork.Data.Aeson.Extras
---    Plutus.Test.Model.Fork.Ledger.Crypto
-    Plutus.Test.Model.Fork.Ledger.Slot
-    Plutus.Test.Model.Fork.Ledger.Tx
-    Plutus.Test.Model.Fork.Ledger.TimeSlot
     Plutus.Test.Model.Fork.Ledger.Ada
     Plutus.Test.Model.Fork.Ledger.Scripts
+    Plutus.Test.Model.Fork.Ledger.Slot
+    Plutus.Test.Model.Fork.Ledger.TimeSlot
+    Plutus.Test.Model.Fork.Ledger.Tx
     Plutus.Test.Model.Fork.TxExtra
   build-depends:    tasty
                   , tasty-hunit
