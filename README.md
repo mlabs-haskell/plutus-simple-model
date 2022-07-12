@@ -886,8 +886,11 @@ all staking credentials that belong to the pool:
 
 ```haskell
 -- Pay fee for TX confirmation. The fees are payed in ADA (Lovelace)
-payFee :: Value -> Tx
+payFee :: Ada -> Tx
 ```
+The `Ada` is a newtpye wrapper over `Integer` that specifies amount of lovelaces.
+It is defined in the module `Plutus.Test.Model.Ledger.Ada`.
+
 
 #### How reward distribution works
 
