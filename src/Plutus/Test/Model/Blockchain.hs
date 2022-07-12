@@ -81,7 +81,6 @@ module Plutus.Test.Model.Blockchain (
   readBchConfig,
   defaultAlonzo,
   defaultBchConfig,
-  readDefaultBchConfig,
   skipLimits,
   warnLimits,
   forceLimits,
@@ -115,11 +114,7 @@ import Prelude
 
 import Control.Monad.Identity
 import Data.ByteString qualified as BS
-import Data.Coerce (coerce)
 import Data.Either
-import Data.Foldable
-import Data.Function (on)
-import Data.List qualified as L
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
 import qualified Data.Map as Map
@@ -131,15 +126,12 @@ import Data.Maybe
 import Data.Set (Set)
 import Data.Set qualified as S
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Data.Sequence (Seq(..))
-import Data.Sequence qualified as Seq
 
 import Cardano.Ledger.Shelley.API.Types qualified as C
 import Cardano.Crypto.Seed qualified as C
 import Cardano.Crypto.DSIGN.Class qualified as C
 import Cardano.Crypto.Hash.Class qualified as C
 import Cardano.Ledger.Crypto qualified as C
-import Cardano.Ledger.BaseTypes
 import Cardano.Slotting.EpochInfo.Impl (fixedEpochInfo)
 import Cardano.Slotting.Time (SystemStart (..), slotLengthFromMillisec)
 import Control.Monad.State.Strict
@@ -151,7 +143,6 @@ import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value (AssetClass)
 import GHC.Natural
-import Plutus.Test.Model.Fork.Ledger.Scripts (validatorHash)
 
 import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Binary qualified as CBOR
@@ -160,7 +151,6 @@ import Cardano.Ledger.Hashes as Ledger (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash qualified as Ledger (unsafeMakeSafeHash)
 import Plutus.Test.Model.Fork.Ledger.Slot
 import Plutus.Test.Model.Fork.Ledger.TimeSlot (SlotConfig (..))
-import Paths_plutus_simple_model
 import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Stake
 import Plutus.Test.Model.Blockchain.ProtocolParameters
@@ -177,176 +167,16 @@ import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
 import Plutus.Test.Model.Fork.Ledger.Ada (Ada(..))
+import Plutus.Test.Model.Blockchain.BchConfig
+import Plutus.Test.Model.Blockchain.Log
+import Plutus.Test.Model.Blockchain.Address
+import Plutus.Test.Model.Blockchain.Stat
 
-class HasAddress a where
-  toAddress :: a -> Address
-
-instance HasAddress Address where
-  toAddress = id
-
-instance HasAddress PubKeyHash where
-  toAddress = pubKeyHashAddress
-
-instance HasAddress ValidatorHash where
-  toAddress = scriptHashAddress
-
-instance HasAddress Validator where
-  toAddress = toAddress . validatorHash
-
-class HasStakingCredential a where
-  toStakingCredential :: a -> StakingCredential
-
-instance HasStakingCredential StakingCredential where
-  toStakingCredential = id
-
-instance HasStakingCredential PubKeyHash where
-  toStakingCredential = keyToStaking
-
-instance HasStakingCredential StakeValidator where
-  toStakingCredential = scriptToStaking
-
--- | Encodes appening of staking address
-data AppendStaking a =
-  AppendStaking StakingCredential a
-
-instance HasAddress a => HasAddress (AppendStaking a) where
-  toAddress (AppendStaking stakeCred a) = appendStake (toAddress a)
-    where
-      appendStake addr = addr { addressStakingCredential = Just stakeCred }
-
-appendStakingCredential :: Credential -> a -> AppendStaking a
-appendStakingCredential cred = AppendStaking (StakingHash cred)
-
-appendStakingPubKey :: PubKeyHash -> a -> AppendStaking a
-appendStakingPubKey pkh = appendStakingCredential (PubKeyCredential pkh)
-
-appendStakingScript :: StakeValidatorHash -> a -> AppendStaking a
-appendStakingScript sh = appendStakingCredential (ScriptCredential $ coerce sh)
-
-data PercentExecutionUnits = PercentExecutionUnits
-  { percentExecutionSteps  :: !Percent
-  , percentExecutionMemory :: !Percent
-  }
-  deriving (Show, Eq)
 
 newtype User = User
   { userSignKey :: C.KeyPair 'C.Witness C.StandardCrypto
   }
   deriving (Show)
-
--- | TX with stats of TX execution onchain.
-data TxStat = TxStat
-  { txStatTx        :: !Tx
-  , txStatTime      :: !Slot
-  , txStat          :: !Stat
-  , txStatPercent   :: !StatPercent
-  }
-  deriving (Show)
-
--- | Gets Tx's hash
-txStatId :: TxStat -> TxId
-txStatId = P.txId . tx'plutus . txStatTx
-
--- | Config for the blockchain.
-data BchConfig = BchConfig
-  { bchConfigCheckLimits  :: !CheckLimits       -- ^ limits check mode
-  , bchConfigLimitStats   :: !Stat              -- ^ TX execution resources limits
-  , bchConfigProtocol     :: !PParams           -- ^ Protocol parameters
-  , bchConfigNetworkId    :: !Network           -- ^ Network id (mainnet / testnet)
-  , bchConfigSlotConfig   :: !SlotConfig        -- ^ Slot config
-  }
-
-data CheckLimits
-  = IgnoreLimits   -- ^ ignore TX-limits
-  | WarnLimits     -- ^ log TX to error log if it exceeds limits but accept TX
-  | ErrorLimits    -- ^ reject TX if it exceeds the limits
-  deriving (Show)
-
--- | Default slot config
-defaultSlotConfig :: SlotConfig
-defaultSlotConfig =
-  SlotConfig
-    { scSlotLength = 1000 -- each slot lasts for 1 second
-    , scSlotZeroTime = 0 -- starts at unix epoch start
-    }
-
--- | Loads default config for the blockchain. Uses presaved era history and protocol parameters.
-readDefaultBchConfig :: IO BchConfig
-readDefaultBchConfig = do
-  paramsFile <- getDataFileName "data/alonzo-params.json"
-  readBchConfig paramsFile
-
-defaultAlonzo :: BchConfig
-defaultAlonzo = defaultBchConfig defaultAlonzoParams
-
--- | Default blockchain config.
-defaultBchConfig :: PParams -> BchConfig
-defaultBchConfig params =
-  BchConfig
-    { bchConfigLimitStats = mainnetTxLimits
-    , bchConfigCheckLimits = ErrorLimits
-    , bchConfigProtocol = params
-    , bchConfigNetworkId = Mainnet
-    , bchConfigSlotConfig = defaultSlotConfig
-    }
-
--- | Do not check for limits
-skipLimits :: BchConfig -> BchConfig
-skipLimits cfg = cfg { bchConfigCheckLimits = IgnoreLimits }
-
--- | Warn on limits
-warnLimits :: BchConfig -> BchConfig
-warnLimits cfg = cfg { bchConfigCheckLimits = WarnLimits }
-
--- | Error on limits
-forceLimits :: BchConfig -> BchConfig
-forceLimits cfg = cfg { bchConfigCheckLimits = ErrorLimits }
-
-{- | Read config for protocol parameters and form blockchain config.
-
- > readBchConfig protocolParametersFile
--}
-readBchConfig :: FilePath -> IO BchConfig
-readBchConfig paramsFile =
-  defaultBchConfig {- TODO . setDefaultCostModel -} <$> readAlonzoParams paramsFile
-
--- | Stats of TX execution onchain.
-data Stat = Stat
-  { statSize           :: !Integer          -- ^ TX-size in bytes
-  , statExecutionUnits :: !Alonzo.ExUnits    -- ^ execution units of TX
-  }
-  deriving (Show, Eq)
-
--- | Percent values from 0 to 100 %.
-newtype Percent = Percent { getPercent :: Float }
-  deriving (Show, Eq)
-
--- | Convert integer to percent based on maximum value (first argument)
-toPercent :: Integer -> Integer -> Percent
-toPercent maxLim n = Percent $ (fromInteger @Float $ 100 * n ) / fromInteger maxLim
-
--- | Stats measured in percents (0 to 100 %)
-data StatPercent = StatPercent
-  { statPercentSize           :: !Percent
-  , statPercentExecutionUnits :: !PercentExecutionUnits
-  }
-  deriving (Show, Eq)
-
--- | Get Stats expressed in percents based on maximum limits and given stats.
-toStatPercent :: Stat -> Stat -> StatPercent
-toStatPercent maxStat stat =
-  StatPercent
-    { statPercentSize = percent statSize
-    , statPercentExecutionUnits = PercentExecutionUnits
-        { percentExecutionSteps  = percentNat (\(Alonzo.ExUnits _ steps) -> steps)
-        , percentExecutionMemory = percentNat (\(Alonzo.ExUnits mem _)   -> mem)
-        }
-    }
-  where
-    percentNat getter = percent (naturalToInteger . getter . statExecutionUnits)
-
-    percent :: (Stat -> Integer) -> Percent
-    percent getter = toPercent (getter maxStat) (getter stat)
 
 {- | Simple model for UTXO-based blockchain.
  We have set of UTXOs. Every UTXO can belong to the user (owner of PubKey) or to script.
@@ -374,41 +204,6 @@ data Blockchain = Blockchain
     bchNames :: !BchNames
   }
 
-newtype Log a = Log { unLog :: Seq (Slot, a) }
-  deriving (Functor)
-
-instance Semigroup (Log a) where
-  (<>) (Log sa) (Log sb) = Log (merge sa sb)
-    where
-      merge Empty b = b
-      merge a Empty = a
-      merge (a :<| as) (b :<| bs) =
-        if fst a <= fst b
-          then a Seq.<| merge as (b Seq.<| bs)
-          else b Seq.<| merge (a Seq.<| as) bs
-
-appendLog :: Slot -> a -> Log a -> Log a
-appendLog slot val (Log xs) = Log (xs Seq.|> (slot, val))
-
-nullLog :: Log a -> Bool
-nullLog (Log a) = Seq.null a
-
-fromLog :: Log a -> [(Slot, a)]
-fromLog (Log s) = toList s
-
-fromGroupLog :: Log a -> [(Slot, [a])]
-fromGroupLog = fmap toGroup . L.groupBy ((==) `on` fst) . fromLog
-  where
-    toGroup ((a, b) : rest) = (a, b : fmap snd rest)
-    toGroup [] = error "toGroup: Empty list"
-
-instance Monoid (Log a) where
-  mempty = Log Seq.empty
-
--- | Wrapper for error logs, produced in the paths of execution protected by
--- 'mustFail' combinator.
-data MustFailLog = MustFailLog String FailReason
-
 -- | Result of the execution.
 data Result = Ok | Fail FailReason
   deriving (Show)
@@ -418,36 +213,6 @@ isOkResult :: Result -> Bool
 isOkResult = \case
   Ok -> True
   _ -> False
-
--- | Fail reasons.
-data FailReason
-  = -- | use with given pub key hash is not found. User was not registered with @newUser@ or @newUserWith@.
-    NoUser PubKeyHash
-  | -- | not enough funds for the user.
-    NotEnoughFunds PubKeyHash Value
-  | -- | TX is not balanced. Sum of inputs does not equal to sum of outputs.
-    NotBalancedTx
-  | -- | no utxo on the address
-    FailToReadUtxo
-  | -- | failed to convert plutus TX to cardano TX. TX is malformed.
-    FailToCardano String
-  | -- | invalid range. TX is submitted with current slot not in valid range
-    TxInvalidRange Slot SlotRange
-    -- | invalid reward for staking credential, expected and actual values for stake at the moment of reward
-  | TxInvalidWithdraw WithdrawError
-    -- | Certificate errors
-  | TxInvalidCertificate DCertError
-  | TxLimitError [LimitOverflow] StatPercent
-  -- | Any error (can be useful to report logic errors on testing)
-  | GenericFail String
-  deriving (Show)
-
--- | Encodes overflow of the TX-resources
-data LimitOverflow
-  = TxSizeError !Integer !Percent -- ^ by how many bytes we exceed the limit
-  | ExMemError !Integer !Percent  -- ^ how many mem units exceeded
-  | ExStepError !Integer !Percent -- ^ how many steps executions exceeded
-  deriving (Show, Eq)
 
 -- | State monad wrapper to run blockchain.
 newtype Run a = Run (State Blockchain a)
@@ -954,72 +719,8 @@ hasStake key = gets (M.member (toStakingCredential key) . stake'stakes. bchStake
 getPools :: Run [PoolId]
 getPools = gets (V.toList . stake'poolIds . bchStake)
 
----------------------------------------------------------------------
--- stat resources limits (Alonzo era)
-
--- | Limits for TX-execution resources on Mainnet (Alonzo)
-mainnetTxLimits :: Stat
-mainnetTxLimits =
-  Stat
-    { statSize  = 16 * 1024
-    , statExecutionUnits =
-        let memory = 14_000_000
-            steps  = 10_000_000_000
-        in Alonzo.ExUnits memory steps
-    }
-
--- | Limits for Block-execution resources resources on Mainnet
-mainnetBlockLimits :: Stat
-mainnetBlockLimits =
-  Stat
-    { statSize = 65 * 1024
-    , statExecutionUnits =
-        let memory = 50_000_000
-            steps = 40_000_000_000
-        in Alonzo.ExUnits memory steps
-    }
-
--- | Limits for TX-execution resources resources on Testnet
-testnetTxLimits :: Stat
-testnetTxLimits = mainnetTxLimits
-
--- | Limits for Block-execution resources resources on Testnet
-testnetBlockLimits :: Stat
-testnetBlockLimits = mainnetBlockLimits
-
 ----------------------------------------------------------------
 -- logs
-
--- | Blockchain events to log.
-data BchEvent
-  -- | Sucessful TXs
-  = BchTx
-    { bchTx'name   :: Maybe String -- ^ Optional tx's name
-    , bchTx'txStat :: TxStat       -- ^ Tx and stat
-    }
-  | BchInfo String             -- ^ Info messages
-  | BchFail FailReason         -- ^ Errors
-  | BchMustFailLog MustFailLog -- ^ Expected errors, see 'mustFail'
-
--- | Skip all info messages
-silentLog :: Log BchEvent -> Log BchEvent
-silentLog (Log xs) = Log $ Seq.filter (not . isInfo . snd) xs
-  where
-    isInfo = \case
-      BchInfo _ -> True
-      _         -> False
-
--- | Skip successful TXs
-failLog :: Log BchEvent -> Log BchEvent
-failLog (Log xs) = Log $ Seq.filter (not . isTx . snd) xs
-  where
-    isTx = \case
-      BchTx _ _ -> True
-      _         -> False
-
--- | filter by slot. Can be useful to filter out unnecessary info.
-filterSlot :: (Slot -> Bool) -> Log a -> Log a
-filterSlot f (Log xs) = Log (Seq.filter (f . fst) xs)
 
 -- | Reads the log.
 getLog :: Blockchain -> Log BchEvent
@@ -1032,7 +733,6 @@ getLog Blockchain{..} =
     ]
   where
     txName = readTxName bchNames
-
 
 ----------------------------------------------------------------------
 -- seed utilities

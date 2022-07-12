@@ -116,7 +116,11 @@ library
   exposed-modules:
     Plutus.Test.Model
     Plutus.Test.Model.Blockchain
+    Plutus.Test.Model.Blockchain.Address
+    Plutus.Test.Model.Blockchain.BchConfig
+    Plutus.Test.Model.Blockchain.Log
     Plutus.Test.Model.Blockchain.ProtocolParameters
+    Plutus.Test.Model.Blockchain.Stat
     Plutus.Test.Model.Contract
     Plutus.Test.Model.Mint
     Plutus.Test.Model.Pretty
