@@ -38,15 +38,13 @@ We can create simple blockchain data structure and update within context of Stat
 Update happens as a pure function and along TX-confirmation we have useful stats to estimate usage of resources.
 
 To create blockchain we first need to specify blockchain config (`BchConfig`).
-Config is specified by protocol parameters (`ProtocolParameters`) and era history (`EraHistory CardanoMode`).
+Config is specified by protocol parameters (`PParams`) and era history (`EraHistory CardanoMode`).
 They are cardano config data types. To avoid gory details it's safe to use predefined config
-and load it with function:
+and default parameters for Alonzo era:
 
 ```haskell
-readDefaultBchConfig :: IO BchConfig
+defaultAlonzo :: BchConfig
 ```
-
-It reads config from files stored in the directory `data`. It's the only non-pure function that we have to use.
 
 Once we have config available we can create initial state for blockchain with function:
 
@@ -71,7 +69,7 @@ It just runs the state updates.
 Let's create test users:
 
 ```haskell
--- alocate 3 users with 1000 lovelaces each
+-- | alocate 3 users with 1000 lovelaces each
 setupUsers :: Run [PubKeyHash]
 setupUsers = replicateM 3 $ newUser $ adaValue 1000
 ```

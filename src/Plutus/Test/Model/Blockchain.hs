@@ -79,7 +79,7 @@ module Plutus.Test.Model.Blockchain (
 
   -- * Blockchain config
   readBchConfig,
-  defaultAlonzoBch,
+  defaultAlonzo,
   defaultBchConfig,
   readDefaultBchConfig,
   skipLimits,
@@ -158,10 +158,8 @@ import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Ledger.Hashes as Ledger (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash qualified as Ledger (unsafeMakeSafeHash)
--- import qualified Cardano.Ledger.Alonzo.Data as Alonzo
 import Plutus.Test.Model.Fork.Ledger.Slot
 import Plutus.Test.Model.Fork.Ledger.TimeSlot (SlotConfig (..))
--- import Plutus.Test.Model.Fork.Ledger.Tx.CardanoAPI qualified as Cardano
 import Paths_plutus_simple_model
 import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Stake
@@ -278,8 +276,8 @@ readDefaultBchConfig = do
   paramsFile <- getDataFileName "data/alonzo-params.json"
   readBchConfig paramsFile
 
-defaultAlonzoBch :: BchConfig
-defaultAlonzoBch = defaultBchConfig defaultAlonzoParams
+defaultAlonzo :: BchConfig
+defaultAlonzo = defaultBchConfig defaultAlonzoParams
 
 -- | Default blockchain config.
 defaultBchConfig :: PParams -> BchConfig
