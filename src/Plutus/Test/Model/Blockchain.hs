@@ -579,7 +579,7 @@ dummyHash = Crypto.castHash $ Crypto.hashWith CBOR.serialize' ()
 
 -- | genesis transaction ID
 genesisTxId :: TxId
-genesisTxId = Alonzo.fromTxId . Ledger.TxId $ Ledger.unsafeMakeSafeHash $ dummyHash
+genesisTxId = Alonzo.fromTxId . Ledger.TxId $ Ledger.unsafeMakeSafeHash dummyHash
 
 userPubKeyHash :: User -> PubKeyHash
 userPubKeyHash (User (C.KeyPair vk _sk)) =

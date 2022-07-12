@@ -41,10 +41,15 @@ import Cardano.Ledger.CompactAddress qualified as C
 import Cardano.Ledger.SafeHash qualified as C (hashAnnotated)
 import Cardano.Ledger.Shelley.UTxO qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as Shelley (Hash)
-import Cardano.Ledger.Shelley.API.Types qualified as C (StrictMaybe(..))
+import Cardano.Ledger.Shelley.API.Types qualified as C (
+  StrictMaybe(..),
+  PoolParams(..),
+  PoolCert(..),
+  DelegCert(..),
+  Delegation(..),
+  )
 import Cardano.Ledger.Shelley.TxBody qualified as C (DCert(..), Wdrl(..))
 import Cardano.Ledger.ShelleyMA.Timelocks qualified as C
-import Cardano.Ledger.Shelley.API.Types qualified as C (PoolParams(..), PoolCert(..), DelegCert(..), Delegation(..))
 import Cardano.Ledger.Alonzo.PParams qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as C
 import Cardano.Ledger.Alonzo.TxWitness qualified as C
@@ -148,7 +153,7 @@ toAlonzoTx network params tx = do
       let keyWits = Set.fromList $ fmap (C.makeWitnessVKey txBodyHash) $ Map.elems $ Plutus.txSignatures $ P.tx'plutus tx
           bootstrapWits = mempty
       scriptWits <- fmap Map.fromList $ mapM (\(sh, s) -> (, C.toScript C.PlutusV1 s) <$> toScriptHash sh) allScripts
-      datumWits1 <- fmap Map.fromList $ mapM (\d -> (, toDatum d) <$> (toDataHash $ C.datumHash d)) $  validatorDatums1
+      datumWits1 <- fmap Map.fromList $ mapM (\d -> (, toDatum d) <$> (toDataHash $ C.datumHash d)) validatorDatums1
       datumWits2 <- fmap Map.fromList $ mapM (\(dh, d) -> (, toDatum d) <$> toDataHash dh) validatorDatums2
       let datumWits = C.TxDats $ datumWits1 <> datumWits2
       let redeemerWits = C.Redeemers $ mintRedeemers <> inputRedeemers <> certRedeemers <> withdrawRedeemers
@@ -259,7 +264,7 @@ toDCert network params = \case
                 (C._minPoolCost params)
                 def
                 (C.RewardAcnt network (C.KeyHashObj cpkh3))
-                (Set.singleton $ cpkh2)
+                (Set.singleton cpkh2)
                 Seq.empty
                 C.SNothing
 
@@ -322,7 +327,7 @@ toTxOut network (P.TxOut addr value mdh) = do
 
         toVal v =
           case C.toCompact v of
-            Just cval -> pure $ cval
+            Just cval -> Right cval
             Nothing   -> Left "Fail to create compact value"
 
 
@@ -392,7 +397,9 @@ toValue val = C.valueFromList totalAda <$> traverse fromValue vs
           | cs == Value.adaSymbol && tok == Value.adaToken = (ada + amount, rest)
           | otherwise = (ada, coin : rest)
 
-    fromValue (cs, tok, amount) = (\p -> (p, toAssetName tok, amount)) <$> toPolicyId cs
+    fromValue (cs, tok, amount) = (, assetName, amount) <$> toPolicyId cs
+      where
+        assetName = toAssetName tok
 
 toPolicyId :: P.CurrencySymbol -> Either ToCardanoError (C.PolicyID StandardCrypto)
 toPolicyId (P.CurrencySymbol bs) = fmap C.PolicyID $ toScriptHash (P.ValidatorHash bs)
