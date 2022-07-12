@@ -922,8 +922,7 @@ for staking credential. For the key we require that TX is signed by the given ke
 ```haskell
 registerStakeKey    :: PubKeyHash -> Tx
 
-registerStakeScript :: IsValidator (TypedStake redeemer) =>
-  TypedStake redeemer -> redeemer -> Tx
+registerStakeScript :: TypedStake redeemer -> Tx
 ```
 
 Also we can deregistrate the staking credential:

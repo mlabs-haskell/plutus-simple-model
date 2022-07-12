@@ -11,7 +11,6 @@ import Data.Functor (void)
 import Prelude
 
 import Test.Tasty
-import Test.Tasty.HUnit
 
 import Plutus.V1.Ledger.Api
 import PlutusTx.Prelude qualified as Plutus

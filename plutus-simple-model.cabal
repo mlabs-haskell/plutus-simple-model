@@ -58,8 +58,8 @@ common lang
     ViewPatterns
 
   ghc-options:
-    -- -Wall -Wcompat -Wredundant-constraints
-    -- -Wmissing-export-lists -Werror -Wincomplete-record-updates
+    -Wall -Wcompat -Wredundant-constraints
+    -Wmissing-export-lists -Werror -Wincomplete-record-updates
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     -fobject-code -fno-strictness
     -fno-specialise -ddump-simpl -ddump-to-file -dsuppress-idinfo

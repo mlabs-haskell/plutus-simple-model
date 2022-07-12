@@ -640,9 +640,9 @@ registerStakeKey pkh = certTx $
 -- It means that we have to omit script witness for DCertDelegRegKey
 
 -- | Register staking credential by stake validator
-registerStakeScript :: IsValidator (TypedStake redeemer) =>
-  TypedStake redeemer -> redeemer -> Tx
-registerStakeScript script red = certTx $
+registerStakeScript ::
+  TypedStake redeemer -> Tx
+registerStakeScript script = certTx $
   Certificate (DCertDelegRegKey $ scriptToStaking $ unTypedStake script) Nothing
 
 -- | DeRegister staking credential by key

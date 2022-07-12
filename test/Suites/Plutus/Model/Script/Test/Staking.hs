@@ -47,7 +47,7 @@ registerCredentialTx stakeScript poolId sp fee =
   mconcat
     [ userSpend sp
     , payFee fee
-    , registerStakeScript stakeScript ()
+    , registerStakeScript stakeScript
     , delegateStakeScript stakeScript () poolId
     ]
 
