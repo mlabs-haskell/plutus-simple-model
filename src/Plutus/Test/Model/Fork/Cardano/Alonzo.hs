@@ -156,10 +156,11 @@ toAlonzoTx network params tx = do
       where
         txBodyHash = C.hashAnnotated txBody
 
-        allScripts = fmap addHash $ mints <> withdraws <> validators
+        allScripts = fmap addHash $ mints <> withdraws <> validators <> certificates
           where
             mints = fmap P.getMintingPolicy $ Set.toList $ Plutus.txMintScripts $ P.tx'plutus tx
             withdraws = mapMaybe (fmap (P.getStakeValidator . snd) . P.withdraw'script) (P.extra'withdraws $ P.tx'extra tx)
+            certificates = mapMaybe (fmap (P.getStakeValidator . snd) . P.certificate'script) (P.extra'certificates $ P.tx'extra tx)
             validators = fmap (\(script, _, _) -> script) validatorInfo
 
             addHash script = (C.validatorHash (P.Validator script), script)

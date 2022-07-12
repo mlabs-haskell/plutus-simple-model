@@ -631,11 +631,19 @@ registerStakeKey :: PubKeyHash -> Tx
 registerStakeKey pkh = certTx $
   Certificate (DCertDelegRegKey $ keyToStaking pkh) Nothing
 
+-- NOTE: that according to cardano-ledger code we need to provide script witness
+-- only for two cases:
+--   * DCertDeleg + DeRegKey
+--   * DCertDeleg + Delegate
+--
+-- if we provide for other cases it will fail with exception RedeemerNotNeeded
+-- It means that we have to omit script witness for DCertDelegRegKey
+
 -- | Register staking credential by stake validator
 registerStakeScript :: IsValidator (TypedStake redeemer) =>
   TypedStake redeemer -> redeemer -> Tx
 registerStakeScript script red = certTx $
-  Certificate (DCertDelegRegKey $ scriptToStaking $ unTypedStake script) (withStakeScript script red)
+  Certificate (DCertDelegRegKey $ scriptToStaking $ unTypedStake script) Nothing
 
 -- | DeRegister staking credential by key
 deregisterStakeKey :: PubKeyHash -> Tx

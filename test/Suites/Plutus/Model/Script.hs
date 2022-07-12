@@ -9,7 +9,7 @@ import Suites.Plutus.Model.Script.Test.Counter qualified as Counter
 import Suites.Plutus.Model.Script.Test.Game qualified as Game
 import Suites.Plutus.Model.Script.Test.Nft qualified as Nft
 import Suites.Plutus.Model.Script.Test.Safe qualified as Safe
--- import Suites.Plutus.Model.Script.Test.Staking qualified as Staking
+import Suites.Plutus.Model.Script.Test.Staking qualified as Staking
 
 tests :: BchConfig -> TestTree
 tests cfg =
@@ -22,5 +22,5 @@ tests cfg =
     , Counter.tests cfg
     , Nft.tests cfg
     , Safe.tests cfg
---    , Staking.tests cfg
+    , Staking.tests cfg
     ]
