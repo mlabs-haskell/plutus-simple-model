@@ -26,12 +26,12 @@ tests cfg =
   testGroup
     "Game scripts"
     [ good "Init script (Guess game)" initGuessGame
-    -- , good "Spend script (Guess game)" makeGuessGame
-    -- , bad "Bad guess" badGuessGame
+    , good "Spend script (Guess game)" makeGuessGame
+    , bad "Bad guess" badGuessGame
     ]
   where
-    -- bad = check False
-    good msg act = testNoErrorsTrace (adaValue 10_000_000) cfg msg act
+    bad msg act = good msg (mustFail act)
+    good msg act = testNoErrors (adaValue 10_000_000) cfg msg act
 
 initGuessGame :: Run ()
 initGuessGame = do
@@ -40,30 +40,23 @@ initGuessGame = do
       answer = "secret"
       prize = adaValue 100
   initGame u1 prize answer
-  val1 <- valueAt u1
-  gameVal <- valueAt gameScript
   gameUtxos <- utxoAt gameScript
-  let [(gameRef, gameOut)] = gameUtxos
+  let [(gameRef, _gameOut)] = gameUtxos
   mDat <- datumAt @GameDatum gameRef
-  unless
-    (and
-      [ val1 == adaValue 900
-      , gameVal == prize
-      , txOutValue gameOut == prize
-      , mDat == Just (GuessHash $ Plutus.sha2_256 answer)
-      ]) $ logError "Constraints violated"
+  unless (mDat == Just (GuessHash $ Plutus.sha2_256 answer)) $
+    logError "Constraints violated"
 
 
-badGuessGame :: Run Bool
+badGuessGame :: Run ()
 badGuessGame = makeGuessGameBy gameSecret "bad guess"
 
-makeGuessGame :: Run Bool
+makeGuessGame :: Run ()
 makeGuessGame = makeGuessGameBy gameSecret gameSecret
 
 gameSecret :: BuiltinByteString
 gameSecret = "secret"
 
-makeGuessGameBy :: BuiltinByteString -> BuiltinByteString -> Run Bool
+makeGuessGameBy :: BuiltinByteString -> BuiltinByteString -> Run ()
 makeGuessGameBy secret answer = do
   users <- setupUsers
   let [u1, u2, _] = users
@@ -71,8 +64,9 @@ makeGuessGameBy secret answer = do
   postedTx <- guess u2 answer
   vals <- mapM valueAt users
   let [v1, v2, _] = vals
-  isOk <- noErrors
-  pure $ postedTx && isOk && v1 == adaValue 900 && v2 == adaValue 1100
+  unless (postedTx && v1 == adaValue 900 && v2 == adaValue 1100) $
+    logError "Constraint error"
+
 
 initGame :: PubKeyHash -> Value -> BuiltinByteString -> Run ()
 initGame pkh prize answer =

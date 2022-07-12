@@ -148,7 +148,9 @@ toAlonzoTx network params tx = do
       let keyWits = Set.fromList $ fmap (C.makeWitnessVKey txBodyHash) $ Map.elems $ Plutus.txSignatures $ P.tx'plutus tx
           bootstrapWits = mempty
       scriptWits <- fmap Map.fromList $ mapM (\(sh, s) -> (, C.toScript C.PlutusV1 s) <$> toScriptHash sh) allScripts
-      datumWits <- fmap (C.TxDats . Map.fromList ) $ mapM (\d -> (, toDatum d) <$> (toDataHash $ C.datumHash d)) $  validatorDatums
+      datumWits1 <- fmap Map.fromList $ mapM (\d -> (, toDatum d) <$> (toDataHash $ C.datumHash d)) $  validatorDatums1
+      datumWits2 <- fmap Map.fromList $ mapM (\(dh, d) -> (, toDatum d) <$> toDataHash dh) validatorDatums2
+      let datumWits = C.TxDats $ datumWits1 <> datumWits2
       let redeemerWits = C.Redeemers $ mintRedeemers <> inputRedeemers <> certRedeemers <> withdrawRedeemers
       pure $ C.TxWitness keyWits bootstrapWits scriptWits datumWits redeemerWits
       where
@@ -163,7 +165,9 @@ toAlonzoTx network params tx = do
             addHash script = (C.validatorHash (P.Validator script), script)
 
         validatorInfo = mapMaybe (fromInType <=< P.txInType) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
-        validatorDatums = fmap (\(_,_,datum) -> datum) validatorInfo
+
+        validatorDatums1 = fmap (\(_,_,datum) -> datum) validatorInfo
+        validatorDatums2 = Map.toList $ Plutus.txData $ P.tx'plutus tx
 
         fromInType = \case
           P.ConsumeScriptAddress (P.Validator script) redeemer datum -> Just (script, redeemer, datum)
