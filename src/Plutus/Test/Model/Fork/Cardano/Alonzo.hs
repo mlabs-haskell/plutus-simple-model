@@ -65,6 +65,7 @@ import PlutusTx.Builtins qualified as PlutusTx
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.Test.Model.Fork.Ledger.Slot qualified as P
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as C (datumHash, validatorHash, toScript)
+import Plutus.Test.Model.Fork.Ledger.Ada qualified as Ada
 
 import Cardano.Ledger.SafeHash
 import Cardano.Crypto.Hash.Class
@@ -125,7 +126,7 @@ toAlonzoTx network params tx = do
       . Plutus.txOutputs
       . P.tx'plutus
 
-    getFee = C.Coin . getLovelace . Plutus.txFee . P.tx'plutus
+    getFee = C.Coin . Ada.getLovelace . Plutus.txFee . P.tx'plutus
 
     getInterval = toInterval . Plutus.txValidRange . P.tx'plutus
 
@@ -215,8 +216,6 @@ toAlonzoTx network params tx = do
               (C.RdmrPtr scriptTag (fromInteger n), addDefaultExUnits $ toRedeemer redeemer)
 
         addDefaultExUnits rdm = (rdm, C.ExUnits 1 1)
-
-    getLovelace v = Value.valueOf v Value.adaSymbol Value.adaToken
 
 -- | TODO: interpret closures
 toInterval :: P.SlotRange -> C.ValidityInterval

@@ -127,6 +127,7 @@ import Plutus.Test.Model.Stake qualified as Stake
 import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Test.Model.Validator as X
+import Plutus.Test.Model.Ledger.Ada (Ada(..))
 
 ------------------------------------------------------------------------
 -- modify blockchain
@@ -318,7 +319,7 @@ payToScript script dat val = toExtra $
     datum = Datum $ toBuiltinData dat
 
 -- | Pay fee for TX-submission
-payFee :: Value -> Tx
+payFee :: Ada -> Tx
 payFee val = toExtra $
   mempty
     { P.txFee = val
@@ -613,14 +614,14 @@ withStakeScript :: (IsValidator (TypedStake red))
 withStakeScript (TypedStake script) red = Just (toRedeemer red, script)
 
 -- | Add staking withdrawal based on pub key hash
-withdrawStakeKey :: PubKeyHash -> Integer -> Tx
-withdrawStakeKey key amount = withdrawTx $
+withdrawStakeKey :: PubKeyHash -> Ada -> Tx
+withdrawStakeKey key (Lovelace amount) = withdrawTx $
   Withdraw (keyToStaking key) amount Nothing
 
 -- | Add staking withdrawal based on script
 withdrawStakeScript :: (IsValidator (TypedStake redeemer))
-  => TypedStake redeemer -> redeemer -> Integer -> Tx
-withdrawStakeScript (TypedStake validator) red amount = withdrawTx $
+  => TypedStake redeemer -> redeemer -> Ada -> Tx
+withdrawStakeScript (TypedStake validator) red (Lovelace amount) = withdrawTx $
   Withdraw (scriptToStaking validator) amount (withStakeScript (TypedStake validator) red)
 
 certTx :: Certificate -> Tx

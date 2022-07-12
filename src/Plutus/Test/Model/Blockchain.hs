@@ -149,7 +149,7 @@ import Plutus.V1.Ledger.Interval ()
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
-import Plutus.V1.Ledger.Value (AssetClass, valueOf)
+import Plutus.V1.Ledger.Value (AssetClass)
 import GHC.Natural
 import Plutus.Test.Model.Fork.Ledger.Scripts (validatorHash)
 
@@ -178,6 +178,7 @@ import Plutus.Test.Model.Fork.Cardano.Alonzo qualified as Alonzo (Era, fromTxId,
 import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
+import Plutus.Test.Model.Fork.Ledger.Ada (Ada(..))
 
 class HasAddress a where
   toAddress :: a -> Address
@@ -907,9 +908,7 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
 
     updateFees = do
       st <- gets bchStake
-      forM_ (rewardStake amount st) $ \nextSt -> modify' $ \bch -> bch { bchStake = nextSt }
-      where
-        amount = valueOf txFee adaSymbol adaToken
+      forM_ (rewardStake (getLovelace txFee) st) $ \nextSt -> modify' $ \bch -> bch { bchStake = nextSt }
 
 -- | Read all TxOutRefs that belong to given address.
 txOutRefAt :: Address -> Run [TxOutRef]

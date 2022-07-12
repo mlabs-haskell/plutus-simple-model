@@ -29,29 +29,20 @@ module Plutus.Test.Model.Fork.Ledger.Ada(
 
 import Prelude qualified as Haskell
 
+import Control.DeepSeq (NFData)
 import Data.Fixed
 
 import Codec.Serialise.Class (Serialise)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Tagged
 import GHC.Generics (Generic)
-import Plutus.V1.Ledger.Value (CurrencySymbol (..), TokenName (..), Value)
+import Plutus.V1.Ledger.Value (Value, adaSymbol, adaToken)
 import Plutus.V1.Ledger.Value qualified as TH
 import PlutusTx qualified
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude hiding (divide)
 import PlutusTx.Prelude qualified as P
 import Prettyprinter (Pretty)
-
-{-# INLINABLE adaSymbol #-}
--- | The 'CurrencySymbol' of the 'Ada' currency.
-adaSymbol :: CurrencySymbol
-adaSymbol = CurrencySymbol emptyByteString
-
-{-# INLINABLE adaToken #-}
--- | The 'TokenName' of the 'Ada' currency.
-adaToken :: TokenName
-adaToken = TokenName emptyByteString
 
 -- | ADA, the special currency on the Cardano blockchain. The unit of Ada is Lovelace, and
 --   1M Lovelace is one Ada.
@@ -60,7 +51,7 @@ newtype Ada = Lovelace { getLovelace :: Integer }
     deriving (Haskell.Enum)
     deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic)
     deriving anyclass (ToJSON, FromJSON)
-    deriving newtype (Eq, Ord, Haskell.Num, AdditiveSemigroup, AdditiveMonoid, AdditiveGroup, MultiplicativeSemigroup, MultiplicativeMonoid, Haskell.Integral, Haskell.Real, Serialise, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData)
+    deriving newtype (Eq, Ord, Haskell.Num, AdditiveSemigroup, AdditiveMonoid, AdditiveGroup, MultiplicativeSemigroup, MultiplicativeMonoid, Haskell.Integral, Haskell.Real, Serialise, PlutusTx.ToData, PlutusTx.FromData, PlutusTx.UnsafeFromData, NFData)
     deriving Pretty via (Tagged "Lovelace:" Integer)
 
 instance Haskell.Semigroup Ada where
