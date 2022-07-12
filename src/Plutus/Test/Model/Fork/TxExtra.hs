@@ -25,13 +25,14 @@ import qualified Data.Map.Strict as M
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
 
+
 -- | Plutus TX with extra fields for Cardano TX fields that are missing
 -- in native Plutus TX (staking and certificates).
 data Tx = Tx
   { tx'extra  :: Extra
   , tx'plutus :: P.Tx
   }
-  deriving (Show, Eq)
+  deriving (Show)
 
 instance Semigroup Tx where
   (<>) (Tx a1 a2) (Tx b1 b2) = Tx (a1 <> b1) (a2 <> b2)

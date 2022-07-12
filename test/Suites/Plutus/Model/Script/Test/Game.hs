@@ -4,12 +4,13 @@ module Suites.Plutus.Model.Script.Test.Game (
   makeGuessGame,
 ) where
 
+import Control.Monad (unless)
+
 import Data.Either
 import Data.Functor (void)
 import Prelude
 
 import Test.Tasty
-import Test.Tasty.HUnit
 
 import Plutus.V1.Ledger.Api
 import PlutusTx.Prelude qualified as Plutus
@@ -28,42 +29,33 @@ tests cfg =
     , bad "Bad guess" badGuessGame
     ]
   where
-    good = check True
-    bad = check False
-    check res msg act = testCase msg $ fst (runBch act (initBch cfg $ adaValue 10_000_000)) @?= res
+    bad msg act = good msg (mustFail act)
+    good msg act = testNoErrors (adaValue 10_000_000) cfg msg act
 
-initGuessGame :: Run Bool
+initGuessGame :: Run ()
 initGuessGame = do
   users <- setupUsers
   let u1 = head users
       answer = "secret"
       prize = adaValue 100
   initGame u1 prize answer
-  isOk <- noErrors
-  val1 <- valueAt u1
-  gameVal <- valueAt gameScript
   gameUtxos <- utxoAt gameScript
-  let [(gameRef, gameOut)] = gameUtxos
+  let [(gameRef, _gameOut)] = gameUtxos
   mDat <- datumAt @GameDatum gameRef
-  pure $
-    and
-      [ isOk
-      , val1 == adaValue 900
-      , gameVal == prize
-      , txOutValue gameOut == prize
-      , mDat == Just (GuessHash $ Plutus.sha2_256 answer)
-      ]
+  unless (mDat == Just (GuessHash $ Plutus.sha2_256 answer)) $
+    logError "Constraints violated"
 
-badGuessGame :: Run Bool
+
+badGuessGame :: Run ()
 badGuessGame = makeGuessGameBy gameSecret "bad guess"
 
-makeGuessGame :: Run Bool
+makeGuessGame :: Run ()
 makeGuessGame = makeGuessGameBy gameSecret gameSecret
 
 gameSecret :: BuiltinByteString
 gameSecret = "secret"
 
-makeGuessGameBy :: BuiltinByteString -> BuiltinByteString -> Run Bool
+makeGuessGameBy :: BuiltinByteString -> BuiltinByteString -> Run ()
 makeGuessGameBy secret answer = do
   users <- setupUsers
   let [u1, u2, _] = users
@@ -71,8 +63,9 @@ makeGuessGameBy secret answer = do
   postedTx <- guess u2 answer
   vals <- mapM valueAt users
   let [v1, v2, _] = vals
-  isOk <- noErrors
-  pure $ postedTx && isOk && v1 == adaValue 900 && v2 == adaValue 1100
+  unless (postedTx && v1 == adaValue 900 && v2 == adaValue 1100) $
+    logError "Constraint error"
+
 
 initGame :: PubKeyHash -> Value -> BuiltinByteString -> Run ()
 initGame pkh prize answer =

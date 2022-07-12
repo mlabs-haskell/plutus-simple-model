@@ -20,7 +20,7 @@ tests cfg =
     -- also see issue: <https://github.com/input-output-hk/plutus-apps/issues/139>
     -- TODO: fix that
     , Counter.tests cfg
-    , Safe.tests cfg
     , Nft.tests cfg
+    , Safe.tests cfg
     , Staking.tests cfg
     ]

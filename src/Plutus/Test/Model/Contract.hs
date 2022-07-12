@@ -110,8 +110,7 @@ import Data.Sequence qualified as Seq (drop, length)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
 
-import Plutus.Test.Model.Fork.Ledger.Scripts
-import Plutus.Test.Model.Fork.Ledger.Crypto (pubKeyHash)
+import Plutus.Test.Model.Fork.Ledger.Scripts (datumHash)
 import Plutus.Test.Model.Fork.Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
 import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api
@@ -128,6 +127,7 @@ import Plutus.Test.Model.Stake qualified as Stake
 import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Test.Model.Validator as X
+import Plutus.Test.Model.Ledger.Ada (Ada(..))
 
 ------------------------------------------------------------------------
 -- modify blockchain
@@ -147,11 +147,11 @@ newUser val = do
   where
     emptyUser = do
       userCount <- gets bchUserStep
-      let pk = intToPubKey userCount
-          pkh = pubKeyHash pk
+      let user = intToUser userCount
+          pkh = userPubKeyHash user
           addr = pubKeyHashAddress pkh
           userNo = "User " ++ show userCount
-      modify' $ \s -> s {bchUserStep = userCount + 1, bchUsers = M.insert pkh (User pk) (bchUsers s)}
+      modify' $ \s -> s {bchUserStep = userCount + 1, bchUsers = M.insert pkh user (bchUsers s)}
       writeUserName pkh userNo >> writeAddressName addr userNo
       pure pkh
 
@@ -319,7 +319,7 @@ payToScript script dat val = toExtra $
     datum = Datum $ toBuiltinData dat
 
 -- | Pay fee for TX-submission
-payFee :: Value -> Tx
+payFee :: Ada -> Tx
 payFee val = toExtra $
   mempty
     { P.txFee = val
@@ -614,14 +614,14 @@ withStakeScript :: (IsValidator (TypedStake red))
 withStakeScript (TypedStake script) red = Just (toRedeemer red, script)
 
 -- | Add staking withdrawal based on pub key hash
-withdrawStakeKey :: PubKeyHash -> Integer -> Tx
-withdrawStakeKey key amount = withdrawTx $
+withdrawStakeKey :: PubKeyHash -> Ada -> Tx
+withdrawStakeKey key (Lovelace amount) = withdrawTx $
   Withdraw (keyToStaking key) amount Nothing
 
 -- | Add staking withdrawal based on script
 withdrawStakeScript :: (IsValidator (TypedStake redeemer))
-  => TypedStake redeemer -> redeemer -> Integer -> Tx
-withdrawStakeScript (TypedStake validator) red amount = withdrawTx $
+  => TypedStake redeemer -> redeemer -> Ada -> Tx
+withdrawStakeScript (TypedStake validator) red (Lovelace amount) = withdrawTx $
   Withdraw (scriptToStaking validator) amount (withStakeScript (TypedStake validator) red)
 
 certTx :: Certificate -> Tx
@@ -632,11 +632,19 @@ registerStakeKey :: PubKeyHash -> Tx
 registerStakeKey pkh = certTx $
   Certificate (DCertDelegRegKey $ keyToStaking pkh) Nothing
 
+-- NOTE: that according to cardano-ledger code we need to provide script witness
+-- only for two cases:
+--   * DCertDeleg + DeRegKey
+--   * DCertDeleg + Delegate
+--
+-- if we provide for other cases it will fail with exception RedeemerNotNeeded
+-- It means that we have to omit script witness for DCertDelegRegKey
+
 -- | Register staking credential by stake validator
-registerStakeScript :: IsValidator (TypedStake redeemer) =>
-  TypedStake redeemer -> redeemer -> Tx
-registerStakeScript script red = certTx $
-  Certificate (DCertDelegRegKey $ scriptToStaking $ unTypedStake script) (withStakeScript script red)
+registerStakeScript ::
+  TypedStake redeemer -> Tx
+registerStakeScript script = certTx $
+  Certificate (DCertDelegRegKey $ scriptToStaking $ unTypedStake script) Nothing
 
 -- | DeRegister staking credential by key
 deregisterStakeKey :: PubKeyHash -> Tx

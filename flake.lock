@@ -135,23 +135,6 @@
         "type": "github"
       }
     },
-    "cardano-node": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1654545834,
-        "narHash": "sha256-Jc8gFJ3owQ+ArnjTj2YGsDO2j4KNmnEpea2g8PWUkug=",
-        "owner": "input-output-hk",
-        "repo": "cardano-node",
-        "rev": "95c3692cfbd4cdb82071495d771b23e51840fb0e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "cardano-node",
-        "rev": "95c3692cfbd4cdb82071495d771b23e51840fb0e",
-        "type": "github"
-      }
-    },
     "cardano-prelude": {
       "flake": false,
       "locked": {
@@ -368,40 +351,6 @@
         "type": "indirect"
       }
     },
-    "io-sim": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1654253725,
-        "narHash": "sha256-TviSvCBEYtlKEo9qJmE8pCE25nMjDi8HeIAFniunaM8=",
-        "owner": "input-output-hk",
-        "repo": "io-sim",
-        "rev": "57e888b1894829056cb00b7b5785fdf6a74c3271",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "io-sim",
-        "rev": "57e888b1894829056cb00b7b5785fdf6a74c3271",
-        "type": "github"
-      }
-    },
-    "iohk-monitoring-framework": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1653619339,
-        "narHash": "sha256-0ia5UflYEmBYepj2gkJy9msknklI0UPtUavMEGwk3Wg=",
-        "owner": "input-output-hk",
-        "repo": "iohk-monitoring-framework",
-        "rev": "066f7002aac5a0efc20e49643fea45454f226caa",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "iohk-monitoring-framework",
-        "rev": "066f7002aac5a0efc20e49643fea45454f226caa",
-        "type": "github"
-      }
-    },
     "iohk-nix": {
       "inputs": {
         "nixpkgs": "nixpkgs_2"
@@ -598,40 +547,6 @@
         "type": "github"
       }
     },
-    "optparse-applicative": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1628901899,
-        "narHash": "sha256-uQx+SEYsCH7JcG3xAT0eJck9yq3y0cvx49bvItLLer8=",
-        "owner": "input-output-hk",
-        "repo": "optparse-applicative",
-        "rev": "7497a29cb998721a9068d5725d49461f2bba0e7a",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "optparse-applicative",
-        "rev": "7497a29cb998721a9068d5725d49461f2bba0e7a",
-        "type": "github"
-      }
-    },
-    "ouroboros-network": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1654356166,
-        "narHash": "sha256-V7D5R7ouqih57R+VQSTUJkeH7UkmmZ8wb4EQeBhl7i0=",
-        "owner": "input-output-hk",
-        "repo": "ouroboros-network",
-        "rev": "04245dbd69387da98d3a37de9f400965e922bb0e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "ouroboros-network",
-        "rev": "04245dbd69387da98d3a37de9f400965e922bb0e",
-        "type": "github"
-      }
-    },
     "plutus": {
       "flake": false,
       "locked": {
@@ -655,23 +570,17 @@
         "cardano-base": "cardano-base",
         "cardano-crypto": "cardano-crypto",
         "cardano-ledger": "cardano-ledger",
-        "cardano-node": "cardano-node",
         "cardano-prelude": "cardano-prelude",
         "flat": "flat",
         "goblins": "goblins",
         "haskell-nix": "haskell-nix",
         "haskell-nix-extra-hackage": "haskell-nix-extra-hackage",
-        "io-sim": "io-sim",
-        "iohk-monitoring-framework": "iohk-monitoring-framework",
         "iohk-nix": "iohk-nix",
         "nixpkgs": [
           "haskell-nix",
           "nixpkgs-unstable"
         ],
-        "optparse-applicative": "optparse-applicative",
-        "ouroboros-network": "ouroboros-network",
-        "plutus": "plutus",
-        "typed-protocols": "typed-protocols"
+        "plutus": "plutus"
       }
     },
     "stackage": {
@@ -687,23 +596,6 @@
       "original": {
         "owner": "input-output-hk",
         "repo": "stackage.nix",
-        "type": "github"
-      }
-    },
-    "typed-protocols": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1653046676,
-        "narHash": "sha256-5Wof5yTKb12EPY6B8LfapX18xNZZpF+rvhnQ88U6KdM=",
-        "owner": "input-output-hk",
-        "repo": "typed-protocols",
-        "rev": "181601bc3d9e9d21a671ce01e0b481348b3ca104",
-        "type": "github"
-      },
-      "original": {
-        "owner": "input-output-hk",
-        "repo": "typed-protocols",
-        "rev": "181601bc3d9e9d21a671ce01e0b481348b3ca104",
         "type": "github"
       }
     }

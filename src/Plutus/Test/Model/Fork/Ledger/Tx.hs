@@ -6,11 +6,9 @@ module Plutus.Test.Model.Fork.Ledger.Tx(
 
 import Prelude
 import Data.Proxy
--- import Codec.Serialise (Serialise, encode)
 import Control.DeepSeq (NFData)
 -- import Data.Aeson (FromJSON, ToJSON)
 import Data.Map (Map)
--- import Data.Map qualified as Map
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Scripts
@@ -20,9 +18,11 @@ import PlutusTx.Lattice
 import Cardano.Crypto.Hash (SHA256, digest)
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise
+import Cardano.Ledger.Keys qualified as C
+import Cardano.Ledger.Crypto qualified as C (StandardCrypto)
 
+import Plutus.Test.Model.Fork.Ledger.Ada (Ada)
 import Plutus.Test.Model.Fork.Ledger.Slot
-import Plutus.Test.Model.Fork.Ledger.Crypto
 
 -- | A transaction, including witnesses for its inputs.
 data Tx = Tx {
@@ -34,19 +34,19 @@ data Tx = Tx {
     -- ^ The outputs of this transaction, ordered so they can be referenced by index.
     txMint        :: !Value,
     -- ^ The 'Value' minted by this transaction.
-    txFee         :: !Value,
+    txFee         :: !Ada,
     -- ^ The fee for this transaction.
     txValidRange  :: !SlotRange,
     -- ^ The 'SlotRange' during which this transaction may be validated.
     txMintScripts :: Set.Set MintingPolicy,
     -- ^ The scripts that must be run to check minting conditions.
-    txSignatures  :: Map PubKey Signature,
+    txSignatures  :: Map PubKeyHash (C.KeyPair 'C.Witness C.StandardCrypto),
     -- ^ Signatures of this transaction.
     txRedeemers   :: Redeemers,
     -- ^ Redeemers of the minting scripts.
     txData        :: Map DatumHash Datum
     -- ^ Datum objects recorded on this transaction.
-    } deriving stock (Show, Eq, Generic)
+    } deriving stock (Show, Generic)
       deriving anyclass ({-ToJSON, FromJSON, Serialise, -} NFData)
 
 
@@ -84,7 +84,7 @@ data TxStripped = TxStripped {
     -- ^ The outputs of this transation.
     txStrippedMint    :: !Value,
     -- ^ The 'Value' minted by this transaction.
-    txStrippedFee     :: !Value
+    txStrippedFee     :: !Ada
     -- ^ The fee for this transaction.
     } deriving (Show, Eq, Generic)
 

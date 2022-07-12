@@ -20,7 +20,6 @@ import Prelude
 import Prettyprinter
 import Text.Printf (printf)
 
-import Cardano.Api.Shelley (Error (..))
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Value (assetClass, flattenValue, toString)
 import Plutus.Test.Model.Fork.Ledger.Slot (Slot (..))
@@ -180,12 +179,9 @@ instance Pretty FailReason where
         <+> "doesn't have enough funds to pay:"
       , indent 5 (ppBalanceWith (BchNames M.empty M.empty M.empty M.empty M.empty) val)
       ]
-    IntervalError err -> "Time or vlaid range related error:" <+> pretty (displayError err)
     NotBalancedTx -> "Not balanced transaction"
     FailToReadUtxo -> "UTXO not found"
     FailToCardano err -> "Failed to convert transaction from Plutus to Cardano:" <+> pretty err
-    TxScriptFail errs -> "Script execution error:" <+>
-      hsep (punctuate comma $ fmap (pretty . displayError) errs)
     TxInvalidRange _ range -> "Not in valid range" <+> pretty range
     TxLimitError ovfs _ -> hsep (punctuate comma (fmap ppOverflow ovfs))
     TxInvalidWithdraw err -> pretty err

@@ -6,6 +6,8 @@ import Prelude
 import Test.Tasty
 
 import Plutus.Test.Model
+import Plutus.Test.Model.Ledger.Ada (Ada)
+import Plutus.Test.Model.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Api
 import Suites.Plutus.Model.Script.Onchain.Staking
 import Suites.Plutus.Model.Util
@@ -23,16 +25,16 @@ tests cfg =
 stakingTest :: Run ()
 stakingTest = do
   u1 : u2 : _ <- setupUsers
-  let fee1 = adaValue 100
+  let fee1 = Ada.Lovelace 100
       stakeScript = stakeValidator $ toAddress u2
   pool <- head <$> getPools
-  sp1 <- spend u1 fee1
+  sp1 <- spend u1 (Ada.toValue fee1)
   submitTx u1 $ registerCredentialTx stakeScript pool sp1 fee1
-  let fee2 = adaValue 10
-  sp2 <- spend u1 fee2
+  let fee2 = Ada.Lovelace 10
+  sp2 <- spend u1 (Ada.toValue fee2)
   submitTx u1 (withdrawTx stakeScript u1 u2 sp2 fee2)
 
-withdrawTx :: TypedStake () -> PubKeyHash -> PubKeyHash -> UserSpend -> Value -> Tx
+withdrawTx :: TypedStake () -> PubKeyHash -> PubKeyHash -> UserSpend -> Ada -> Tx
 withdrawTx stakeScript u1 u2 sp fee =
   mconcat
     [ userSpend sp
@@ -42,12 +44,12 @@ withdrawTx stakeScript u1 u2 sp fee =
     , withdrawStakeScript stakeScript () 50
     ]
 
-registerCredentialTx :: TypedStake () -> PoolId -> UserSpend -> Value -> Tx
+registerCredentialTx :: TypedStake () -> PoolId -> UserSpend -> Ada -> Tx
 registerCredentialTx stakeScript poolId sp fee =
   mconcat
     [ userSpend sp
     , payFee fee
-    , registerStakeScript stakeScript ()
+    , registerStakeScript stakeScript
     , delegateStakeScript stakeScript () poolId
     ]
 
