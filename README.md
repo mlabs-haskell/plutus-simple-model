@@ -775,7 +775,7 @@ Enter the Box - typed `TxOut`. The `Box` is `TxOut` augmented with typed datum.
 We can read Box for the script with the function:
 
 ```haskell
-boxAt :: (IsValidator script) => script -> Run [TxBox script]
+boxAt :: (IsValidator script) => script -> Run [TxBox (DatumType script)]
 ```
 
 It reads the typed box. We can use it like this: 
@@ -787,7 +787,7 @@ gameBox <- head <$> boxAt @Game gameScript
 Sometimes it's useful to read the box by NFT, since often scripts are identified by unque NFTs:
 
 ```haskell
-nftAt :: (IsValidator script) => script -> Run (TxBox script)
+nftAt :: (IsValidator script) => script -> Run (TxBox (DatumType script))
 nftAt tv = ...
 ```
 
@@ -795,10 +795,10 @@ So let's look at the box:
 
 ```haskell
 -- | Typed txOut that contains decoded datum
-data TxBox a = TxBox
+data TxBox datum = TxBox
   { txBoxRef   :: TxOutRef    -- ^ tx out reference
   , txBoxOut   :: TxOut       -- ^ tx out
-  , txBoxDatum :: DatumType a -- ^ datum
+  , txBoxDatum :: datum       -- ^ datum
   }
 
 txBoxValue :: TxBox a -> Value
@@ -811,7 +811,7 @@ We can just spend boxes as scripts:
 
 ```haskell
 spendBox :: (IsValidator v) => 
-  v -> RedeemerType v -> TxBox v -> Tx
+  v -> RedeemerType v -> TxBox (DatumType v) -> Tx
 spendBox tv redeemer box
 ```
 
@@ -819,7 +819,7 @@ The most generic function is `modifyBox`:
 
 ```haskell
 modifyBox :: (IsValidator v) 
-  => v -> TxBox v -> RedeemerType v 
+  => v -> TxBox (DatumType v) -> RedeemerType v 
   -> (DatumType v -> DatumType v) 
   -> (Value -> Value) 
   -> Tx
@@ -831,7 +831,7 @@ Also, often we use boxes as oracles:
 
 ```haskell
 readOnlyBox :: (IsValidator v)
-  => v -> TxBox v -> RedeemerType v -> Tx
+  => v -> TxBox (DatumType v) -> RedeemerType v -> Tx
 ```
 
 It keeps the datum and value the same.

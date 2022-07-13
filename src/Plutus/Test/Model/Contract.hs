@@ -350,7 +350,7 @@ spendBox ::
   (IsValidator script) =>
   script ->
   RedeemerType script ->
-  TxBox script ->
+  TxBox (DatumType script) ->
   Tx
 spendBox tv red TxBox{..} =
   spendScript tv txBoxRef red txBoxDatum
@@ -358,7 +358,7 @@ spendBox tv red TxBox{..} =
 -- | Specify that box is used as oracle (read-only). Spends value to itself and uses the same datum.
 readOnlyBox :: (IsValidator script)
   => script
-  -> TxBox script
+  -> TxBox (DatumType script)
   -> RedeemerType script
   -> Tx
 readOnlyBox tv box act = modifyBox tv box act id id
@@ -366,7 +366,7 @@ readOnlyBox tv box act = modifyBox tv box act id id
 -- | Modifies the box. We specify how script box datum and value are updated.
 modifyBox :: (IsValidator script)
   => script
-  -> TxBox script
+  -> TxBox (DatumType script)
   -> RedeemerType script
   -> (DatumType script -> DatumType script)
   -> (Value -> Value)
@@ -409,11 +409,9 @@ validateIn times = updatePlutusTx $ \tx -> do
 data TxBox a = TxBox
   { txBoxRef   :: TxOutRef     -- ^ tx out reference
   , txBoxOut   :: TxOut        -- ^ tx out
-  , txBoxDatum :: DatumType a  -- ^ datum
+  , txBoxDatum :: a            -- ^ datum
   }
-
-deriving instance Show (DatumType a) => Show (TxBox a)
-deriving instance Eq (DatumType a) => Eq (TxBox a)
+  deriving (Show, Eq)
 
 instance HasAddress (TxBox a) where
   toAddress = txBoxAddress
@@ -431,14 +429,14 @@ txBoxValue :: TxBox a -> Value
 txBoxValue = txOutValue . txBoxOut
 
 -- | Read UTXOs with datums.
-boxAt :: (IsValidator script) => script -> Run [TxBox script]
+boxAt :: (IsValidator script) => script -> Run [TxBox (DatumType script)]
 boxAt addr = do
   utxos <- utxoAt (toAddress addr)
   fmap catMaybes $ mapM (\(ref, tout) -> fmap (\dat -> TxBox ref tout dat) <$> datumAt ref) utxos
 
 -- | It expects that Typed validator can have only one UTXO
 -- which is NFT.
-nftAt :: IsValidator script => script -> Run (TxBox script)
+nftAt :: IsValidator script => script -> Run (TxBox (DatumType script))
 nftAt tv = head <$> boxAt tv
 
 ----------------------------------------------------------------------
