@@ -12,7 +12,11 @@ module Plutus.Test.Model.Validator(
   toBuiltinPolicy,
   toBuiltinStake,
 
+  -- * Hashes
+  validatorHash,
   scriptCurrencySymbol,
+  stakeValidatorHash,
+  mintingPolicyHash,
 ) where
 
 import Prelude
@@ -34,6 +38,11 @@ class (HasAddress script, ToData (DatumType script), FromData (DatumType script)
   type RedeemerType script :: Type
   toValidator :: script -> Validator
 
+instance IsValidator Validator where
+  type DatumType Validator = BuiltinData
+  type RedeemerType Validator = BuiltinData
+  toValidator = id
+
 instance (ToData datum, FromData datum, ToData redeemer, FromData redeemer)
   => IsValidator (TypedValidator datum redeemer) where
   type DatumType (TypedValidator datum redeemer) = datum
@@ -51,6 +60,9 @@ instance (ToData redeemer, FromData redeemer) => IsValidator (TypedPolicy redeem
   type RedeemerType (TypedPolicy redeemer) = redeemer
   toValidator (TypedPolicy (MintingPolicy script)) = Validator script
 
+validatorHash :: IsValidator a => a -> ValidatorHash
+validatorHash = Fork.validatorHash . toValidator
+
 -- | Phantom type to annotate types
 newtype TypedValidator datum redeemer = TypedValidator
   { unTypedValidator :: Validator }
@@ -61,9 +73,6 @@ instance HasAddress (TypedValidator datum redeemer) where
 -- | Phantom type to annotate types
 newtype TypedPolicy redeemer = TypedPolicy
   { unTypedPolicy :: MintingPolicy }
-
-scriptCurrencySymbol :: TypedPolicy a -> CurrencySymbol
-scriptCurrencySymbol (TypedPolicy script) = Fork.scriptCurrencySymbol script
 
 instance (ToData redeemer, FromData redeemer) => HasAddress (TypedPolicy redeemer) where
   toAddress = toAddress . toValidator
@@ -89,6 +98,19 @@ instance (ToData redeemer, FromData redeemer) => HasAddress (TypedStake redeemer
 
 instance HasStakingCredential (TypedStake redeemer) where
   toStakingCredential (TypedStake script) = toStakingCredential script
+
+---------------------------------------------------------------------------------
+
+scriptCurrencySymbol :: TypedPolicy a -> CurrencySymbol
+scriptCurrencySymbol = Fork.scriptCurrencySymbol . unTypedPolicy
+
+mintingPolicyHash :: TypedPolicy a -> MintingPolicyHash
+mintingPolicyHash = Fork.mintingPolicyHash . unTypedPolicy
+
+stakeValidatorHash :: TypedStake a -> StakeValidatorHash
+stakeValidatorHash = Fork.stakeValidatorHash . unTypedStake
+
+---------------------------------------------------------------------------------
 
 -- | Coverts to low-level validator representation
 {-# INLINABLE toBuiltinValidator #-}
