@@ -97,9 +97,6 @@
           {
             packages = {
               marlowe.flags.defer-plugin-errors = true;
-              plutus-use-cases.flags.defer-plugin-errors = true;
-              plutus-ledger.flags.defer-plugin-errors = true;
-              plutus-contract.flags.defer-plugin-errors = true;
               cardano-crypto-praos.components.library.pkgconfig = pkgs.lib.mkForce [ [ pkgs.libsodium-vrf ] ];
               cardano-crypto-class.components.library.pkgconfig = pkgs.lib.mkForce [ [ pkgs.libsodium-vrf ] ];
             };
