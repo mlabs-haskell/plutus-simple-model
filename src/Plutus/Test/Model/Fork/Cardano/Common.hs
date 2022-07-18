@@ -3,6 +3,7 @@ module Plutus.Test.Model.Fork.Cardano.Common(
   getFee,
   getMint,
   getDCerts,
+  getWdrl,
   toValue,
   toAssetName,
   toPolicyId,
@@ -16,6 +17,7 @@ import Data.ByteString qualified as BS
 import Data.ByteString.Short (toShort)
 import Data.Default (def)
 import Data.List qualified as L
+import Data.Map qualified as Map
 import Data.Sequence.Strict qualified as Seq
 import Data.Set qualified as Set
 
@@ -28,6 +30,7 @@ import Cardano.Ledger.Shelley.API.Types qualified as C (
   Credential(..),
   VerKeyVRF,
   KeyHash(..),
+  Wdrl(..)
   )
 import Cardano.Crypto.Hash.Class qualified as C
 import Cardano.Ledger.Slot qualified as C
@@ -57,6 +60,12 @@ getDCerts network poolDeposit minPoolCost =
     fmap Seq.fromList
   . mapM (toDCert network poolDeposit minPoolCost . P.certificate'dcert)
   . P.extra'certificates
+  . P.tx'extra
+
+getWdrl :: Network -> P.Tx -> Either ToCardanoError (C.Wdrl StandardCrypto)
+getWdrl network =
+    toWdrl network
+  . P.extra'withdraws
   . P.tx'extra
 
 toValue :: P.Value -> Either ToCardanoError (C.Value StandardCrypto)
@@ -133,4 +142,11 @@ toCredential = \case
   P.PubKeyCredential pubKeyHash    -> C.KeyHashObj <$> toPubKeyHash pubKeyHash
   P.ScriptCredential validatorHash -> C.ScriptHashObj <$> toScriptHash validatorHash
 
+toWdrl :: Network -> [P.Withdraw] -> Either ToCardanoError (C.Wdrl StandardCrypto)
+toWdrl network ws = C.Wdrl . Map.fromList <$> mapM to ws
+  where
+    to (P.Withdraw scred amount _) =
+      case scred of
+        P.StakingHash cred -> (\x -> (C.RewardAcnt network x, C.Coin amount)) <$> toCredential cred
+        _                  -> Left "Not supported staking cred in withdraw"
 

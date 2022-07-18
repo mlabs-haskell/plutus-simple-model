@@ -21,6 +21,7 @@ import Plutus.Test.Model.Fork.Cardano.Common(
   getFee,
   getMint,
   getDCerts,
+  getWdrl,
   )
 
 type Era = BabbageEra StandardCrypto
@@ -41,7 +42,7 @@ toBabbageTx network params tx = do
           totalCollateral = undefined
       outputs <- getOutputs tx
       txcerts <- getDCerts network (C._poolDeposit params) (C._minPoolCost params) tx
-      txwdrls <- getWdrl tx
+      txwdrls <- getWdrl network tx
       let txfee = getFee tx
           txvldt = getInterval tx
           txUpdates = C.SNothing
@@ -71,7 +72,6 @@ toBabbageTx network params tx = do
     getInputsBy = undefined
     getReferenceInputs = undefined
     getOutputs = undefined
-    getWdrl = undefined
     getInterval = undefined
     getSignatories = undefined
     getWits = undefined

@@ -22,7 +22,6 @@ import Data.ByteString qualified as BS
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.TxIn qualified as C
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Coin qualified as C
 import Cardano.Ledger.Alonzo (AlonzoEra, PParams)
 import Cardano.Ledger.Alonzo.Data qualified as C
 import Cardano.Ledger.Alonzo.Tx qualified as C
@@ -38,7 +37,6 @@ import Cardano.Ledger.Shelley.UTxO qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as C (
   StrictMaybe(..),
   )
-import Cardano.Ledger.Shelley.TxBody qualified as C (Wdrl(..))
 import Cardano.Ledger.ShelleyMA.Timelocks qualified as C
 import Cardano.Ledger.Alonzo.PParams qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as C
@@ -58,6 +56,7 @@ import Plutus.Test.Model.Fork.Cardano.Common(
   getFee,
   getMint,
   getDCerts,
+  getWdrl,
   toValue,
   toScriptHash,
   toCredential,
@@ -82,7 +81,7 @@ toAlonzoTx network params tx = do
       collateral <- getInputsBy Plutus.txCollateral tx
       outputs <- getOutputs tx
       txcerts <- getDCerts network (C._poolDeposit params) (C._minPoolCost params) tx
-      txwdrls <- getWdrl tx
+      txwdrls <- getWdrl network tx
       let txfee = getFee tx
           txvldt = getInterval tx
           txUpdates = C.SNothing
@@ -130,10 +129,6 @@ toAlonzoTx network params tx = do
       . Plutus.txSignatures
       . P.tx'plutus
 
-    getWdrl =
-        toWdrl network
-      . P.extra'withdraws
-      . P.tx'extra
 
 
     toWits txBody = do
@@ -218,13 +213,6 @@ toInterval (P.Interval (P.LowerBound from _) (P.UpperBound to _)) = C.ValidityIn
 toSlot :: P.Slot -> C.SlotNo
 toSlot (P.Slot n) = C.SlotNo (fromInteger n)
 
-toWdrl :: Network -> [P.Withdraw] -> Either ToCardanoError (C.Wdrl StandardCrypto)
-toWdrl network ws = C.Wdrl . Map.fromList <$> mapM to ws
-  where
-    to (P.Withdraw scred amount _) =
-      case scred of
-        P.StakingHash cred -> (\x -> (C.RewardAcnt network x, C.Coin amount)) <$> toCredential cred
-        _                  -> Left "Not supported staking cred in withdraw"
 
 
 fromTxId :: C.TxId StandardCrypto -> P.TxId
