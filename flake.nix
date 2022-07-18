@@ -5,25 +5,26 @@
     haskell-nix.url = "github:input-output-hk/haskell.nix";
     nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
+    iohk-nix.flake = false;
     haskell-nix-extra-hackage.url = "github:mlabs-haskell/haskell-nix-extra-hackage/separate-hackages";
     haskell-nix-extra-hackage.inputs.haskell-nix.follows = "haskell-nix";
     haskell-nix-extra-hackage.inputs.nixpkgs.follows = "nixpkgs";
 
-    cardano-base.url = "github:input-output-hk/cardano-base/631cb6cf1fa01ab346233b610a38b3b4cba6e6ab";
+    cardano-base.url = "github:input-output-hk/cardano-base";
     cardano-base.flake = false;
-    cardano-crypto.url = "github:input-output-hk/cardano-crypto/f73079303f663e028288f9f4a9e08bcca39a923e";
+    cardano-crypto.url = "github:input-output-hk/cardano-crypto";
     cardano-crypto.flake = false;
-    cardano-ledger.url = "github:input-output-hk/cardano-ledger/e290bf8d0ea272a51e9acd10adc96b4e12e00d37";
+    cardano-ledger.url = "github:input-output-hk/cardano-ledger";
     cardano-ledger.flake = false;
-    cardano-prelude.url = "github:input-output-hk/cardano-prelude/bb4ed71ba8e587f672d06edf9d2e376f4b055555";
+    cardano-prelude.url = "github:input-output-hk/cardano-prelude";
     cardano-prelude.flake = false;
-    flat.url = "github:Quid2/flat/ee59880f47ab835dbd73bea0847dab7869fc20d8";
+    flat.url = "github:Quid2/flat";
     flat.flake = false;
-    goblins.url = "github:input-output-hk/goblins/cde90a2b27f79187ca8310b6549331e59595e7ba";
+    goblins.url = "github:input-output-hk/goblins";
     goblins.flake = false;
-    plutus.url = "github:input-output-hk/plutus/d24a7540e4659b57ce2ab25dadb968991e232191";
+    plutus.url = "github:input-output-hk/plutus";
     plutus.flake = false;
-    Win32-network.url = "github:input-output-hk/Win32-network/3825d3abf75f83f406c1f7161883c438dac7277d";
+    Win32-network.url = "github:input-output-hk/Win32-network";
     Win32-network.flake = false;
   };
 
@@ -35,8 +36,7 @@
 
       nixpkgsFor = system:
         import nixpkgs {
-          overlays = [ haskell-nix.overlay iohk-nix.overlays.crypto ];
-          inherit (haskell-nix) config;
+          overlays = [ haskell-nix.overlay (import "${iohk-nix}/overlays/crypto") ];
           inherit system;
         };
 
@@ -116,12 +116,10 @@
           pkgs = nixpkgsFor system;
           pkgs' = nixpkgsFor' system;
           hackages = hackagesFor pkgs.system;
-          plutus = import inputs.plutus { inherit system; };
           pkgSet = pkgs.haskell-nix.cabalProject' ({
               src = ./.;
               compiler-nix-name = ghcVersion;
               inherit (hackages) extra-hackages extra-hackage-tarballs modules;
-              index-state = "2022-05-18T00:00:00Z";
               cabalProjectLocal =
                 ''
                   allow-newer:
