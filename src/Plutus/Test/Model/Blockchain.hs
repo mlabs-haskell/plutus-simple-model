@@ -598,12 +598,12 @@ getUTxO tx = do
   mOuts <- sequence <$> mapM (getTxOut . P.txInRef) ins
   pure $ fmap (Alonzo.toUtxo networkId . zip (P.txInRef <$> ins)) mOuts
   where
-    ins = S.toList $ P.txInputs tx
-
-{-
-toScriptData :: ToData a => a -> Cardano.ScriptData
-toScriptData d = fromAlonzoData $ Alonzo.Data $ toData d
--}
+    ins =
+      mconcat
+        [ S.toList $ P.txInputs tx
+        , S.toList $ P.txCollateral tx
+        , S.toList $ P.txReferenceInputs tx
+        ]
 
 -- | Reads TxOut by its reference.
 getTxOut :: TxOutRef -> Run (Maybe TxOut)

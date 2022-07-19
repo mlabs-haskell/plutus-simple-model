@@ -44,6 +44,8 @@ module Plutus.Test.Model.Contract (
   spendPubKey,
   spendScript,
   spendBox,
+  readInput,
+  readBox,
   readOnlyBox,
   modifyBox,
   mintValue,
@@ -343,6 +345,17 @@ spendScript tv ref red dat = toExtra $
   mempty
     { P.txInputs = S.singleton $ P.TxIn ref (Just $ P.ConsumeScriptAddress (toValidator tv) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
     }
+
+-- | Reference input
+readInput :: TxOutRef -> Tx
+readInput ref = toExtra $
+  mempty
+    { P.txReferenceInputs = S.singleton $ P.TxIn ref Nothing
+    }
+
+-- | Reference box
+readBox :: TxBox script -> Tx
+readBox = readInput . txBoxRef
 
 -- | Spend script input.
 spendBox ::

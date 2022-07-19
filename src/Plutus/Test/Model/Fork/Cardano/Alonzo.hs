@@ -53,6 +53,7 @@ import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.Test.Model.Fork.Ledger.Slot qualified as P
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as C (datumHash, validatorHash, toScript)
 import Plutus.Test.Model.Fork.Cardano.Common(
+  getInputsBy,
   getFee,
   getMint,
   getDCerts,
@@ -60,6 +61,7 @@ import Plutus.Test.Model.Fork.Cardano.Common(
   toValue,
   toScriptHash,
   toCredential,
+  toTxIn,
   )
 import Cardano.Ledger.SafeHash
 import Cardano.Crypto.Hash.Class
@@ -106,13 +108,6 @@ toAlonzoTx network params tx = do
           adHash
           txnetworkid
 
-    getInputsBy extract =
-        fmap Set.fromList
-      . mapM toTxIn
-      . fmap P.txInRef
-      . Set.toList
-      . extract
-      . P.tx'plutus
 
     getOutputs =
         fmap Seq.fromList
@@ -283,16 +278,6 @@ toDataHash (P.DatumHash bs) =
   let bsx = PlutusTx.fromBuiltin bs
       tg = "toDatumHash (" <> show (BS.length bsx) <> " bytes)"
   in tag tg $ maybe (Left "Failed to get TxId Hash") Right $ unsafeMakeSafeHash <$> Crypto.hashFromBytes bsx
-
-toTxIn :: P.TxOutRef -> Either ToCardanoError (C.TxIn StandardCrypto)
-toTxIn (P.TxOutRef txId n) = (\tid -> C.TxIn tid (toEnum $ fromInteger n)) <$> toTxId txId
-
-toTxId :: P.TxId -> Either ToCardanoError (C.TxId StandardCrypto)
-toTxId (P.TxId bs) =
-  let bsx = PlutusTx.fromBuiltin bs
-      tg = "toTxIdHash (" <> show (BS.length bsx) <> " bytes)"
-  in tag tg $ maybe (Left "Failed to get TxId Hash") Right $ C.TxId . unsafeMakeSafeHash <$> Crypto.hashFromBytes bsx
-
 
 toAddr :: Network -> P.Address -> Either ToCardanoError (C.Addr StandardCrypto)
 toAddr network (P.Address addressCredential addressStakingCredential) =

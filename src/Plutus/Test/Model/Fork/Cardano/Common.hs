@@ -1,10 +1,12 @@
 module Plutus.Test.Model.Fork.Cardano.Common(
   ToCardanoError,
+  getInputsBy,
   getFee,
   getMint,
   getDCerts,
   getWdrl,
   toValue,
+  toTxIn,
   toAssetName,
   toPolicyId,
   toScriptHash,
@@ -21,6 +23,7 @@ import Data.Map qualified as Map
 import Data.Sequence.Strict qualified as Seq
 import Data.Set qualified as Set
 
+import Cardano.Ledger.SafeHash
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Shelley.API.Types qualified as C (
   StrictMaybe(..),
@@ -37,10 +40,12 @@ import Cardano.Ledger.Slot qualified as C
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.Delegation.Certificates qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as Shelley (Hash)
+import Cardano.Ledger.TxIn qualified as C
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Ledger.Mary.Value qualified as C
 import Cardano.Ledger.Hashes qualified as C
-import Plutus.V1.Ledger.Api qualified as P
+import Plutus.V2.Ledger.Api qualified as P
+import Plutus.V2.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value qualified as Value
 import Plutus.Test.Model.Fork.TxExtra qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
@@ -48,6 +53,15 @@ import Plutus.Test.Model.Fork.Ledger.Ada qualified as Ada
 import PlutusTx.Builtins qualified as PlutusTx
 
 type ToCardanoError = String
+
+getInputsBy :: (Plutus.Tx -> Set.Set P.TxIn) -> P.Tx -> Either ToCardanoError (Set.Set (C.TxIn StandardCrypto))
+getInputsBy extract =
+    fmap Set.fromList
+  . mapM toTxIn
+  . fmap P.txInRef
+  . Set.toList
+  . extract
+  . P.tx'plutus
 
 getFee :: P.Tx -> C.Coin
 getFee = C.Coin . Ada.getLovelace . Plutus.txFee . P.tx'plutus
@@ -124,6 +138,15 @@ toDCert network poolDeposit minPoolCost = \case
                 (Set.singleton cpkh2)
                 Seq.empty
                 C.SNothing
+
+toTxIn :: P.TxOutRef -> Either ToCardanoError (C.TxIn StandardCrypto)
+toTxIn (P.TxOutRef txId n) = (\tid -> C.TxIn tid (toEnum $ fromInteger n)) <$> toTxId txId
+
+toTxId :: P.TxId -> Either ToCardanoError (C.TxId StandardCrypto)
+toTxId (P.TxId bs) =
+  let bsx = PlutusTx.fromBuiltin bs
+      tg = "toTxIdHash (" <> show (BS.length bsx) <> " bytes)"
+  in tag tg $ maybe (Left "Failed to get TxId Hash") Right $ C.TxId . unsafeMakeSafeHash <$> Crypto.hashFromBytes bsx
 
 toVrf :: P.PubKeyHash -> Either ToCardanoError (Shelley.Hash StandardCrypto (C.VerKeyVRF StandardCrypto))
 toVrf (P.PubKeyHash bs) =

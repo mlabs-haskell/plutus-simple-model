@@ -18,6 +18,7 @@ import Plutus.Test.Model.Fork.TxExtra qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.Test.Model.Fork.Cardano.Common(
   ToCardanoError,
+  getInputsBy,
   getFee,
   getMint,
   getDCerts,
@@ -37,7 +38,7 @@ toBabbageTx network params tx = do
     getBody = do
       spendInputs <- getInputsBy Plutus.txInputs tx
       collateralInputs <- getInputsBy Plutus.txCollateral tx
-      referenceInputs <- getReferenceInputs
+      referenceInputs <- getInputsBy Plutus.txReferenceInputs tx
       let collateralReturn = undefined
           totalCollateral = undefined
       outputs <- getOutputs tx
@@ -69,8 +70,6 @@ toBabbageTx network params tx = do
         adHash
         txNetworkId
 
-    getInputsBy = undefined
-    getReferenceInputs = undefined
     getOutputs = undefined
     getInterval = undefined
     getSignatories = undefined

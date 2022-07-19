@@ -30,6 +30,8 @@ data Tx = Tx {
     -- ^ The inputs to this transaction.
     txCollateral  :: Set.Set TxIn,
     -- ^ The collateral inputs to cover the fees in case validation of the transaction fails.
+    txReferenceInputs :: Set.Set TxIn,
+    -- ^ Reference inputs
     txOutputs     :: [TxOut],
     -- ^ The outputs of this transaction, ordered so they can be referenced by index.
     txMint        :: !Value,
@@ -54,6 +56,7 @@ instance Semigroup Tx where
     tx1 <> tx2 = Tx {
         txInputs = txInputs tx1 <> txInputs tx2,
         txCollateral = txCollateral tx1 <> txCollateral tx2,
+        txReferenceInputs = txReferenceInputs tx1 <> txReferenceInputs tx2,
         txOutputs = txOutputs tx1 <> txOutputs tx2,
         txMint = txMint tx1 <> txMint tx2,
         txFee = txFee tx1 <> txFee tx2,
@@ -65,7 +68,7 @@ instance Semigroup Tx where
         }
 
 instance Monoid Tx where
-    mempty = Tx mempty mempty mempty mempty mempty top mempty mempty mempty mempty
+    mempty = Tx mempty mempty mempty mempty mempty mempty top mempty mempty mempty mempty
 
 -- | Compute the id of a transaction.
 txId :: Tx -> TxId
