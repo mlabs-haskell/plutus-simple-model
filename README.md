@@ -69,7 +69,7 @@ It just runs the state updates.
 Let's create test users:
 
 ```haskell
--- | alocate 3 users with 1000 lovelaces each
+-- | allocate 3 users with 1000 lovelaces each
 setupUsers :: Run [PubKeyHash]
 setupUsers = replicateM 3 $ newUser $ adaValue 1000
 ```
@@ -81,7 +81,7 @@ newUser :: Value -> Run PubKeyHash
 ```
 
 Users are identified by their pub key hashes. Note that admin should have the value that we want to share
-with new user. Otherwise we will get run-time exception.
+with new user. Otherwise we will get a run-time exception.
 
 Users can send values to each other with function:
 
@@ -167,7 +167,7 @@ The function `sendTx` just submits a block with single TX in it. It's ok for mos
 if we need to test acceptance of several TXs in the block we can use `sendBlock`.
 
 There is a common pattern for testing to form single TX, sign it with a key and send to network. 
-If we don't need to look at the stats we can use function. If it fails it logs the error.
+If we don't need to look at the stats we can use the following function. If it fails it logs the error.
 
 ```haskell
 submitTx :: PubKeyHash -> Tx -> Run ()
@@ -178,14 +178,14 @@ Let's create Tx and submit it.
 
 ## Typed validators
 
-You might be familiar with the notion of `TypedValdiator` from the library `plutus-ledger`
+You might be familiar with the notion of `TypedValidator` from the library `plutus-ledger`
 which comes from the repo `plutus-apps`. In practice `plutus-apps` is heavy-weight and 
-often becomes obsolete. To mitigate it's shortcomings in this library we stay at the 
+often becomes obsolete. To mitigate its shortcomings in this library we stay at the 
 plutus level. We work with types that are supported by `plutus-ledger-api` and
 don't use higher-level types from `plutus-ledger`.
 
 Nonetheless it's great to have type-safety and watch out for which datums and redeemers are
-applied to specific validators. For that the library `plutus-simple-model` uses 
+applied to specific validators. For that purpose the library `plutus-simple-model` uses 
 lightweight wrappers to enforce types for datums and redeemers based on scripts. 
 They are defined in the module `Plutus.Test.Model.Validator`.
 
@@ -194,7 +194,7 @@ There are three types of typed valdiators:
 * typed validators for scripts: 
 
   ```haskell
-  newtype TypedValidator datum redeemer = TypedValdiator Validator
+  newtype TypedValidator datum redeemer = TypedValidator Validator
   ```
 
 * typed minting policies:
@@ -304,7 +304,7 @@ gameContract (GuessHash h) (Guess answer) _ =
   Plutus.sha2_256 answer Plutus.== h
 ```
 
-Let's compile the script and create `TypedValdiator` for testing with our library:
+Let's compile the script and create `TypedValidator` for testing with our library:
 
 ```haskell
 import Plutus.Test.Model (toBuiltinValidator, TypedValidator, mkTypedValidator)
@@ -316,9 +316,9 @@ gameScript :: Game
 gameScript = mkTypedValidator $$(PlutusTx.compile [|| toBuiltinValidator gameContract ||])
 ```
 
-We have to define it in separate module than the types definition otherwise GHC
+We have to define the script instance in a separate module from the type definition otherwise GHC
 complains on mixing compilation with QuasiQuotes with derivation of `UnsafeData` instances
-with template haskell.
+with Template Haskell.
 
 That's it! This is our contract that we are going to test.
 
@@ -349,7 +349,7 @@ initGame pkh prize answer = do               -- arguments: user, value for the p
 
 
 Let's discuss the function bit by bit. To create TX we need to first determine the inputs.
-Input is set of UTXO's that we'd like to spend. For that we use function
+Input is a set of UTXO's that we'd like to spend. For that we use function
 
 ```haskell
 spend :: PubKeyHash -> Value -> Run UserSpend
@@ -386,10 +386,10 @@ initGameTx usp val answer =
     ]
 ```
 
-We create transaction by accumulation of monoidal parts. As Plutus Tx is monoid it's convenient
+We create transaction by accumulation of monoidal parts. As Plutus Tx is a monoid it's convenient
 to assemble it from tiny parts. For our task there are just two parts:
 
-* for inputs and outputs of user spend
+* form inputs and outputs of user spend
 * pay prize to the script and form right datum for it.
 
 We use function to make right part for spending the user inputs and sending change back to user:
@@ -406,7 +406,7 @@ payToScript :: IsValidator script => script -> DatumType script -> Value -> Tx
 
 So it uses validator, datum for it (of proper type) and value to protect with the contract.
 As simple as that. Our type `Game` is `TypedValidator GameDatum GameRedeemer` and
-for typed valdiator first tpye argument corresponds to `DatumType`.
+for typed validator first type argument corresponds to `DatumType`.
 
 Let's create another Tx to post solution to the puzzle. It seems to be more involved but don't be scary.
 We will take it bit by bit:
@@ -435,8 +435,8 @@ utxoAt  :: HasAddress addr => addr -> Run [(TxOutRef, TxOut)]
 datumAt :: TxOutRef -> Run (Maybe a)
 ```
 
-Our `gameScript` has instance of `HasAddress`. It is an address of underlying script.
-We should query the datum separately because `TxOut` contains only hash of it.
+Our `gameScript` has instance of `HasAddress`. It is an address of the underlying script.
+We should query the datum separately because `TxOut` contains only its hash.
 Let's look at the pure function that creates TX. Again we assemble TX from monoidal parts:
 
 ```haskell
@@ -509,7 +509,7 @@ By default, it's `always`, it means "any time" and should work.
 Also note that because Plutus uses `POSIXTime` while the Cardano network uses Slots, the inherent
 difference in precision between Slot and `POSIXTime` may cause unexpected validation failures.
 For example, if we try to build a transaction using the `POSIXTimeRange` `(1100,3400)`, it will be converted to
-`SlotRange` `(1,4)` to go through the Cardano network, and when it is converted back to Plutus, the POSIXRange
+`SlotRange` `(1,4)` to go through the Cardano network, and when it is converted back to Plutus, the `POSIXTimeRange`
 will have been extended to cover the whole slot range, becoming `(1000,4000)` and maybe trespassing
 the allowed limits set by the validator.
 
@@ -520,8 +520,8 @@ To count in human-readable format we have convenient functions: `days`, `hours`,
 wait $ hours 4
 ```
 
-That's it. you can find complete example at the test suite (see `Suites.Plutus.Model.Script.Test.Game`).
-There are other useful function to dicuss. Look up the docs for the `Blockchain` and `Contract` modules.
+That's it. You can find complete example at the test suite (see `Suites.Plutus.Model.Script.Test.Game`).
+There are other useful functions to discuss. Look up the docs for the `Blockchain` and `Contract` modules.
 
 ### How to use custom coins
 
