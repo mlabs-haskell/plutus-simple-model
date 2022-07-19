@@ -5,6 +5,7 @@ module Plutus.Test.Model.Fork.Ledger.Tx(
 ) where
 
 import Prelude
+import Control.Applicative (Alternative(..))
 import Data.Proxy
 import Control.DeepSeq (NFData)
 -- import Data.Aeson (FromJSON, ToJSON)
@@ -34,6 +35,10 @@ data Tx = Tx {
     -- ^ Reference inputs
     txOutputs     :: [TxOut],
     -- ^ The outputs of this transaction, ordered so they can be referenced by index.
+    txCollateralReturn :: Maybe TxOut,
+    -- ^ where to return the collateral
+    txTotalCollateral :: Maybe Ada,
+    -- ^ total collateral (see CIP-40)
     txMint        :: !Value,
     -- ^ The 'Value' minted by this transaction.
     txFee         :: !Ada,
@@ -58,7 +63,9 @@ instance Semigroup Tx where
         txCollateral = txCollateral tx1 <> txCollateral tx2,
         txReferenceInputs = txReferenceInputs tx1 <> txReferenceInputs tx2,
         txOutputs = txOutputs tx1 <> txOutputs tx2,
+        txCollateralReturn = txCollateralReturn tx1 <|> txCollateralReturn tx2,
         txMint = txMint tx1 <> txMint tx2,
+        txTotalCollateral = txTotalCollateral tx1 <> txTotalCollateral tx2,
         txFee = txFee tx1 <> txFee tx2,
         txValidRange = txValidRange tx1 /\ txValidRange tx2,
         txMintScripts = txMintScripts tx1 <> txMintScripts tx2,
@@ -68,7 +75,7 @@ instance Semigroup Tx where
         }
 
 instance Monoid Tx where
-    mempty = Tx mempty mempty mempty mempty mempty mempty top mempty mempty mempty mempty
+    mempty = Tx mempty mempty mempty mempty Nothing mempty mempty mempty top mempty mempty mempty mempty
 
 -- | Compute the id of a transaction.
 txId :: Tx -> TxId

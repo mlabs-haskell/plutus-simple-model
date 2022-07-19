@@ -15,6 +15,8 @@ module Plutus.Test.Model.Fork.Cardano.Common(
   toCredential,
   toInterval,
   toSlot,
+  toCoin,
+  toStrictMaybe,
 ) where
 
 import Prelude
@@ -68,8 +70,11 @@ getInputsBy extract =
   . extract
   . P.tx'plutus
 
+toCoin :: Ada.Ada -> C.Coin
+toCoin = C.Coin . Ada.getLovelace
+
 getFee :: P.Tx -> C.Coin
-getFee = C.Coin . Ada.getLovelace . Plutus.txFee . P.tx'plutus
+getFee = toCoin . Plutus.txFee . P.tx'plutus
 
 getInterval :: P.Tx -> C.ValidityInterval
 getInterval = toInterval . Plutus.txValidRange . P.tx'plutus
@@ -203,4 +208,9 @@ toInterval (P.Interval (P.LowerBound from _) (P.UpperBound to _)) = C.ValidityIn
 
 toSlot :: P.Slot -> C.SlotNo
 toSlot (P.Slot n) = C.SlotNo (fromInteger n)
+
+
+toStrictMaybe :: Maybe a -> C.StrictMaybe a
+toStrictMaybe = maybe C.SNothing C.SJust
+
 

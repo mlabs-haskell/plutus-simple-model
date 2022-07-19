@@ -46,6 +46,7 @@ module Plutus.Test.Model.Contract (
   spendBox,
   readInput,
   readBox,
+  collateralInput,
   readOnlyBox,
   modifyBox,
   mintValue,
@@ -351,6 +352,13 @@ readInput :: TxOutRef -> Tx
 readInput ref = toExtra $
   mempty
     { P.txReferenceInputs = S.singleton $ P.TxIn ref Nothing
+    }
+
+
+collateralInput :: TxOutRef -> Tx
+collateralInput ref = toExtra $
+  mempty
+    { P.txCollateral = S.singleton $ P.TxIn ref Nothing
     }
 
 -- | Reference box

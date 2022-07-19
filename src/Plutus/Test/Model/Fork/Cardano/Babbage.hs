@@ -4,16 +4,20 @@ module Plutus.Test.Model.Fork.Cardano.Babbage(
 ) where
 
 import Prelude
+import Data.Sequence.Strict qualified as Seq
 
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (PParams)
+import Cardano.Ledger.Core qualified as C
 import Cardano.Ledger.Babbage.Tx qualified as C
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Babbage.PParams qualified as C
+import Cardano.Ledger.Serialization qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as C (
   StrictMaybe(..),
   )
+import Plutus.V2.Ledger.Api qualified as P
 import Plutus.Test.Model.Fork.TxExtra qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.Test.Model.Fork.Cardano.Common(
@@ -25,6 +29,8 @@ import Plutus.Test.Model.Fork.Cardano.Common(
   getMint,
   getDCerts,
   getWdrl,
+  toCoin,
+  toStrictMaybe,
   )
 
 type Era = BabbageEra StandardCrypto
@@ -41,8 +47,8 @@ toBabbageTx network params tx = do
       spendInputs <- getInputsBy Plutus.txInputs tx
       collateralInputs <- getInputsBy Plutus.txCollateral tx
       referenceInputs <- getInputsBy Plutus.txReferenceInputs tx
-      let collateralReturn = undefined
-          totalCollateral = undefined
+      collateralReturn <- getCollateralReturn tx
+      let totalCollateral = getTotalCollateral tx
       outputs <- getOutputs tx
       txcerts <- getDCerts network (C._poolDeposit params) (C._minPoolCost params) tx
       txwdrls <- getWdrl network tx
@@ -72,6 +78,26 @@ toBabbageTx network params tx = do
         adHash
         txNetworkId
 
-    getOutputs = undefined
+    getOutputs =
+        fmap Seq.fromList
+      . mapM (toSizedTxOut network)
+      . Plutus.txOutputs
+      . P.tx'plutus
+
     getWits = undefined
+
+    getTotalCollateral =
+        maybe C.SNothing (C.SJust . toCoin)
+      . Plutus.txTotalCollateral
+      . P.tx'plutus
+
+    getCollateralReturn =
+        fmap toStrictMaybe
+      . mapM (toSizedTxOut network)
+      . Plutus.txCollateralReturn
+      . P.tx'plutus
+
+toSizedTxOut :: Network -> P.TxOut -> Either ToCardanoError (C.Sized (C.TxOut Era))
+toSizedTxOut _network _tout = undefined
+
 

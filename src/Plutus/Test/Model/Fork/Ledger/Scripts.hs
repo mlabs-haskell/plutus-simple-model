@@ -26,8 +26,7 @@ import Cardano.Ledger.Alonzo.Scripts qualified as C
 import Cardano.Ledger.Alonzo.Language qualified as C
 import Cardano.Ledger.Alonzo.TxInfo qualified as C
 import Cardano.Ledger.Mary.Value qualified as C
-import Plutus.V1.Ledger.Api qualified as P
-import Plutus.V1.Ledger.Scripts qualified as P
+import Plutus.V2.Ledger.Api qualified as P
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 
