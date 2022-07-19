@@ -1,6 +1,7 @@
 module Plutus.Test.Model.Fork.Cardano.Common(
   ToCardanoError,
   getInputsBy,
+  getInterval,
   getFee,
   getMint,
   getDCerts,
@@ -11,6 +12,8 @@ module Plutus.Test.Model.Fork.Cardano.Common(
   toPolicyId,
   toScriptHash,
   toCredential,
+  toInterval,
+  toSlot,
 ) where
 
 import Prelude
@@ -41,12 +44,14 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Shelley.Delegation.Certificates qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as Shelley (Hash)
 import Cardano.Ledger.TxIn qualified as C
+import Cardano.Ledger.ShelleyMA.Timelocks qualified as C
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Ledger.Mary.Value qualified as C
 import Cardano.Ledger.Hashes qualified as C
 import Plutus.V2.Ledger.Api qualified as P
 import Plutus.V2.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value qualified as Value
+import Plutus.Test.Model.Fork.Ledger.Slot qualified as P
 import Plutus.Test.Model.Fork.TxExtra qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.Test.Model.Fork.Ledger.Ada qualified as Ada
@@ -65,6 +70,9 @@ getInputsBy extract =
 
 getFee :: P.Tx -> C.Coin
 getFee = C.Coin . Ada.getLovelace . Plutus.txFee . P.tx'plutus
+
+getInterval :: P.Tx -> C.ValidityInterval
+getInterval = toInterval . Plutus.txValidRange . P.tx'plutus
 
 getMint :: P.Tx -> Either ToCardanoError (C.Value StandardCrypto)
 getMint = toValue . Plutus.txMint . P.tx'plutus
@@ -172,4 +180,19 @@ toWdrl network ws = C.Wdrl . Map.fromList <$> mapM to ws
       case scred of
         P.StakingHash cred -> (\x -> (C.RewardAcnt network x, C.Coin amount)) <$> toCredential cred
         _                  -> Left "Not supported staking cred in withdraw"
+
+-- | TODO: interpret closures
+toInterval :: P.SlotRange -> C.ValidityInterval
+toInterval (P.Interval (P.LowerBound from _) (P.UpperBound to _)) = C.ValidityInterval before after
+  where
+    before = case from of
+      P.Finite a -> C.SJust (toSlot a)
+      _        -> C.SNothing
+
+    after = case to of
+      P.Finite a -> C.SJust  (toSlot a)
+      _        -> C.SNothing
+
+toSlot :: P.Slot -> C.SlotNo
+toSlot (P.Slot n) = C.SlotNo (fromInteger n)
 

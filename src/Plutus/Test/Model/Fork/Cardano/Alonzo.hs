@@ -37,7 +37,6 @@ import Cardano.Ledger.Shelley.UTxO qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as C (
   StrictMaybe(..),
   )
-import Cardano.Ledger.ShelleyMA.Timelocks qualified as C
 import Cardano.Ledger.Alonzo.PParams qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as C
 import Cardano.Ledger.Alonzo.TxWitness qualified as C
@@ -50,11 +49,11 @@ import Plutus.V2.Ledger.Tx qualified as Plutus
 import PlutusTx.Builtins.Internal qualified as P
 import PlutusTx.Builtins qualified as PlutusTx
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
-import Plutus.Test.Model.Fork.Ledger.Slot qualified as P
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as C (datumHash, validatorHash, toScript)
 import Plutus.Test.Model.Fork.Cardano.Common(
   getInputsBy,
   getFee,
+  getInterval,
   getMint,
   getDCerts,
   getWdrl,
@@ -115,7 +114,6 @@ toAlonzoTx network params tx = do
       . Plutus.txOutputs
       . P.tx'plutus
 
-    getInterval = toInterval . Plutus.txValidRange . P.tx'plutus
 
     getSignatories =
         Set.fromList
@@ -192,21 +190,6 @@ toAlonzoTx network params tx = do
               (C.RdmrPtr scriptTag (fromInteger n), addDefaultExUnits $ toRedeemer redeemer)
 
         addDefaultExUnits rdm = (rdm, C.ExUnits 1 1)
-
--- | TODO: interpret closures
-toInterval :: P.SlotRange -> C.ValidityInterval
-toInterval (P.Interval (P.LowerBound from _) (P.UpperBound to _)) = C.ValidityInterval before after
-  where
-    before = case from of
-      P.Finite a -> C.SJust (toSlot a)
-      _        -> C.SNothing
-
-    after = case to of
-      P.Finite a -> C.SJust  (toSlot a)
-      _        -> C.SNothing
-
-toSlot :: P.Slot -> C.SlotNo
-toSlot (P.Slot n) = C.SlotNo (fromInteger n)
 
 
 

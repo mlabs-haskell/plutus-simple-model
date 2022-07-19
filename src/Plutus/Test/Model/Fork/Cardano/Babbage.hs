@@ -19,6 +19,7 @@ import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.Test.Model.Fork.Cardano.Common(
   ToCardanoError,
   getInputsBy,
+  getInterval,
   getFee,
   getMint,
   getDCerts,
@@ -71,7 +72,6 @@ toBabbageTx network params tx = do
         txNetworkId
 
     getOutputs = undefined
-    getInterval = undefined
     getSignatories = undefined
     getWits = undefined
 
