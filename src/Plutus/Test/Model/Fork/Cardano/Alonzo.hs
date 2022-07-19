@@ -133,7 +133,7 @@ toAlonzoTx network params tx = do
             certificates = mapMaybe (fmap (P.getStakeValidator . snd) . P.certificate'script) (P.extra'certificates $ P.tx'extra tx)
             validators = fmap (\(script, _, _) -> script) validatorInfo
 
-            addHash script = (C.validatorHash (P.Validator script), script)
+            addHash script = (C.validatorHash C.PlutusV1 (P.Validator script), script)
 
         validatorInfo = mapMaybe (fromInType <=< P.txInType) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
 

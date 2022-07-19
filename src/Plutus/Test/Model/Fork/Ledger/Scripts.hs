@@ -42,29 +42,29 @@ dataHash (P.BuiltinData dat) =
   P.toBuiltin . C.hashToBytes . C.extractHash $ C.hashData $ C.Data @(AlonzoEra StandardCrypto) dat
 
 -- | Hash a 'PV1.Validator' script.
-validatorHash :: P.Validator -> P.ValidatorHash
-validatorHash (P.Validator script) =
+validatorHash :: C.Language -> P.Validator -> P.ValidatorHash
+validatorHash lang (P.Validator script) =
     C.transScriptHash
   $ C.hashScript @(AlonzoEra StandardCrypto)
-  $ toScript C.PlutusV1 script
+  $ toScript lang script
 
-stakeValidatorHash :: P.StakeValidator -> P.StakeValidatorHash
-stakeValidatorHash = coerce validatorHash
+stakeValidatorHash :: C.Language -> P.StakeValidator -> P.StakeValidatorHash
+stakeValidatorHash lang = coerce (validatorHash lang)
 
-scriptHash :: P.Script -> P.ScriptHash
-scriptHash = coerce validatorHash
+scriptHash :: C.Language -> P.Script -> P.ScriptHash
+scriptHash lang = coerce (validatorHash lang)
 
-mintingPolicyHash :: P.MintingPolicy -> P.MintingPolicyHash
-mintingPolicyHash = coerce validatorHash
+mintingPolicyHash :: C.Language -> P.MintingPolicy -> P.MintingPolicyHash
+mintingPolicyHash lang = coerce (validatorHash lang)
 
 {-# INLINABLE scriptCurrencySymbol #-}
 -- | The 'CurrencySymbol' of a 'MintingPolicy'.
-scriptCurrencySymbol :: P.MintingPolicy -> P.CurrencySymbol
-scriptCurrencySymbol (P.MintingPolicy script) =
+scriptCurrencySymbol :: C.Language -> P.MintingPolicy -> P.CurrencySymbol
+scriptCurrencySymbol lang (P.MintingPolicy script) =
  C.transPolicyID
  $ C.PolicyID
  $ C.hashScript @(AlonzoEra StandardCrypto)
- $ toScript C.PlutusV1 script
+ $ toScript lang script
 
 toScript :: C.Language -> P.Script -> C.Script (AlonzoEra StandardCrypto)
 toScript lang = C.PlutusScript lang . SBS.toShort . BSL.toStrict . serialise

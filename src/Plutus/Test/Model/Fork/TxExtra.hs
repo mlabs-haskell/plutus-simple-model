@@ -24,6 +24,7 @@ import Plutus.V2.Ledger.Api
 import qualified Data.Map.Strict as M
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
+import Cardano.Ledger.Alonzo.Language qualified as C
 
 
 -- | Plutus TX with extra fields for Cardano TX fields that are missing
@@ -123,9 +124,9 @@ liftPlutusTx f (Tx extra tx) = Tx extra (f tx)
 keyToStaking :: PubKeyHash -> StakingCredential
 keyToStaking = StakingHash . PubKeyCredential
 
-scriptToStaking :: StakeValidator -> StakingCredential
-scriptToStaking validator = StakingHash $ ScriptCredential vh
+scriptToStaking :: C.Language -> StakeValidator -> StakingCredential
+scriptToStaking lang validator = StakingHash $ ScriptCredential vh
   where
-    vh = P.validatorHash $ Validator $ getStakeValidator validator
+    vh = P.validatorHash lang $ Validator $ getStakeValidator validator
 
 

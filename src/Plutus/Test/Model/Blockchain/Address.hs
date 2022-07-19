@@ -11,8 +11,7 @@ import Prelude
 import Data.Coerce
 import Plutus.V1.Ledger.Address
 import Plutus.V1.Ledger.Api
-import Plutus.Test.Model.Fork.TxExtra(keyToStaking, scriptToStaking)
-import Plutus.Test.Model.Fork.Ledger.Scripts (validatorHash)
+import Plutus.Test.Model.Fork.TxExtra(keyToStaking)
 
 class HasAddress a where
   toAddress :: a -> Address
@@ -26,8 +25,10 @@ instance HasAddress PubKeyHash where
 instance HasAddress ValidatorHash where
   toAddress = scriptHashAddress
 
+{-
 instance HasAddress Validator where
   toAddress = toAddress . validatorHash
+-}
 
 class HasStakingCredential a where
   toStakingCredential :: a -> StakingCredential
@@ -38,8 +39,10 @@ instance HasStakingCredential StakingCredential where
 instance HasStakingCredential PubKeyHash where
   toStakingCredential = keyToStaking
 
+{-
 instance HasStakingCredential StakeValidator where
   toStakingCredential = scriptToStaking
+-}
 
 -- | Encodes appening of staking address
 data AppendStaking a =

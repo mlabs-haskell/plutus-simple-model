@@ -5,6 +5,7 @@ module Plutus.Test.Model.Mint(
   fakeValue,
 ) where
 
+import Cardano.Ledger.Alonzo.Language qualified as C
 import PlutusTx.Prelude qualified as PlutusTx
 import PlutusTx qualified
 import PlutusTx.Prelude
@@ -22,7 +23,7 @@ fakeValue tag = assetClassValue (fakeCoin tag)
 fakeCoin :: FakeCoin -> AssetClass
 fakeCoin (FakeCoin tag) = assetClass sym tok
   where
-    sym = scriptCurrencySymbol $ fakeMintingPolicy tag
+    sym = scriptCurrencySymbol C.PlutusV1 $ fakeMintingPolicy tag
     tok = TokenName tag
 
 fakeMintingPolicy :: BuiltinByteString -> MintingPolicy

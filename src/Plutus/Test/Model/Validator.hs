@@ -4,9 +4,12 @@ module Plutus.Test.Model.Validator(
   TypedPolicy(..),
   TypedStake(..),
   IsValidator(..),
-  mkTypedValidator,
-  mkTypedPolicy,
-  mkTypedStake,
+  mkTypedValidatorV1,
+  mkTypedPolicyV1,
+  mkTypedStakeV1,
+  mkTypedValidatorV2,
+  mkTypedPolicyV2,
+  mkTypedStakeV2,
   -- utils
   toBuiltinValidator,
   toBuiltinPolicy,
@@ -21,6 +24,7 @@ module Plutus.Test.Model.Validator(
 
 import Prelude
 import Data.Kind (Type)
+import Cardano.Ledger.Alonzo.Language qualified as C
 
 import PlutusTx.Code (CompiledCode)
 import Plutus.V1.Ledger.Api
@@ -30,6 +34,7 @@ import Plutus.Test.Model.Blockchain (
   HasStakingCredential(..),
   )
 import PlutusTx.Prelude qualified as Plutus
+import Plutus.Test.Model.Fork.TxExtra qualified as Fork
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as Fork
 
 class (HasAddress script, ToData (DatumType script), FromData (DatumType script), ToData (RedeemerType script), FromData (RedeemerType script))
@@ -37,78 +42,95 @@ class (HasAddress script, ToData (DatumType script), FromData (DatumType script)
   type DatumType script    :: Type
   type RedeemerType script :: Type
   toValidator :: script -> Validator
-
-instance IsValidator Validator where
-  type DatumType Validator = BuiltinData
-  type RedeemerType Validator = BuiltinData
-  toValidator = id
+  getLanguage :: script -> C.Language
 
 instance (ToData datum, FromData datum, ToData redeemer, FromData redeemer)
   => IsValidator (TypedValidator datum redeemer) where
   type DatumType (TypedValidator datum redeemer) = datum
   type RedeemerType (TypedValidator datum redeemer) = redeemer
-  toValidator (TypedValidator validator) = validator
+  toValidator (TypedValidator _lang validator) = validator
+  getLanguage = typedValidator'language
 
 instance (IsValidator script, ToData (DatumType script), FromData (DatumType script), ToData (RedeemerType script), FromData (RedeemerType script))
   => IsValidator (AppendStaking script) where
   type DatumType (AppendStaking script)    = DatumType script
   type RedeemerType (AppendStaking script) = RedeemerType script
   toValidator (AppendStaking _ script) = toValidator script
+  getLanguage (AppendStaking _ script) = getLanguage script
 
 instance (ToData redeemer, FromData redeemer) => IsValidator (TypedPolicy redeemer) where
   type DatumType (TypedPolicy redeemer) = ()
   type RedeemerType (TypedPolicy redeemer) = redeemer
-  toValidator (TypedPolicy (MintingPolicy script)) = Validator script
+  toValidator (TypedPolicy _lang (MintingPolicy script)) = Validator script
+  getLanguage = typedPolicy'language
 
 validatorHash :: IsValidator a => a -> ValidatorHash
-validatorHash = Fork.validatorHash . toValidator
+validatorHash v = Fork.validatorHash (getLanguage v) (toValidator v)
 
 -- | Phantom type to annotate types
-newtype TypedValidator datum redeemer = TypedValidator
-  { unTypedValidator :: Validator }
+data TypedValidator datum redeemer = TypedValidator
+  { typedValidator'language  :: C.Language
+  , typedValidator'validator :: Validator
+  }
 
-instance HasAddress (TypedValidator datum redeemer) where
-  toAddress = toAddress . unTypedValidator
+instance (ToData datum, ToData redeemer, FromData datum, FromData redeemer)
+  => HasAddress (TypedValidator datum redeemer) where
+  toAddress = toAddress . validatorHash
 
 -- | Phantom type to annotate types
-newtype TypedPolicy redeemer = TypedPolicy
-  { unTypedPolicy :: MintingPolicy }
+data TypedPolicy redeemer = TypedPolicy
+  { typedPolicy'language  :: C.Language
+  , typedPolicy'validator :: MintingPolicy
+  }
 
 instance (ToData redeemer, FromData redeemer) => HasAddress (TypedPolicy redeemer) where
-  toAddress = toAddress . toValidator
+  toAddress = toAddress . validatorHash
 
-mkTypedValidator :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> TypedValidator datum redeemer
-mkTypedValidator = TypedValidator . mkValidatorScript
+mkTypedValidatorV1 :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> TypedValidator datum redeemer
+mkTypedValidatorV1 = TypedValidator C.PlutusV1 . mkValidatorScript
 
-mkTypedPolicy :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedPolicy redeemer
-mkTypedPolicy = TypedPolicy . mkMintingPolicyScript
+mkTypedValidatorV2 :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> TypedValidator datum redeemer
+mkTypedValidatorV2 = TypedValidator C.PlutusV2 . mkValidatorScript
 
-mkTypedStake :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedStake redeemer
-mkTypedStake = TypedStake . mkStakeValidatorScript
+mkTypedPolicyV1 :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedPolicy redeemer
+mkTypedPolicyV1 = TypedPolicy C.PlutusV1 . mkMintingPolicyScript
 
-newtype TypedStake redeemer = TypedStake { unTypedStake :: StakeValidator }
+mkTypedPolicyV2 :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedPolicy redeemer
+mkTypedPolicyV2 = TypedPolicy C.PlutusV2 . mkMintingPolicyScript
+
+mkTypedStakeV1 :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedStake redeemer
+mkTypedStakeV1 = TypedStake C.PlutusV1 . mkStakeValidatorScript
+
+mkTypedStakeV2 :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedStake redeemer
+mkTypedStakeV2 = TypedStake C.PlutusV2 . mkStakeValidatorScript
+
+data TypedStake redeemer = TypedStake
+  { typedStake'language  :: C.Language
+  , typedStake'validator :: StakeValidator
+  }
 
 instance (ToData redeemer, FromData redeemer) => IsValidator (TypedStake redeemer) where
   type DatumType (TypedStake redeemer) = ()
   type RedeemerType (TypedStake redeemer) = redeemer
-  toValidator (TypedStake (StakeValidator script)) = Validator script
+  toValidator (TypedStake _lang (StakeValidator script)) = Validator script
+  getLanguage = typedStake'language
 
 instance (ToData redeemer, FromData redeemer) => HasAddress (TypedStake redeemer) where
-  toAddress = toAddress . toValidator
+  toAddress = toAddress . validatorHash
 
 instance HasStakingCredential (TypedStake redeemer) where
-  toStakingCredential (TypedStake script) = toStakingCredential script
+  toStakingCredential (TypedStake lang script) = Fork.scriptToStaking lang script
 
 ---------------------------------------------------------------------------------
 
 scriptCurrencySymbol :: TypedPolicy a -> CurrencySymbol
-scriptCurrencySymbol = Fork.scriptCurrencySymbol . unTypedPolicy
+scriptCurrencySymbol (TypedPolicy lang script) = Fork.scriptCurrencySymbol lang script
 
 mintingPolicyHash :: TypedPolicy a -> MintingPolicyHash
-mintingPolicyHash = Fork.mintingPolicyHash . unTypedPolicy
+mintingPolicyHash (TypedPolicy lang script) = Fork.mintingPolicyHash lang script
 
 stakeValidatorHash :: TypedStake a -> StakeValidatorHash
-stakeValidatorHash = Fork.stakeValidatorHash . unTypedStake
+stakeValidatorHash (TypedStake lang script) = Fork.stakeValidatorHash lang script
 
 ---------------------------------------------------------------------------------
 

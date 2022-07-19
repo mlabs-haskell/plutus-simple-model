@@ -36,7 +36,7 @@ mkStakingValidator addr () ctx = case scriptContextPurpose ctx of
             | otherwise              = n
 
 stakeValidator :: Address -> TypedStake ()
-stakeValidator addr = mkTypedStake $
+stakeValidator addr = mkTypedStakeV1 $
     $$(PlutusTx.compile [|| \param -> toBuiltinStake (mkStakingValidator param) ||])
     `PlutusTx.applyCode`
     PlutusTx.liftCode addr
