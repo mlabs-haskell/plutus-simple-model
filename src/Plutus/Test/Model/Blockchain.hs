@@ -108,6 +108,7 @@ module Plutus.Test.Model.Blockchain (
   -- * internal
   intToUser,
   userPubKeyHash,
+  txOutDatumHash,
 ) where
 
 import Prelude
@@ -135,13 +136,12 @@ import Cardano.Ledger.Crypto qualified as C
 import Cardano.Slotting.EpochInfo.Impl (fixedEpochInfo)
 import Cardano.Slotting.Time (SystemStart (..), slotLengthFromMillisec)
 import Control.Monad.State.Strict
-import Plutus.V1.Ledger.Address
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Interval ()
+import Plutus.V2.Ledger.Api hiding (Map)
 import Plutus.V1.Ledger.Interval qualified as Interval
-import Plutus.V1.Ledger.Tx qualified as P
+import Plutus.V2.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.V1.Ledger.Value (AssetClass)
+import Plutus.V1.Ledger.Address (pubKeyHashAddress)
 import GHC.Natural
 
 import Cardano.Ledger.Slot (EpochSize (..))
@@ -325,7 +325,7 @@ initBch cfg initVal =
     genesisAddress = pubKeyHashAddress genesisUserId
 
     genesisTxOutRef = TxOutRef genesisTxId 0
-    genesisTxOut = TxOut (pubKeyHashAddress genesisUserId) initVal Nothing
+    genesisTxOut = TxOut (pubKeyHashAddress genesisUserId) initVal NoOutputDatum Nothing
 
     initStake = Stake
       { stake'pools      = M.singleton genesisPoolId (Pool { pool'stakes = [genesisStakingCred]})
@@ -699,6 +699,11 @@ datumAt ref = do
   mDh <- (txOutDatumHash =<<) <$> getTxOut ref
   pure $ fromBuiltinData . getDatum =<< (`M.lookup` dhs) =<< mDh
 
+txOutDatumHash :: TxOut -> Maybe DatumHash
+txOutDatumHash tout =
+  case txOutDatum tout of
+    OutputDatumHash dh -> Just dh
+    _                  -> Nothing
 
 -- | Reads current reward amount for a staking credential
 rewardAt :: HasStakingCredential cred => cred -> Run Integer

@@ -44,9 +44,9 @@ import Cardano.Ledger.Alonzo.TxWitness qualified as C
 import Cardano.Ledger.Alonzo.Language qualified as C
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Plutus.Test.Model.Fork.TxExtra qualified as P
-import Plutus.V1.Ledger.Api qualified as P
-import Plutus.V1.Ledger.Tx qualified as P
-import Plutus.V1.Ledger.Tx qualified as Plutus
+import Plutus.V2.Ledger.Api qualified as P
+import Plutus.V2.Ledger.Tx qualified as P
+import Plutus.V2.Ledger.Tx qualified as Plutus
 import PlutusTx.Builtins.Internal qualified as P
 import PlutusTx.Builtins qualified as PlutusTx
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
@@ -231,7 +231,7 @@ toUtxo network xs = C.UTxO . Map.fromList <$> mapM go xs
       pure (tinC, toutC)
 
 toTxOut :: Network -> P.TxOut -> Either ToCardanoError (C.TxOut Era)
-toTxOut network (P.TxOut addr value mdh) = do
+toTxOut network (P.TxOut addr value mdh _) = do
   caddr <- toAddr network addr
   cvalue <- toValue value
   fullValue caddr cvalue
@@ -264,10 +264,11 @@ toTxOut network (P.TxOut addr value mdh) = do
     fullValue caddr cvalue = do
       cval <- toVal cvalue
       case mdh of
-        Just dh -> do
+        Plutus.OutputDatumHash dh -> do
           cdh <- toDataHash dh
           pure $ C.TxOutCompactDH' compAddr cval cdh
-        Nothing -> pure $ C.TxOutCompact' compAddr cval
+        Plutus.NoOutputDatum -> pure $ C.TxOutCompact' compAddr cval
+        Plutus.OutputDatum _ -> Left "Output datum not supported in alonzo era"
       where
         compAddr = C.compactAddr caddr
 

@@ -113,8 +113,7 @@ import Test.Tasty.HUnit
 import Plutus.Test.Model.Fork.Ledger.Scripts (datumHash)
 import Plutus.Test.Model.Fork.Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
 import Plutus.V1.Ledger.Address
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Interval ()
+import Plutus.V2.Ledger.Api hiding (Map)
 import Plutus.V1.Ledger.Value
 import PlutusTx.Prelude qualified as Plutus
 import Plutus.Test.Model.Fork.Ledger.Slot (Slot (..))
@@ -124,7 +123,7 @@ import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Pretty
 import Prettyprinter (Doc, vcat, indent, (<+>), pretty)
 import Plutus.Test.Model.Stake qualified as Stake
-import Plutus.V1.Ledger.Tx qualified as P
+import Plutus.V2.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Test.Model.Validator as X
 import Plutus.Test.Model.Ledger.Ada (Ada(..))
@@ -279,7 +278,7 @@ spend' pkh expected = do
     toInput (ref, _) = P.TxIn ref (Just P.ConsumePublicKeyAddress)
 
     getChange utxos
-      | change /= mempty = Just $ TxOut (pubKeyHashAddress pkh) change Nothing
+      | change /= mempty = Just $ TxOut (pubKeyHashAddress pkh) change NoOutputDatum Nothing
       | otherwise = Nothing
       where
         change = foldMap (txOutValue . snd) utxos <> Plutus.negate expected
@@ -290,7 +289,7 @@ spend' pkh expected = do
 payWithDatumToPubKey :: ToData a => PubKeyHash -> a -> Value -> Tx
 payWithDatumToPubKey pkh dat val = toExtra $
   mempty
-    { P.txOutputs = [TxOut (pubKeyHashAddress pkh) val (Just dh)]
+    { P.txOutputs = [TxOut (pubKeyHashAddress pkh) val (OutputDatumHash dh) Nothing]
     , P.txData = M.singleton dh datum
     }
   where
@@ -302,7 +301,7 @@ payWithDatumToPubKey pkh dat val = toExtra $
 payToPubKey :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
 payToPubKey pkh val = toExtra $
   mempty
-    { P.txOutputs = [TxOut (toAddress pkh) val Nothing]
+    { P.txOutputs = [TxOut (toAddress pkh) val NoOutputDatum Nothing]
     }
 
 -- | Pay to the script.
@@ -311,7 +310,7 @@ payToScript :: (HasAddress script, ToData datum) =>
   script -> datum -> Value -> Tx
 payToScript script dat val = toExtra $
   mempty
-    { P.txOutputs = [TxOut (toAddress script) val (Just dh)]
+    { P.txOutputs = [TxOut (toAddress script) val (OutputDatumHash dh) Nothing]
     , P.txData = M.singleton dh datum
     }
   where

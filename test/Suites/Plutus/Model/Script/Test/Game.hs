@@ -12,7 +12,7 @@ import Prelude
 
 import Test.Tasty
 
-import Plutus.V1.Ledger.Api
+import Plutus.V2.Ledger.Api
 import PlutusTx.Prelude qualified as Plutus
 import Suites.Plutus.Model.Script.Onchain.Game
 import Suites.Plutus.Model.Script.Onchain.Game.Script

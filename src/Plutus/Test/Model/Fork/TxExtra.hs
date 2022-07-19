@@ -20,7 +20,7 @@ import Data.List qualified as L
 import Data.Set qualified as S
 import Prelude
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
-import Plutus.V1.Ledger.Api
+import Plutus.V2.Ledger.Api
 import qualified Data.Map.Strict as M
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as P
 import Plutus.V1.Ledger.Tx qualified as P

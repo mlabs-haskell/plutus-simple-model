@@ -8,12 +8,12 @@ import Prelude
 import Data.Proxy
 import Control.DeepSeq (NFData)
 -- import Data.Aeson (FromJSON, ToJSON)
-import Data.Map (Map)
+import Data.Map qualified as Map
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
-import Plutus.V1.Ledger.Scripts
-import Plutus.V1.Ledger.Tx
-import Plutus.V1.Ledger.Api
+-- import Plutus.V2.Ledger.Scripts
+import Plutus.V2.Ledger.Tx
+import Plutus.V2.Ledger.Api
 import PlutusTx.Lattice
 import Cardano.Crypto.Hash (SHA256, digest)
 import Codec.CBOR.Write qualified as Write
@@ -40,11 +40,11 @@ data Tx = Tx {
     -- ^ The 'SlotRange' during which this transaction may be validated.
     txMintScripts :: Set.Set MintingPolicy,
     -- ^ The scripts that must be run to check minting conditions.
-    txSignatures  :: Map PubKeyHash (C.KeyPair 'C.Witness C.StandardCrypto),
+    txSignatures  :: Map.Map PubKeyHash (C.KeyPair 'C.Witness C.StandardCrypto),
     -- ^ Signatures of this transaction.
     txRedeemers   :: Redeemers,
     -- ^ Redeemers of the minting scripts.
-    txData        :: Map DatumHash Datum
+    txData        :: Map.Map DatumHash Datum
     -- ^ Datum objects recorded on this transaction.
     } deriving stock (Show, Generic)
       deriving anyclass ({-ToJSON, FromJSON, Serialise, -} NFData)
