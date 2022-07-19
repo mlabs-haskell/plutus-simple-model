@@ -27,7 +27,6 @@ import Cardano.Ledger.Alonzo.Data qualified as C
 import Cardano.Ledger.Alonzo.Tx qualified as C
 import Cardano.Ledger.Alonzo.TxBody qualified as C
 import Cardano.Ledger.Credential qualified as C
-import Cardano.Ledger.Keys qualified as C
 import Cardano.Ledger.Address qualified as C
 import Cardano.Ledger.Slot qualified as C
 import Cardano.Ledger.Compactible qualified as C
@@ -56,6 +55,7 @@ import Plutus.Test.Model.Fork.Cardano.Common(
   getInterval,
   getMint,
   getDCerts,
+  getSignatories,
   getWdrl,
   toValue,
   toScriptHash,
@@ -113,16 +113,6 @@ toAlonzoTx network params tx = do
       . mapM (toTxOut network)
       . Plutus.txOutputs
       . P.tx'plutus
-
-
-    getSignatories =
-        Set.fromList
-      . fmap (C.hashKey . C.vKey)
-      . Map.elems
-      . Plutus.txSignatures
-      . P.tx'plutus
-
-
 
     toWits txBody = do
       let keyWits = Set.fromList $ fmap (C.makeWitnessVKey txBodyHash) $ Map.elems $ Plutus.txSignatures $ P.tx'plutus tx

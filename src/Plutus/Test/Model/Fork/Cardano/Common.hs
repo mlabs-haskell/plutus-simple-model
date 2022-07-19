@@ -5,6 +5,7 @@ module Plutus.Test.Model.Fork.Cardano.Common(
   getFee,
   getMint,
   getDCerts,
+  getSignatories,
   getWdrl,
   toValue,
   toTxIn,
@@ -34,8 +35,6 @@ import Cardano.Ledger.Shelley.API.Types qualified as C (
   PoolParams(..),
   RewardAcnt(..),
   Credential(..),
-  VerKeyVRF,
-  KeyHash(..),
   Wdrl(..)
   )
 import Cardano.Crypto.Hash.Class qualified as C
@@ -45,6 +44,7 @@ import Cardano.Ledger.Shelley.Delegation.Certificates qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as Shelley (Hash)
 import Cardano.Ledger.TxIn qualified as C
 import Cardano.Ledger.ShelleyMA.Timelocks qualified as C
+import Cardano.Ledger.Keys qualified as C
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Ledger.Mary.Value qualified as C
 import Cardano.Ledger.Hashes qualified as C
@@ -89,6 +89,14 @@ getWdrl network =
     toWdrl network
   . P.extra'withdraws
   . P.tx'extra
+
+getSignatories :: P.Tx -> Set.Set (C.KeyHash 'C.Witness StandardCrypto)
+getSignatories =
+    Set.fromList
+  . fmap (C.hashKey . C.vKey)
+  . Map.elems
+  . Plutus.txSignatures
+  . P.tx'plutus
 
 toValue :: P.Value -> Either ToCardanoError (C.Value StandardCrypto)
 toValue val = C.valueFromList totalAda <$> traverse fromValue vs
