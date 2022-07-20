@@ -24,8 +24,7 @@ import Plutus.V2.Ledger.Api
 import qualified Data.Map.Strict as M
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
-import Cardano.Ledger.Alonzo.Language qualified as C
-
+import Plutus.Test.Model.Fork.Ledger.Scripts (Versioned(..))
 
 -- | Plutus TX with extra fields for Cardano TX fields that are missing
 -- in native Plutus TX (staking and certificates).
@@ -62,7 +61,7 @@ instance Monoid Extra where
 data Mint = Mint
   { mint'value    :: Value
   , mint'redeemer :: Redeemer
-  , mint'policy   :: MintingPolicy
+  , mint'policy   :: Versioned MintingPolicy
   }
   deriving (Show, Eq)
 
@@ -89,11 +88,11 @@ appendMints mints ptx =
 
 data Certificate = Certificate
   { certificate'dcert  :: DCert
-  , certificate'script :: Maybe (Redeemer, StakeValidator)
+  , certificate'script :: Maybe (Redeemer, Versioned StakeValidator)
   }
   deriving (Show, Eq)
 
-getCertificateValidators :: [Certificate] -> M.Map StakingCredential (Redeemer, StakeValidator)
+getCertificateValidators :: [Certificate] -> M.Map StakingCredential (Redeemer, Versioned StakeValidator)
 getCertificateValidators = foldMap go
   where
     go Certificate{..} = case certificate'dcert of
@@ -111,7 +110,7 @@ getCertificateValidators = foldMap go
 data Withdraw = Withdraw
   { withdraw'credential :: StakingCredential                 -- ^ staking credential
   , withdraw'amount     :: Integer                           -- ^ amount of withdrawal in Lovelace
-  , withdraw'script     :: Maybe (Redeemer, StakeValidator)  -- ^ Just in case of script withdrawal
+  , withdraw'script     :: Maybe (Redeemer, Versioned StakeValidator)  -- ^ Just in case of script withdrawal
   }
   deriving (Show, Eq)
 
@@ -124,9 +123,9 @@ liftPlutusTx f (Tx extra tx) = Tx extra (f tx)
 keyToStaking :: PubKeyHash -> StakingCredential
 keyToStaking = StakingHash . PubKeyCredential
 
-scriptToStaking :: C.Language -> StakeValidator -> StakingCredential
-scriptToStaking lang validator = StakingHash $ ScriptCredential vh
+scriptToStaking :: Versioned StakeValidator -> StakingCredential
+scriptToStaking validator = StakingHash $ ScriptCredential vh
   where
-    vh = P.validatorHash lang $ Validator $ getStakeValidator validator
+    vh = P.validatorHash $ fmap (Validator . getStakeValidator) validator
 
 

@@ -138,8 +138,8 @@ import Cardano.Slotting.Time (SystemStart (..), slotLengthFromMillisec)
 import Control.Monad.State.Strict
 import Plutus.V2.Ledger.Api hiding (Map)
 import Plutus.V1.Ledger.Interval qualified as Interval
-import Plutus.V2.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
+import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.V1.Ledger.Value (AssetClass)
 import Plutus.V1.Ledger.Address (pubKeyHashAddress)
 import GHC.Natural
@@ -595,8 +595,8 @@ compareLimits maxLimits stat = catMaybes
 getUTxO :: P.Tx -> Run (Maybe (Either String (Ledger.UTxO Alonzo.Era)))
 getUTxO tx = do
   networkId <- bchConfigNetworkId <$> gets bchConfig
-  mOuts <- sequence <$> mapM (getTxOut . P.txInRef) ins
-  pure $ fmap (Alonzo.toUtxo networkId . zip (P.txInRef <$> ins)) mOuts
+  mOuts <- sequence <$> mapM (getTxOut . Plutus.txInRef) ins
+  pure $ fmap (Alonzo.toUtxo networkId . zip (Plutus.txInRef <$> ins)) mOuts
   where
     ins =
       mconcat
@@ -647,8 +647,8 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
         , bchAddresses = fmap (`S.difference` inRefSet) (bchAddresses s)
         }
       where
-        inRefSet = S.map P.txInRef ins
-        inRefs = M.fromList $ (,()) . P.txInRef <$> S.toList ins
+        inRefSet = S.map Plutus.txInRef ins
+        inRefs = M.fromList $ (,()) . Plutus.txInRef <$> S.toList ins
         rmIns a = M.difference a inRefs
 
     insertOut (ix, out) = do

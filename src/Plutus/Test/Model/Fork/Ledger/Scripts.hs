@@ -1,4 +1,5 @@
 module Plutus.Test.Model.Fork.Ledger.Scripts (
+  Versioned(..),
   datumHash,
   dataHash,
   redeemerHash,
@@ -12,6 +13,8 @@ module Plutus.Test.Model.Fork.Ledger.Scripts (
 
 import Prelude
 import Data.Coerce
+import Control.DeepSeq (NFData)
+import GHC.Generics
 
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy qualified as BSL
@@ -30,6 +33,12 @@ import Plutus.V2.Ledger.Api qualified as P
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 
+data Versioned a = Versioned
+  { versioned'language :: !C.Language
+  , versioned'content  :: a
+  }
+  deriving (Show, Eq, Ord, Generic, NFData, Functor)
+
 datumHash :: P.Datum -> P.DatumHash
 datumHash (P.Datum (P.BuiltinData dat)) =
   C.transDataHash' $ C.hashData $ C.Data @(AlonzoEra StandardCrypto) dat
@@ -42,29 +51,32 @@ dataHash (P.BuiltinData dat) =
   P.toBuiltin . C.hashToBytes . C.extractHash $ C.hashData $ C.Data @(AlonzoEra StandardCrypto) dat
 
 -- | Hash a 'PV1.Validator' script.
-validatorHash :: C.Language -> P.Validator -> P.ValidatorHash
-validatorHash lang (P.Validator script) =
+validatorHash :: Versioned P.Validator -> P.ValidatorHash
+validatorHash val =
     C.transScriptHash
   $ C.hashScript @(AlonzoEra StandardCrypto)
-  $ toScript lang script
+  $ toScript (fmap coerce val)
 
-stakeValidatorHash :: C.Language -> P.StakeValidator -> P.StakeValidatorHash
-stakeValidatorHash lang = coerce (validatorHash lang)
+stakeValidatorHash :: Versioned P.StakeValidator -> P.StakeValidatorHash
+stakeValidatorHash = coerce validatorHash
 
-scriptHash :: C.Language -> P.Script -> P.ScriptHash
-scriptHash lang = coerce (validatorHash lang)
+scriptHash :: Versioned P.Script -> P.ScriptHash
+scriptHash = coerce validatorHash
 
-mintingPolicyHash :: C.Language -> P.MintingPolicy -> P.MintingPolicyHash
-mintingPolicyHash lang = coerce (validatorHash lang)
+mintingPolicyHash :: Versioned P.MintingPolicy -> P.MintingPolicyHash
+mintingPolicyHash = coerce validatorHash
 
 {-# INLINABLE scriptCurrencySymbol #-}
 -- | The 'CurrencySymbol' of a 'MintingPolicy'.
-scriptCurrencySymbol :: C.Language -> P.MintingPolicy -> P.CurrencySymbol
-scriptCurrencySymbol lang (P.MintingPolicy script) =
+scriptCurrencySymbol :: Versioned P.MintingPolicy -> P.CurrencySymbol
+scriptCurrencySymbol policy =
  C.transPolicyID
  $ C.PolicyID
  $ C.hashScript @(AlonzoEra StandardCrypto)
- $ toScript lang script
+ $ toScript (fmap coerce policy)
 
-toScript :: C.Language -> P.Script -> C.Script (AlonzoEra StandardCrypto)
-toScript lang = C.PlutusScript lang . SBS.toShort . BSL.toStrict . serialise
+toScript :: Versioned P.Script -> C.Script era
+toScript (Versioned lang script) =
+  C.PlutusScript lang $ SBS.toShort $ BSL.toStrict $ serialise script
+
+

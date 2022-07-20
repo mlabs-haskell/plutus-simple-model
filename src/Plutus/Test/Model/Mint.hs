@@ -23,7 +23,7 @@ fakeValue tag = assetClassValue (fakeCoin tag)
 fakeCoin :: FakeCoin -> AssetClass
 fakeCoin (FakeCoin tag) = assetClass sym tok
   where
-    sym = scriptCurrencySymbol C.PlutusV1 $ fakeMintingPolicy tag
+    sym = scriptCurrencySymbol $ Versioned C.PlutusV1 $ fakeMintingPolicy tag
     tok = TokenName tag
 
 fakeMintingPolicy :: BuiltinByteString -> MintingPolicy

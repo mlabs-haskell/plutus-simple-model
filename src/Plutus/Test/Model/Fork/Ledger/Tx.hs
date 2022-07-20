@@ -2,6 +2,8 @@
 module Plutus.Test.Model.Fork.Ledger.Tx(
   Tx(..),
   txId,
+  TxIn(..),
+  TxInType(..),
 ) where
 
 import Prelude
@@ -13,7 +15,7 @@ import Data.Map qualified as Map
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
 -- import Plutus.V2.Ledger.Scripts
-import Plutus.V2.Ledger.Tx
+import Plutus.V2.Ledger.Tx hiding (TxIn(..), TxInType(..))
 import Plutus.V2.Ledger.Api
 import PlutusTx.Lattice
 import Cardano.Crypto.Hash (SHA256, digest)
@@ -24,6 +26,7 @@ import Cardano.Ledger.Crypto qualified as C (StandardCrypto)
 
 import Plutus.Test.Model.Fork.Ledger.Ada (Ada)
 import Plutus.Test.Model.Fork.Ledger.Slot
+import Plutus.Test.Model.Fork.Ledger.Scripts (Versioned(..))
 
 -- | A transaction, including witnesses for its inputs.
 data Tx = Tx {
@@ -45,7 +48,7 @@ data Tx = Tx {
     -- ^ The fee for this transaction.
     txValidRange  :: !SlotRange,
     -- ^ The 'SlotRange' during which this transaction may be validated.
-    txMintScripts :: Set.Set MintingPolicy,
+    txMintScripts :: Set.Set (Versioned MintingPolicy),
     -- ^ The scripts that must be run to check minting conditions.
     txSignatures  :: Map.Map PubKeyHash (C.KeyPair 'C.Witness C.StandardCrypto),
     -- ^ Signatures of this transaction.
@@ -99,6 +102,24 @@ data TxStripped = TxStripped {
     } deriving (Show, Eq, Generic)
 
 strip :: Tx -> TxStripped
-strip Tx{..} = TxStripped i txOutputs txMint txFee where
+strip Tx{..} = TxStripped i txOutputs txMint txFee
+  where
     i = Set.map txInRef txInputs
+
+
+-- | A transaction input, consisting of a transaction output reference and an input type.
+data TxIn = TxIn
+  { txInRef  :: !TxOutRef
+  , txInType :: Maybe TxInType
+  }
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
+
+data TxInType =
+    -- TODO: these should all be hashes, with the validators and data segregated to the side
+    ConsumeScriptAddress !(Versioned Validator) !Redeemer !Datum -- ^ A transaction input that consumes a script address with the given validator, redeemer, and datum.
+  | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
+  | ConsumeSimpleScriptAddress -- ^ Consume a simple script
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
 

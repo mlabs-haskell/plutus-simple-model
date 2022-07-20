@@ -1,8 +1,9 @@
 module Plutus.Test.Model.Blockchain.ProtocolParameters(
   PParams(..),
   readAlonzoParams,
-  readBabbageParams,
+  -- readBabbageParams,
   defaultAlonzoParams,
+  defaultBabbageParams,
 ) where
 
 import Prelude
@@ -16,20 +17,24 @@ import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
 import Cardano.Ledger.Babbage.PParams qualified as Babbage
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.BaseTypes qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Alonzo.Language
+import Cardano.Ledger.Babbage.Translation qualified as B
 
 import PlutusCore (defaultCostModelParams)
 
 data PParams
   = AlonzoParams (Alonzo.PParams (AlonzoEra StandardCrypto))
-  | BabbageParams (Babbage.PParams ())
+  | BabbageParams (Babbage.PParams (BabbageEra StandardCrypto))
 
+{- TODO: NO JSON instance for BabbageEra PPArams
 -- | Reads protocol parameters from file.
 readBabbageParams :: FilePath -> IO PParams
-readBabbageParams = undefined -- fmap (fmap BabbageParams) . readJson
+readBabbageParams = fmap BabbageParams . readJson
+-}
 
 -- | Reads protocol parameters from file.
 readAlonzoParams :: FilePath -> IO PParams
@@ -47,7 +52,10 @@ rational = fromJust . Alonzo.boundRational
 -- Alonzo
 
 defaultAlonzoParams :: PParams
-defaultAlonzoParams = AlonzoParams $ Alonzo.PParams
+defaultAlonzoParams = AlonzoParams defaultAlonzoParams'
+
+defaultAlonzoParams' :: Alonzo.PParams (AlonzoEra StandardCrypto)
+defaultAlonzoParams' = Alonzo.PParams
   { Alonzo._minfeeA = 44
   , Alonzo._minfeeB = 155381
   , Alonzo._maxBBSize = 65536
@@ -84,5 +92,9 @@ defaultCostModels = Alonzo.CostModels $
     toCostModel lang = (lang, fromRight (error "Cost model apply fail") $ Alonzo.mkCostModel lang cost)
     cost = fromJust defaultCostModelParams
 
--- Babbage (TODO)
+-- Babbage
+
+defaultBabbageParams :: PParams
+defaultBabbageParams = BabbageParams $ B.translatePParams defaultAlonzoParams'
+
 

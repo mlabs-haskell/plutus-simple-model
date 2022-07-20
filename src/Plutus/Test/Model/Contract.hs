@@ -113,7 +113,7 @@ import Data.Sequence qualified as Seq (drop, length)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
 
-import Plutus.Test.Model.Fork.Ledger.Scripts (datumHash)
+import Plutus.Test.Model.Fork.Ledger.Scripts (datumHash, Versioned(..))
 import Plutus.Test.Model.Fork.Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
 import Plutus.V1.Ledger.Address
 import Plutus.V2.Ledger.Api hiding (Map)
@@ -126,8 +126,8 @@ import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Pretty
 import Prettyprinter (Doc, vcat, indent, (<+>), pretty)
 import Plutus.Test.Model.Stake qualified as Stake
-import Plutus.V2.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
+import Plutus.Test.Model.Fork.Ledger.Tx qualified as Fork
 import Plutus.Test.Model.Validator as X
 import Plutus.Test.Model.Ledger.Ada (Ada(..))
 
@@ -227,7 +227,7 @@ valueAtState user st = foldMap (txOutValue . snd) $ utxoAtState user st
  back to the user.
 -}
 data UserSpend = UserSpend
-  { userSpend'inputs :: Set P.TxIn
+  { userSpend'inputs :: Set Fork.TxIn
   , userSpend'change :: Maybe TxOut
   }
   deriving (Show)
@@ -235,7 +235,7 @@ data UserSpend = UserSpend
 -- | Reads first @TxOutRef@ from user spend inputs.
 -- It can be useful to create NFTs that depend on TxOutRef's.
 getHeadRef :: UserSpend -> TxOutRef
-getHeadRef UserSpend{..} = P.txInRef $ S.elemAt 0 userSpend'inputs
+getHeadRef UserSpend{..} = Fork.txInRef $ S.elemAt 0 userSpend'inputs
 
 -- | Variant of spend' that fails in run-time if there are not enough funds to spend.
 spend :: PubKeyHash -> Value -> Run UserSpend
@@ -278,7 +278,7 @@ spend' pkh expected = do
       | curVal `leq` mempty = Just $ UserSpend (foldMap (S.singleton . toInput) utxos) (getChange utxos)
       | otherwise = Nothing
 
-    toInput (ref, _) = P.TxIn ref (Just P.ConsumePublicKeyAddress)
+    toInput (ref, _) = Fork.TxIn ref (Just Fork.ConsumePublicKeyAddress)
 
     getChange utxos
       | change /= mempty = Just $ TxOut (pubKeyHashAddress pkh) change NoOutputDatum Nothing
@@ -331,7 +331,7 @@ payFee val = toExtra $
 spendPubKey :: TxOutRef -> Tx
 spendPubKey ref = toExtra $
   mempty
-    { P.txInputs = S.singleton $ P.TxIn ref (Just P.ConsumePublicKeyAddress)
+    { P.txInputs = S.singleton $ Fork.TxIn ref (Just Fork.ConsumePublicKeyAddress)
     }
 
 -- | Spend script input.
@@ -344,21 +344,21 @@ spendScript ::
   Tx
 spendScript tv ref red dat = toExtra $
   mempty
-    { P.txInputs = S.singleton $ P.TxIn ref (Just $ P.ConsumeScriptAddress (toValidator tv) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
+    { P.txInputs = S.singleton $ Fork.TxIn ref (Just $ Fork.ConsumeScriptAddress (Versioned (getLanguage tv) (toValidator tv)) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
     }
 
 -- | Reference input
 readInput :: TxOutRef -> Tx
 readInput ref = toExtra $
   mempty
-    { P.txReferenceInputs = S.singleton $ P.TxIn ref Nothing
+    { P.txReferenceInputs = S.singleton $ Fork.TxIn ref Nothing
     }
 
 
 collateralInput :: TxOutRef -> Tx
 collateralInput ref = toExtra $
   mempty
-    { P.txCollateral = S.singleton $ P.TxIn ref Nothing
+    { P.txCollateral = S.singleton $ Fork.TxIn ref Nothing
     }
 
 -- | Reference box
@@ -410,7 +410,7 @@ mintTx m = mempty { tx'extra = mempty { extra'mints = [m] } }
 -- | Mints value. To use redeemer see function @addMintRedeemer@.
 mintValue :: IsValidator (TypedPolicy redeemer)
   => TypedPolicy redeemer -> redeemer -> Value -> Tx
-mintValue (TypedPolicy _lang policy) redeemer val =
+mintValue (TypedPolicy policy) redeemer val =
   mintTx (Mint val (Redeemer $ toBuiltinData redeemer) policy)
 
 -- | Set validation time
@@ -630,8 +630,8 @@ toRedeemer :: ToData red => red -> Redeemer
 toRedeemer = Redeemer . toBuiltinData
 
 withStakeScript :: (IsValidator (TypedStake red))
-  => TypedStake red -> red -> Maybe (Redeemer, StakeValidator)
-withStakeScript (TypedStake _lang script) red = Just (toRedeemer red, script)
+  => TypedStake red -> red -> Maybe (Redeemer, Versioned StakeValidator)
+withStakeScript (TypedStake script) red = Just (toRedeemer red, script)
 
 -- | Add staking withdrawal based on pub key hash
 withdrawStakeKey :: PubKeyHash -> Ada -> Tx
@@ -641,8 +641,8 @@ withdrawStakeKey key (Lovelace amount) = withdrawTx $
 -- | Add staking withdrawal based on script
 withdrawStakeScript :: (IsValidator (TypedStake redeemer))
   => TypedStake redeemer -> redeemer -> Ada -> Tx
-withdrawStakeScript (TypedStake lang validator) red (Lovelace amount) = withdrawTx $
-  Withdraw (scriptToStaking lang validator) amount (withStakeScript (TypedStake lang validator) red)
+withdrawStakeScript (TypedStake validator) red (Lovelace amount) = withdrawTx $
+  Withdraw (scriptToStaking validator) amount (withStakeScript (TypedStake validator) red)
 
 certTx :: Certificate -> Tx
 certTx cert = mempty { tx'extra = mempty { extra'certificates = [cert] } }
