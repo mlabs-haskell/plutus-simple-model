@@ -131,6 +131,7 @@ library
   other-modules:
     Plutus.Test.Model.Fork.Cardano.Alonzo
     Plutus.Test.Model.Fork.Cardano.Babbage
+    Plutus.Test.Model.Fork.Cardano.Class
     Plutus.Test.Model.Fork.Cardano.Common
     Plutus.Test.Model.Fork.Ledger.Ada
     Plutus.Test.Model.Fork.Ledger.Scripts

@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+-- | Babbage era conversions
 module Plutus.Test.Model.Fork.Cardano.Babbage(
   Era,
   toBabbageTx,
@@ -49,8 +51,13 @@ import Plutus.Test.Model.Fork.Cardano.Common(
   toScriptWitness,
   )
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as C (Versioned(..), toScript)
+import Plutus.Test.Model.Fork.Cardano.Class
 
 type Era = BabbageEra StandardCrypto
+
+instance IsCardanoTx Era where
+  toCardanoTx = toBabbageTx
+  toCardanoTxOut = toTxOut
 
 toBabbageTx ::
      Map P.ScriptHash (C.Versioned P.Script)

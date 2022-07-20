@@ -113,7 +113,7 @@ import Data.Sequence qualified as Seq (drop, length)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
 
-import Plutus.Test.Model.Fork.Ledger.Scripts (datumHash, Versioned(..))
+import Plutus.Test.Model.Fork.Ledger.Scripts (datumHash)
 import Plutus.Test.Model.Fork.Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
 import Plutus.V1.Ledger.Address
 import Plutus.V2.Ledger.Api hiding (Map)

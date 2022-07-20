@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fno-warn-orphans #-}
+-- | Alonzo era conversions
 module Plutus.Test.Model.Fork.Cardano.Alonzo(
   Era,
   toAlonzoTx,
@@ -53,9 +55,14 @@ import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Hashes qualified as C
 import Cardano.Crypto.Hash.Class
 import Data.ByteString.Short (fromShort)
+import Plutus.Test.Model.Fork.Cardano.Class
 
 type Era = AlonzoEra StandardCrypto
 type ToCardanoError = String
+
+instance IsCardanoTx Era where
+  toCardanoTx = const toAlonzoTx
+  toCardanoTxOut = const toTxOut
 
 toAlonzoTx :: Network -> PParams Era -> P.Tx -> Either ToCardanoError (C.ValidatedTx Era)
 toAlonzoTx network params tx = do
