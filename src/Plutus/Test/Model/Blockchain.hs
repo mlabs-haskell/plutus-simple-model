@@ -167,6 +167,7 @@ import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
 import Plutus.Test.Model.Fork.Ledger.Ada (Ada(..))
+import Plutus.Test.Model.Fork.Ledger.Scripts (Versioned(..))
 import Plutus.Test.Model.Blockchain.BchConfig
 import Plutus.Test.Model.Blockchain.Log
 import Plutus.Test.Model.Blockchain.Address
@@ -191,6 +192,7 @@ data Blockchain = Blockchain
   , bchAddresses    :: !(Map Address (Set TxOutRef))
   , bchUtxos        :: !(Map TxOutRef TxOut)
   , bchDatums       :: !(Map DatumHash Datum)
+  , bchRefScripts   :: !(Map ScriptHash (Versioned Script))
   , bchStake        :: !Stake
   , bchTxs          :: !(Log TxStat)
   , bchConfig       :: !BchConfig
@@ -303,6 +305,7 @@ initBch cfg initVal =
     { bchUsers = M.singleton genesisUserId genesisUser
     , bchUtxos = M.singleton genesisTxOutRef genesisTxOut
     , bchDatums = M.empty
+    , bchRefScripts = M.empty
     , bchAddresses = M.singleton genesisAddress (S.singleton genesisTxOutRef)
     , bchStake = initStake
     , bchTxs = mempty

@@ -4,6 +4,7 @@ module Plutus.Test.Model.Validator(
   TypedPolicy(..),
   TypedStake(..),
   IsValidator(..),
+  Versioned(..),
   mkTypedValidatorV1,
   mkTypedPolicyV1,
   mkTypedStakeV1,
