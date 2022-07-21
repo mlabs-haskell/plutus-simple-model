@@ -13,15 +13,17 @@
     cardano-base.flake = false;
     cardano-crypto.url = "github:input-output-hk/cardano-crypto/f73079303f663e028288f9f4a9e08bcca39a923e";
     cardano-crypto.flake = false;
-    cardano-ledger.url = "github:input-output-hk/cardano-ledger/e290bf8d0ea272a51e9acd10adc96b4e12e00d37";
+    cardano-ledger.url = "github:input-output-hk/cardano-ledger/389b266d6226dedf3d2aec7af640b3ca4984c5ea";
     cardano-ledger.flake = false;
-    cardano-prelude.url = "github:input-output-hk/cardano-prelude/bb4ed71ba8e587f672d06edf9d2e376f4b055555";
+    cardano-prelude.url = "github:input-output-hk/cardano-prelude/533aec85c1ca05c7d171da44b89341fb736ecfe5";
     cardano-prelude.flake = false;
     flat.url = "github:Quid2/flat/ee59880f47ab835dbd73bea0847dab7869fc20d8";
     flat.flake = false;
     goblins.url = "github:input-output-hk/goblins/cde90a2b27f79187ca8310b6549331e59595e7ba";
     goblins.flake = false;
-    plutus.url = "github:input-output-hk/plutus/d24a7540e4659b57ce2ab25dadb968991e232191";
+    weigh.url = "github:fpco/weigh/bfcf4415144d7d2817dfcb91b6f9a6dfd7236de7";
+    weigh.flake = false;
+    plutus.url = "github:input-output-hk/plutus/8ab4c3355c5fdf67dcf6acc1f5a14668d5e6f0a9";
     plutus.flake = false;
     Win32-network.url = "github:input-output-hk/Win32-network/3825d3abf75f83f406c1f7161883c438dac7277d";
     Win32-network.flake = false;
@@ -53,34 +55,43 @@
           "${inputs.cardano-base}/cardano-crypto-praos"
           "${inputs.cardano-base}/cardano-crypto-tests"
           "${inputs.cardano-base}/measures"
-          "${inputs.cardano-base}/orphans-deriving-via"
           "${inputs.cardano-base}/slotting"
           "${inputs.cardano-base}/strict-containers"
+          
           "${inputs.cardano-crypto}"
+
           "${inputs.cardano-ledger}/eras/alonzo/impl"
+          "${inputs.cardano-ledger}/eras/alonzo/test-suite"
           "${inputs.cardano-ledger}/eras/babbage/impl"
+          "${inputs.cardano-ledger}/eras/babbage/test-suite"
           "${inputs.cardano-ledger}/eras/byron/chain/executable-spec"
-          "${inputs.cardano-ledger}/eras/byron/crypto"
-          "${inputs.cardano-ledger}/eras/byron/crypto/test"
           "${inputs.cardano-ledger}/eras/byron/ledger/executable-spec"
           "${inputs.cardano-ledger}/eras/byron/ledger/impl"
           "${inputs.cardano-ledger}/eras/byron/ledger/impl/test"
+          "${inputs.cardano-ledger}/eras/byron/crypto"
+          "${inputs.cardano-ledger}/eras/byron/crypto/test"
           "${inputs.cardano-ledger}/eras/shelley/impl"
-          "${inputs.cardano-ledger}/eras/shelley-ma/impl"
           "${inputs.cardano-ledger}/eras/shelley/test-suite"
-          "${inputs.cardano-ledger}/libs/cardano-data"
+          "${inputs.cardano-ledger}/eras/shelley-ma/impl"
+          "${inputs.cardano-ledger}/eras/shelley-ma/test-suite"
           "${inputs.cardano-ledger}/libs/cardano-ledger-core"
           "${inputs.cardano-ledger}/libs/cardano-ledger-pretty"
+          "${inputs.cardano-ledger}/libs/cardano-ledger-test"
           "${inputs.cardano-ledger}/libs/cardano-protocol-tpraos"
+          "${inputs.cardano-ledger}/libs/plutus-preprocessor"
+          "${inputs.cardano-ledger}/libs/ledger-state"
           "${inputs.cardano-ledger}/libs/non-integral"
-          "${inputs.cardano-ledger}/libs/set-algebra"
           "${inputs.cardano-ledger}/libs/small-steps"
           "${inputs.cardano-ledger}/libs/small-steps-test"
+          "${inputs.cardano-ledger}/libs/cardano-data"
+          "${inputs.cardano-ledger}/libs/set-algebra"
           "${inputs.cardano-ledger}/libs/vector-map"
+
           "${inputs.cardano-prelude}/cardano-prelude"
           "${inputs.cardano-prelude}/cardano-prelude-test"
           "${inputs.flat}"
           "${inputs.goblins}"
+          "${inputs.weigh}"
           "${inputs.plutus}/plutus-core"
           "${inputs.plutus}/plutus-ledger-api"
           "${inputs.plutus}/plutus-tx"

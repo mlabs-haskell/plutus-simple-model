@@ -1,4 +1,9 @@
 module Plutus.Test.Model.Fork.Ledger.Scripts (
+  Versioned(..),
+  toV1,
+  toV2,
+  isV1,
+  isV2,
   datumHash,
   dataHash,
   redeemerHash,
@@ -12,6 +17,8 @@ module Plutus.Test.Model.Fork.Ledger.Scripts (
 
 import Prelude
 import Data.Coerce
+import Control.DeepSeq (NFData)
+import GHC.Generics
 
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy qualified as BSL
@@ -26,10 +33,36 @@ import Cardano.Ledger.Alonzo.Scripts qualified as C
 import Cardano.Ledger.Alonzo.Language qualified as C
 import Cardano.Ledger.Alonzo.TxInfo qualified as C
 import Cardano.Ledger.Mary.Value qualified as C
-import Plutus.V1.Ledger.Api qualified as P
-import Plutus.V1.Ledger.Scripts qualified as P
+import Plutus.V2.Ledger.Api qualified as P
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Alonzo (AlonzoEra)
+
+-- | Appends plutus version to the value.
+data Versioned a = Versioned
+  { versioned'language :: !C.Language
+  , versioned'content  :: a
+  }
+  deriving (Show, Eq, Ord, Generic, NFData, Functor)
+
+-- | Version with PlutusV1
+toV1 :: a -> Versioned a
+toV1 = Versioned C.PlutusV1
+
+-- | Version with PlutusV2
+toV2 :: a -> Versioned a
+toV2 = Versioned C.PlutusV2
+
+-- | Check that version is PlutusV1
+isV1 :: Versioned a -> Bool
+isV1 x = case versioned'language x of
+  C.PlutusV1 -> True
+  _          -> False
+
+-- | Check that version is PlutusV2
+isV2 :: Versioned a -> Bool
+isV2 x = case versioned'language x of
+  C.PlutusV2 -> True
+  _          -> False
 
 datumHash :: P.Datum -> P.DatumHash
 datumHash (P.Datum (P.BuiltinData dat)) =
@@ -43,29 +76,32 @@ dataHash (P.BuiltinData dat) =
   P.toBuiltin . C.hashToBytes . C.extractHash $ C.hashData $ C.Data @(AlonzoEra StandardCrypto) dat
 
 -- | Hash a 'PV1.Validator' script.
-validatorHash :: P.Validator -> P.ValidatorHash
-validatorHash (P.Validator script) =
+validatorHash :: Versioned P.Validator -> P.ValidatorHash
+validatorHash val =
     C.transScriptHash
   $ C.hashScript @(AlonzoEra StandardCrypto)
-  $ toScript C.PlutusV1 script
+  $ toScript (fmap coerce val)
 
-stakeValidatorHash :: P.StakeValidator -> P.StakeValidatorHash
+stakeValidatorHash :: Versioned P.StakeValidator -> P.StakeValidatorHash
 stakeValidatorHash = coerce validatorHash
 
-scriptHash :: P.Script -> P.ScriptHash
+scriptHash :: Versioned P.Script -> P.ScriptHash
 scriptHash = coerce validatorHash
 
-mintingPolicyHash :: P.MintingPolicy -> P.MintingPolicyHash
+mintingPolicyHash :: Versioned P.MintingPolicy -> P.MintingPolicyHash
 mintingPolicyHash = coerce validatorHash
 
 {-# INLINABLE scriptCurrencySymbol #-}
 -- | The 'CurrencySymbol' of a 'MintingPolicy'.
-scriptCurrencySymbol :: P.MintingPolicy -> P.CurrencySymbol
-scriptCurrencySymbol (P.MintingPolicy script) =
+scriptCurrencySymbol :: Versioned P.MintingPolicy -> P.CurrencySymbol
+scriptCurrencySymbol policy =
  C.transPolicyID
  $ C.PolicyID
  $ C.hashScript @(AlonzoEra StandardCrypto)
- $ toScript C.PlutusV1 script
+ $ toScript (fmap coerce policy)
 
-toScript :: C.Language -> P.Script -> C.Script (AlonzoEra StandardCrypto)
-toScript lang = C.PlutusScript lang . SBS.toShort . BSL.toStrict . serialise
+toScript :: Versioned P.Script -> C.Script era
+toScript (Versioned lang script) =
+  C.PlutusScript lang $ SBS.toShort $ BSL.toStrict $ serialise script
+
+

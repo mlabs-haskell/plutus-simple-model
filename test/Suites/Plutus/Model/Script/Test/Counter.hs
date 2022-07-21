@@ -12,7 +12,7 @@ import Prelude
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import Plutus.V1.Ledger.Api
+import Plutus.V2.Ledger.Api
 import Suites.Plutus.Model.Script.Onchain.Counter
 import Suites.Plutus.Model.Script.Onchain.Counter.Script
 import Suites.Plutus.Model.Util

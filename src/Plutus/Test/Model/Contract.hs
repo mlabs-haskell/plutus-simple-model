@@ -44,6 +44,9 @@ module Plutus.Test.Model.Contract (
   spendPubKey,
   spendScript,
   spendBox,
+  readInput,
+  readBox,
+  collateralInput,
   readOnlyBox,
   modifyBox,
   mintValue,
@@ -113,8 +116,7 @@ import Test.Tasty.HUnit
 import Plutus.Test.Model.Fork.Ledger.Scripts (datumHash)
 import Plutus.Test.Model.Fork.Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
 import Plutus.V1.Ledger.Address
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Interval ()
+import Plutus.V2.Ledger.Api hiding (Map)
 import Plutus.V1.Ledger.Value
 import PlutusTx.Prelude qualified as Plutus
 import Plutus.Test.Model.Fork.Ledger.Slot (Slot (..))
@@ -124,8 +126,8 @@ import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Pretty
 import Prettyprinter (Doc, vcat, indent, (<+>), pretty)
 import Plutus.Test.Model.Stake qualified as Stake
-import Plutus.V1.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
+import Plutus.Test.Model.Fork.Ledger.Tx qualified as Fork
 import Plutus.Test.Model.Validator as X
 import Plutus.Test.Model.Ledger.Ada (Ada(..))
 
@@ -225,7 +227,7 @@ valueAtState user st = foldMap (txOutValue . snd) $ utxoAtState user st
  back to the user.
 -}
 data UserSpend = UserSpend
-  { userSpend'inputs :: Set P.TxIn
+  { userSpend'inputs :: Set Fork.TxIn
   , userSpend'change :: Maybe TxOut
   }
   deriving (Show)
@@ -233,7 +235,7 @@ data UserSpend = UserSpend
 -- | Reads first @TxOutRef@ from user spend inputs.
 -- It can be useful to create NFTs that depend on TxOutRef's.
 getHeadRef :: UserSpend -> TxOutRef
-getHeadRef UserSpend{..} = P.txInRef $ S.elemAt 0 userSpend'inputs
+getHeadRef UserSpend{..} = Fork.txInRef $ S.elemAt 0 userSpend'inputs
 
 -- | Variant of spend' that fails in run-time if there are not enough funds to spend.
 spend :: PubKeyHash -> Value -> Run UserSpend
@@ -276,10 +278,10 @@ spend' pkh expected = do
       | curVal `leq` mempty = Just $ UserSpend (foldMap (S.singleton . toInput) utxos) (getChange utxos)
       | otherwise = Nothing
 
-    toInput (ref, _) = P.TxIn ref (Just P.ConsumePublicKeyAddress)
+    toInput (ref, _) = Fork.TxIn ref (Just Fork.ConsumePublicKeyAddress)
 
     getChange utxos
-      | change /= mempty = Just $ TxOut (pubKeyHashAddress pkh) change Nothing
+      | change /= mempty = Just $ TxOut (pubKeyHashAddress pkh) change NoOutputDatum Nothing
       | otherwise = Nothing
       where
         change = foldMap (txOutValue . snd) utxos <> Plutus.negate expected
@@ -290,7 +292,7 @@ spend' pkh expected = do
 payWithDatumToPubKey :: ToData a => PubKeyHash -> a -> Value -> Tx
 payWithDatumToPubKey pkh dat val = toExtra $
   mempty
-    { P.txOutputs = [TxOut (pubKeyHashAddress pkh) val (Just dh)]
+    { P.txOutputs = [TxOut (pubKeyHashAddress pkh) val (OutputDatumHash dh) Nothing]
     , P.txData = M.singleton dh datum
     }
   where
@@ -302,7 +304,7 @@ payWithDatumToPubKey pkh dat val = toExtra $
 payToPubKey :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
 payToPubKey pkh val = toExtra $
   mempty
-    { P.txOutputs = [TxOut (toAddress pkh) val Nothing]
+    { P.txOutputs = [TxOut (toAddress pkh) val NoOutputDatum Nothing]
     }
 
 -- | Pay to the script.
@@ -311,7 +313,7 @@ payToScript :: (HasAddress script, ToData datum) =>
   script -> datum -> Value -> Tx
 payToScript script dat val = toExtra $
   mempty
-    { P.txOutputs = [TxOut (toAddress script) val (Just dh)]
+    { P.txOutputs = [TxOut (toAddress script) val (OutputDatumHash dh) Nothing]
     , P.txData = M.singleton dh datum
     }
   where
@@ -329,7 +331,7 @@ payFee val = toExtra $
 spendPubKey :: TxOutRef -> Tx
 spendPubKey ref = toExtra $
   mempty
-    { P.txInputs = S.singleton $ P.TxIn ref (Just P.ConsumePublicKeyAddress)
+    { P.txInputs = S.singleton $ Fork.TxIn ref (Just Fork.ConsumePublicKeyAddress)
     }
 
 -- | Spend script input.
@@ -342,8 +344,26 @@ spendScript ::
   Tx
 spendScript tv ref red dat = toExtra $
   mempty
-    { P.txInputs = S.singleton $ P.TxIn ref (Just $ P.ConsumeScriptAddress (toValidator tv) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
+    { P.txInputs = S.singleton $ Fork.TxIn ref (Just $ Fork.ConsumeScriptAddress (Versioned (getLanguage tv) (toValidator tv)) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
     }
+
+-- | Reference input
+readInput :: TxOutRef -> Tx
+readInput ref = toExtra $
+  mempty
+    { P.txReferenceInputs = S.singleton $ Fork.TxIn ref Nothing
+    }
+
+
+collateralInput :: TxOutRef -> Tx
+collateralInput ref = toExtra $
+  mempty
+    { P.txCollateral = S.singleton $ Fork.TxIn ref Nothing
+    }
+
+-- | Reference box
+readBox :: TxBox script -> Tx
+readBox = readInput . txBoxRef
 
 -- | Spend script input.
 spendBox ::
@@ -610,7 +630,7 @@ toRedeemer :: ToData red => red -> Redeemer
 toRedeemer = Redeemer . toBuiltinData
 
 withStakeScript :: (IsValidator (TypedStake red))
-  => TypedStake red -> red -> Maybe (Redeemer, StakeValidator)
+  => TypedStake red -> red -> Maybe (Redeemer, Versioned StakeValidator)
 withStakeScript (TypedStake script) red = Just (toRedeemer red, script)
 
 -- | Add staking withdrawal based on pub key hash
@@ -644,7 +664,7 @@ registerStakeKey pkh = certTx $
 registerStakeScript ::
   TypedStake redeemer -> Tx
 registerStakeScript script = certTx $
-  Certificate (DCertDelegRegKey $ scriptToStaking $ unTypedStake script) Nothing
+  Certificate (DCertDelegRegKey $ toStakingCredential script) Nothing
 
 -- | DeRegister staking credential by key
 deregisterStakeKey :: PubKeyHash -> Tx
@@ -655,7 +675,7 @@ deregisterStakeKey pkh = certTx $
 deregisterStakeScript :: IsValidator (TypedStake redeemer) =>
   TypedStake redeemer -> redeemer -> Tx
 deregisterStakeScript script red = certTx $
-  Certificate (DCertDelegDeRegKey $ scriptToStaking $ unTypedStake script) (withStakeScript script red)
+  Certificate (DCertDelegDeRegKey $ toStakingCredential script) (withStakeScript script red)
 
 -- | Register staking pool
 -- TODO: thois does not work on TX level.
@@ -688,6 +708,6 @@ delegateStakeKey stakeKey (PoolId poolKey) = certTx $
 delegateStakeScript :: IsValidator (TypedStake redeemer) =>
   TypedStake redeemer -> redeemer -> PoolId -> Tx
 delegateStakeScript script red (PoolId poolKey) = certTx $
-  Certificate (DCertDelegDelegate (scriptToStaking $ unTypedStake script) poolKey) (withStakeScript script red)
+  Certificate (DCertDelegDelegate (toStakingCredential script) poolKey) (withStakeScript script red)
 
 

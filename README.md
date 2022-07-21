@@ -469,6 +469,14 @@ protected by our own pub key. We do it with the function:
 payToPubKey :: PubKeyHash -> Value -> Tx
 ```
 
+
+For V2 plutus (Babbage era and above) we can also use reference inputs.
+They are inputs that we can only read datum and we don't need to spend them.
+
+```haskell
+readInput :: TxOutRef -> Tx
+```
+
 ### How to work with time
 
 Note that every time we submit block successfully one slot passes.
@@ -813,6 +821,12 @@ We can just spend boxes as scripts:
 spendBox :: (IsValidator v) => 
   v -> RedeemerType v -> TxBox v -> Tx
 spendBox tv redeemer box
+```
+
+Also we can use read only box with reference inputs:
+
+```haskell
+readBox :: TxBox v -> Tx
 ```
 
 The most generic function is `modifyBox`:

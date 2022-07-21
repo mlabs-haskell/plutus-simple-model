@@ -5,7 +5,9 @@ module Plutus.Test.Model.Blockchain.BchConfig(
   defaultSlotConfig,
   defaultBchConfig,
   defaultAlonzo,
+  defaultBabbage,
   defaultAlonzoParams,
+  defaultBabbageParams,
   skipLimits,
   warnLimits,
   forceLimits,
@@ -43,6 +45,9 @@ defaultSlotConfig =
 
 defaultAlonzo :: BchConfig
 defaultAlonzo = defaultBchConfig defaultAlonzoParams
+
+defaultBabbage :: BchConfig
+defaultBabbage = defaultBchConfig defaultBabbageParams
 
 -- | Default blockchain config.
 defaultBchConfig :: PParams -> BchConfig
