@@ -1,19 +1,26 @@
 -- | Common interface for Plutus to Cardano conversions for mock Blockchain
 module Plutus.Test.Model.Fork.Cardano.Class(
-  IsCardanoTx(..)
+  IsCardanoTx(..),
+  toUtxo,
 ) where
 
 import Prelude
 
 import Data.Map (Map)
+import Data.Map qualified as Map
 import Cardano.Ledger.BaseTypes
+import Cardano.Ledger.Era qualified as C
+import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Core qualified as C
+import Cardano.Ledger.Shelley.UTxO qualified as C
 import Plutus.V2.Ledger.Api qualified as P
 import Plutus.Test.Model.Fork.TxExtra qualified as P
 import Plutus.Test.Model.Fork.Cardano.Common (ToCardanoError)
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as C
+import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
+import Plutus.Test.Model.Fork.Cardano.Common (toTxIn)
 
-class IsCardanoTx era where
+class (C.Crypto era ~ StandardCrypto) => IsCardanoTx era where
   toCardanoTx ::
        Map P.ScriptHash (C.Versioned P.Script)
     -> Network
@@ -21,9 +28,22 @@ class IsCardanoTx era where
     -> P.Tx
     -> Either ToCardanoError (C.Tx era)
 
-  toCardanoTxOut ::
+  toTxOut ::
        Map P.ScriptHash (C.Versioned P.Script)
     -> Network
     -> P.TxOut
     -> Either ToCardanoError (C.TxOut era)
 
+  getTxBody :: C.Tx era -> C.TxBody era
+
+
+toUtxo ::
+     (IsCardanoTx era)
+  => Map P.ScriptHash (C.Versioned P.Script)
+  -> Network -> [(Plutus.TxIn, P.TxOut)] -> Either ToCardanoError (C.UTxO era)
+toUtxo scriptMap network xs = C.UTxO . Map.fromList <$> mapM go xs
+  where
+    go (tin, tout) = do
+      tinC <- toTxIn (Plutus.txInRef tin)
+      toutC <- toTxOut scriptMap network tout
+      pure (tinC, toutC)

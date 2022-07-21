@@ -56,8 +56,9 @@ import Plutus.Test.Model.Fork.Cardano.Class
 type Era = BabbageEra StandardCrypto
 
 instance IsCardanoTx Era where
+  getTxBody = C.body
   toCardanoTx = toBabbageTx
-  toCardanoTxOut = toTxOut
+  toTxOut = toBabbageTxOut
 
 toBabbageTx ::
      Map P.ScriptHash (C.Versioned P.Script)
@@ -126,8 +127,8 @@ toSizedTxOut ::
   -> Network -> P.TxOut -> Either ToCardanoError (C.Sized (C.TxOut Era))
 toSizedTxOut scriptMap network tout = C.mkSized <$> toTxOut scriptMap network tout
 
-toTxOut :: Map P.ScriptHash (C.Versioned P.Script) -> Network -> P.TxOut -> Either ToCardanoError (C.TxOut Era)
-toTxOut scriptMap network (P.TxOut addr value mdh mScriptHash) = do
+toBabbageTxOut :: Map P.ScriptHash (C.Versioned P.Script) -> Network -> P.TxOut -> Either ToCardanoError (C.TxOut Era)
+toBabbageTxOut scriptMap network (P.TxOut addr value mdh mScriptHash) = do
   caddr <- toAddr network addr
   cvalue <- toValue value
   fullValue caddr cvalue

@@ -97,4 +97,3 @@ defaultCostModels = Alonzo.CostModels $
 defaultBabbageParams :: PParams
 defaultBabbageParams = BabbageParams $ B.translatePParams defaultAlonzoParams'
 
-

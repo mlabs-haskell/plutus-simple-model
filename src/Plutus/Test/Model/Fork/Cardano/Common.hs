@@ -1,5 +1,6 @@
 module Plutus.Test.Model.Fork.Cardano.Common(
   ToCardanoError,
+  fromTxId,
   getInputsBy,
   getInterval,
   getFee,
@@ -31,7 +32,7 @@ import Control.Monad
 
 import Data.Bifunctor
 import Data.ByteString qualified as BS
-import Data.ByteString.Short (toShort)
+import Data.ByteString.Short (toShort, fromShort)
 import Data.Default (def)
 import Data.List qualified as L
 import Data.Maybe
@@ -71,6 +72,7 @@ import Cardano.Ledger.Hashes qualified as C
 import Cardano.Ledger.Alonzo.TxWitness qualified as C
 import Cardano.Ledger.Alonzo.Data qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as C
+import PlutusTx.Builtins.Internal qualified as P
 import Plutus.V2.Ledger.Api qualified as P
 import Plutus.V2.Ledger.Tx qualified as P
 import Plutus.V2.Ledger.Tx qualified as Plutus hiding (TxIn(..), TxInType(..))
@@ -83,6 +85,11 @@ import PlutusTx.Builtins qualified as PlutusTx
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as C
 
 type ToCardanoError = String
+
+fromTxId :: C.TxId StandardCrypto -> P.TxId
+fromTxId (C.TxId safeHash) =
+  case extractHash safeHash of
+    Crypto.UnsafeHash shortBs -> P.TxId $ P.BuiltinByteString $ fromShort shortBs
 
 getInputsBy :: (Plutus.Tx -> Set.Set Plutus.TxIn) -> P.Tx -> Either ToCardanoError (Set.Set (C.TxIn StandardCrypto))
 getInputsBy extract =

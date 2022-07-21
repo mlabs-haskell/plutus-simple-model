@@ -80,6 +80,7 @@ module Plutus.Test.Model.Blockchain (
   -- * Blockchain config
   readBchConfig,
   defaultAlonzo,
+  defaultBabbage,
   defaultBchConfig,
   skipLimits,
   warnLimits,
@@ -112,6 +113,7 @@ module Plutus.Test.Model.Blockchain (
 ) where
 
 import Prelude
+import GHC.Records
 
 import Control.Monad.Identity
 import Data.ByteString qualified as BS
@@ -127,7 +129,11 @@ import Data.Maybe
 import Data.Set (Set)
 import Data.Set qualified as S
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
+import Data.Sequence.Strict (StrictSeq)
 
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
+import Cardano.Ledger.Era (Era, Crypto)
+import Cardano.Ledger.Alonzo.TxWitness qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as C
 import Cardano.Crypto.Seed qualified as C
 import Cardano.Crypto.DSIGN.Class qualified as C
@@ -142,8 +148,10 @@ import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.V1.Ledger.Value (AssetClass)
 import Plutus.V1.Ledger.Address (pubKeyHashAddress)
+import Cardano.Ledger.Core qualified as Core
 import GHC.Natural
 
+import Cardano.Ledger.Hashes qualified as C
 import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash qualified as Crypto
@@ -155,15 +163,17 @@ import Plutus.Test.Model.Fork.TxExtra
 import Plutus.Test.Model.Stake
 import Plutus.Test.Model.Blockchain.ProtocolParameters
 
+import Cardano.Ledger.Shelley.API.Wallet qualified as C
+import Cardano.Ledger.SafeHash qualified as C
 import Cardano.Ledger.TxIn qualified as Ledger
 import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Shelley.API.Wallet (evaluateTransactionBalance)
 import qualified Cardano.Ledger.Alonzo.Language as Alonzo
 import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
-import Plutus.Test.Model.Fork.Cardano.Alonzo (toAlonzoTx)
-import Plutus.Test.Model.Fork.Cardano.Alonzo qualified as Alonzo (Era, fromTxId, toUtxo)
-import Cardano.Ledger.Alonzo.Tx qualified as Alonzo
+import Plutus.Test.Model.Fork.Cardano.Alonzo ()
+import Plutus.Test.Model.Fork.Cardano.Babbage  ()
+import Plutus.Test.Model.Fork.Cardano.Common (fromTxId)
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
 import Plutus.Test.Model.Fork.Ledger.Ada (Ada(..))
@@ -172,7 +182,8 @@ import Plutus.Test.Model.Blockchain.BchConfig
 import Plutus.Test.Model.Blockchain.Log
 import Plutus.Test.Model.Blockchain.Address
 import Plutus.Test.Model.Blockchain.Stat
-
+import Plutus.Test.Model.Fork.Cardano.Class qualified as Class
+import Cardano.Ledger.Babbage.PParams
 
 newtype User = User
   { userSignKey :: C.KeyPair 'C.Witness C.StandardCrypto
@@ -346,7 +357,7 @@ dummyHash = Crypto.castHash $ Crypto.hashWith CBOR.serialize' ()
 
 -- | genesis transaction ID
 genesisTxId :: TxId
-genesisTxId = Alonzo.fromTxId . Ledger.TxId $ Ledger.unsafeMakeSafeHash dummyHash
+genesisTxId = fromTxId . Ledger.TxId $ Ledger.unsafeMakeSafeHash dummyHash
 
 userPubKeyHash :: User -> PubKeyHash
 userPubKeyHash (User (C.KeyPair vk _sk)) =
@@ -441,14 +452,39 @@ sendTx tx = do
  and produces performance stats if TX was ok.
 -}
 sendSingleTx :: Tx -> Run (Either FailReason Stat)
-sendSingleTx (Tx extra tx) =
+sendSingleTx tx = do
+  genParams <- gets (bchConfigProtocol . bchConfig)
+  case genParams of
+    AlonzoParams params  -> checkSingleTx params tx
+    BabbageParams params -> checkSingleTx params tx
+
+checkSingleTx ::
+  forall era .
+  ( Era era,
+    ExtendedUTxO era,
+    CBOR.ToCBOR (Core.Tx era),
+    HasField "inputs" (Core.TxBody era) (Set (C.TxIn (Crypto era))),
+    HasField "certs" (Core.TxBody era) (StrictSeq (C.DCert (Crypto era))),
+    HasField "wdrls" (Core.TxBody era) (C.Wdrl (Crypto era)),
+    HasField "txdats" (Core.Witnesses era) (C.TxDats era),
+    HasField "txrdmrs" (Core.Witnesses era) (C.Redeemers era),
+    HasField "_costmdls" (Core.PParams era) Alonzo.CostModels,
+    HasField "_maxTxExUnits" (Core.PParams era) Alonzo.ExUnits,
+    HasField "_protocolVersion" (Core.PParams era) C.ProtVer,
+    Core.Script era ~ Alonzo.Script era,
+    C.CLI era,
+    C.HashAnnotated (Core.TxBody era) C.EraIndependentTxBody C.StandardCrypto,
+    Class.IsCardanoTx era
+  )
+  => Core.PParams era -> Tx -> Run (Either FailReason Stat)
+checkSingleTx params (Tx extra tx) =
   withCheckStaking $
     withCheckRange $
-      withTxBody $ \protocol txBody -> do
-        let tid = Alonzo.fromTxId $ Ledger.txid (Alonzo.body txBody)
+      withTxBody $ \txBody -> do
+        let tid = fromTxId $ Ledger.txid (Class.getTxBody txBody)
         withUTxO $ \utxo ->
-          withCheckBalance protocol utxo txBody $
-            withCheckUnits protocol utxo txBody $ \cost -> do
+          withCheckBalance utxo txBody $
+            withCheckUnits utxo txBody $ \cost -> do
               let txSize = fromIntegral $ BS.length $ CBOR.serialize' txBody
                   stat = Stat txSize cost
               withCheckTxLimits stat $ do
@@ -457,10 +493,23 @@ sendSingleTx (Tx extra tx) =
   where
     pkhs = M.keys $ P.txSignatures tx
 
+    withTxBody cont = do
+      cfg <- gets bchConfig
+      scriptMap <- gets bchRefScripts
+      case Class.toCardanoTx scriptMap (bchConfigNetworkId cfg) params (Tx extra tx) of
+        Right txBody -> cont txBody
+        Left err -> leftFail $ GenericFail err
+
     withCheckStaking cont = withCheckWithdraw (withCheckCertificates cont )
 
     withCheckWithdraw cont = maybe cont leftFail =<< checkWithdraws (extra'withdraws extra )
     withCheckCertificates cont = maybe cont leftFail =<< checkCertificates (extra'certificates extra)
+
+    withCheckRange cont = do
+      curSlot <- gets bchCurrentSlot
+      if Interval.member curSlot $ P.txValidRange tx
+        then cont
+        else leftFail $ TxInvalidRange curSlot (P.txValidRange tx)
 
     checkWithdraws ws = do
       st <- gets bchStake
@@ -483,12 +532,6 @@ sendSingleTx (Tx extra tx) =
             Nothing  -> go (reactDCert c st) cs
             Just err -> pure $ Just $ TxInvalidCertificate err
 
-    withCheckRange cont = do
-      curSlot <- gets bchCurrentSlot
-      if Interval.member curSlot $ P.txValidRange tx
-        then cont
-        else leftFail $ TxInvalidRange curSlot (P.txValidRange tx)
-
     withUTxO cont = do
       mUtxo <- getUTxO tx
       case mUtxo of
@@ -496,36 +539,22 @@ sendSingleTx (Tx extra tx) =
         Just (Left err) -> leftFail $ FailToCardano err
         Nothing -> leftFail FailToReadUtxo
 
-    withTxBody cont = do
-      cfg <- gets bchConfig
-      case bchConfigProtocol cfg of
-        AlonzoParams params   -> do
-          case toAlonzoTx (bchConfigNetworkId cfg) params (Tx extra tx) of
-            Right txBody -> cont params txBody
-            Left err -> leftFail $ GenericFail err
-
-        BabbageParams _params -> undefined {- TODO -}
-
-    withCheckBalance params utxo txBody cont
-      | balanceIsOk = cont
-      | otherwise = leftFail NotBalancedTx
+    withCheckBalance utxo txBody cont
+      | balance == mempty = cont
+      | otherwise         = leftFail NotBalancedTx
       where
-        balanceIsOk = alonzoBalance == mempty
-
-        alonzoBalance = evaluateTransactionBalance params utxo isNewPool (Alonzo.body txBody)
-        -- babbageBalance params = evaluateTransactionBalance params (Cardano.toLedgerUTxO Cardano.ShelleyBasedEraBabbage utxo) isNewPool txBody
+        balance = evaluateTransactionBalance params utxo isNewPool (Class.getTxBody txBody)
 
         -- | TODO: use pool ids info
         -- isNewPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
         isNewPool _kh = True -- StakePoolKeyHash kh `S.notMember` poolids
 
     withCheckUnits ::
-         Alonzo.PParams Alonzo.Era
-      -> Ledger.UTxO Alonzo.Era
-      -> Alonzo.ValidatedTx Alonzo.Era
-      -> (Alonzo.ExUnits -> Run (Either FailReason Stat))
-      -> Run (Either FailReason Stat)
-    withCheckUnits params utxo txBody cont = do
+         Ledger.UTxO era
+      -> Core.Tx era
+      -> (Alonzo.ExUnits -> Run (Either FailReason a))
+      -> Run (Either FailReason a)
+    withCheckUnits utxo txBody cont = do
       slotCfg <- gets (bchConfigSlotConfig . bchConfig)
       let cardanoSystemStart = SystemStart $ posixSecondsToUTCTime $ fromInteger $ (`div` 1000) $ getPOSIXTime $ scSlotZeroTime slotCfg
           epochSize = EpochSize 1
@@ -543,7 +572,7 @@ sendSingleTx (Tx extra tx) =
             utxo
             history
             systemStart
-            (toAlonzoCostModels $ Alonzo._costmdls params)
+            (toAlonzoCostModels $ getField @"_costmdls" params)
           of
             Left err -> leftFail $ GenericFail $ show err
             Right res ->
@@ -562,7 +591,6 @@ sendSingleTx (Tx extra tx) =
             [ (lang, costmodel)
             | (lang, costmodel) <- Map.toList costmodels ]
 
-
     withCheckTxLimits stat cont = do
       maxLimits <- gets (bchConfigLimitStats . bchConfig)
       checkLimits <- gets (bchConfigCheckLimits . bchConfig)
@@ -580,6 +608,8 @@ sendSingleTx (Tx extra tx) =
       logFail err
       pure $ Left err
 
+
+
 compareLimits :: Stat -> Stat -> [LimitOverflow]
 compareLimits maxLimits stat = catMaybes
   [ cmp TxSizeError statSize
@@ -595,11 +625,12 @@ compareLimits maxLimits stat = catMaybes
 
 
 -- | Read UTxO relevant to transaction
-getUTxO :: P.Tx -> Run (Maybe (Either String (Ledger.UTxO Alonzo.Era)))
+getUTxO :: (Class.IsCardanoTx era) => P.Tx -> Run (Maybe (Either String (Ledger.UTxO era)))
 getUTxO tx = do
+  scriptMap <- gets bchRefScripts
   networkId <- bchConfigNetworkId <$> gets bchConfig
   mOuts <- sequence <$> mapM (getTxOut . Plutus.txInRef) ins
-  pure $ fmap (Alonzo.toUtxo networkId . zip (Plutus.txInRef <$> ins)) mOuts
+  pure $ fmap (Class.toUtxo scriptMap networkId . zip ins) mOuts
   where
     ins =
       mconcat
