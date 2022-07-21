@@ -1,5 +1,9 @@
 module Plutus.Test.Model.Fork.Ledger.Scripts (
   Versioned(..),
+  toV1,
+  toV2,
+  isV1,
+  isV2,
   datumHash,
   dataHash,
   redeemerHash,
@@ -33,11 +37,32 @@ import Plutus.V2.Ledger.Api qualified as P
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Alonzo (AlonzoEra)
 
+-- | Appends plutus version to the value.
 data Versioned a = Versioned
   { versioned'language :: !C.Language
   , versioned'content  :: a
   }
   deriving (Show, Eq, Ord, Generic, NFData, Functor)
+
+-- | Version with PlutusV1
+toV1 :: a -> Versioned a
+toV1 = Versioned C.PlutusV1
+
+-- | Version with PlutusV2
+toV2 :: a -> Versioned a
+toV2 = Versioned C.PlutusV2
+
+-- | Check that version is PlutusV1
+isV1 :: Versioned a -> Bool
+isV1 x = case versioned'language x of
+  C.PlutusV1 -> True
+  _          -> False
+
+-- | Check that version is PlutusV2
+isV2 :: Versioned a -> Bool
+isV2 x = case versioned'language x of
+  C.PlutusV2 -> True
+  _          -> False
 
 datumHash :: P.Datum -> P.DatumHash
 datumHash (P.Datum (P.BuiltinData dat)) =
