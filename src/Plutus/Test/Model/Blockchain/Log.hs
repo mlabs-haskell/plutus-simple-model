@@ -19,7 +19,7 @@ import Data.Function (on)
 import Data.List qualified as L
 import Data.Sequence (Seq(..))
 import Data.Sequence qualified as Seq
-import Plutus.V1.Ledger.Api
+import Plutus.V2.Ledger.Api
 import Plutus.Test.Model.Stake
 import Plutus.Test.Model.Blockchain.Stat
 import Plutus.Test.Model.Fork.Ledger.Slot

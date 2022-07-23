@@ -6,7 +6,7 @@ import           Plutus.V1.Ledger.Api
 import           Plutus.V1.Ledger.Value
 import qualified PlutusTx
 import           PlutusTx.Prelude
-import Plutus.Test.Model
+import Plutus.Test.Model.V1
 
 {-# INLINABLE mkStakingValidator #-}
 mkStakingValidator :: Address -> () -> ScriptContext -> Bool

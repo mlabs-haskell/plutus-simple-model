@@ -115,6 +115,8 @@ library
   import:           deps
   exposed-modules:
     Plutus.Test.Model
+    Plutus.Test.Model.V1
+    Plutus.Test.Model.V2
     Plutus.Test.Model.Blockchain
     Plutus.Test.Model.Blockchain.Address
     Plutus.Test.Model.Blockchain.BchConfig
@@ -126,6 +128,8 @@ library
     Plutus.Test.Model.Pretty
     Plutus.Test.Model.Stake
     Plutus.Test.Model.Validator
+    Plutus.Test.Model.Validator.V1
+    Plutus.Test.Model.Validator.V2
     Plutus.Test.Model.Ledger.Ada
     Plutus.Test.Model.Ledger.Scripts
   other-modules:
@@ -168,6 +172,10 @@ test-suite plutus-simple-model-test
     Suites.Plutus.Model.Script.V1.Test.Nft
     Suites.Plutus.Model.Script.V1.Test.Safe
     Suites.Plutus.Model.Script.V1.Test.Staking
+    Suites.Plutus.Model.Script.V2
+    Suites.Plutus.Model.Script.V2.Onchain.Game.Script
+    Suites.Plutus.Model.Script.V2.Onchain.Game
+    Suites.Plutus.Model.Script.V2.Test.Game
     Suites.Plutus.Model.User
     Suites.Plutus.Model.Util
   build-depends:    plutus-simple-model

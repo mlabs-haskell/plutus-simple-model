@@ -78,7 +78,7 @@ initGameTx :: UserSpend -> Value -> BuiltinByteString -> Tx
 initGameTx usp val answer =
   mconcat
     [ userSpend usp
-    , payToScript gameScript (GuessHash $ Plutus.sha2_256 answer) val
+    , payToScript gameScript (HashDatum $ GuessHash $ Plutus.sha2_256 answer) val
     ]
 
 guess :: PubKeyHash -> BuiltinByteString -> Run Bool

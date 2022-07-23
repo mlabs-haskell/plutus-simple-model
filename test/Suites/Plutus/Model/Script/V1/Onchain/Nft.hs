@@ -15,7 +15,7 @@ import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Contexts (ownCurrencySymbol)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
-import Plutus.Test.Model
+import Plutus.Test.Model.V1
 
 data NftParams = NftParams TxOutRef TokenName
 

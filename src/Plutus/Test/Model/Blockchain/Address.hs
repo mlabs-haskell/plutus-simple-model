@@ -10,7 +10,7 @@ module Plutus.Test.Model.Blockchain.Address(
 import Prelude
 import Data.Coerce
 import Plutus.V1.Ledger.Address
-import Plutus.V1.Ledger.Api
+import Plutus.V2.Ledger.Api
 import Plutus.Test.Model.Fork.TxExtra(keyToStaking)
 
 class HasAddress a where

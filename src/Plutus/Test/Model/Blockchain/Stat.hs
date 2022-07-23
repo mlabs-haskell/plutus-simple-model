@@ -16,7 +16,7 @@ module Plutus.Test.Model.Blockchain.Stat(
 import Prelude
 import GHC.Natural
 import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
-import Plutus.V1.Ledger.Api
+import Plutus.V2.Ledger.Api
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Slot
 import Plutus.Test.Model.Fork.TxExtra

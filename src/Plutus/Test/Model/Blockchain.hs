@@ -70,6 +70,8 @@ module Plutus.Test.Model.Blockchain (
   utxoAt,
   utxoAtState,
   datumAt,
+  getHashDatum,
+  getInlineDatum,
   rewardAt,
   stakesAt,
   hasPool,
@@ -184,6 +186,8 @@ import Plutus.Test.Model.Blockchain.Address
 import Plutus.Test.Model.Blockchain.Stat
 import Plutus.Test.Model.Fork.Cardano.Class qualified as Class
 import Cardano.Ledger.Babbage.PParams
+import Plutus.Test.Model.Fork.Cardano.Alonzo qualified as Alonzo
+import Plutus.Test.Model.Fork.Cardano.Babbage qualified as Babbage
 
 newtype User = User
   { userSignKey :: C.KeyPair 'C.Witness C.StandardCrypto
@@ -455,8 +459,8 @@ sendSingleTx :: Tx -> Run (Either FailReason Stat)
 sendSingleTx tx = do
   genParams <- gets (bchConfigProtocol . bchConfig)
   case genParams of
-    AlonzoParams params  -> checkSingleTx params tx
-    BabbageParams params -> checkSingleTx params tx
+    AlonzoParams params  -> checkSingleTx @Alonzo.Era  params tx
+    BabbageParams params -> checkSingleTx @Babbage.Era params tx
 
 checkSingleTx ::
   forall era .
@@ -726,12 +730,26 @@ utxoAtState (toAddress -> addr) st =
   where
     refs = txOutRefAtState addr st
 
--- | Reads typed datum from blockchain that belongs to UTXO (by reference).
+-- | Reads both hash and inline datum
 datumAt :: FromData a => TxOutRef -> Run (Maybe a)
 datumAt ref = do
+  mdat <- getHashDatum ref
+  case mdat of
+    Just dat -> pure (Just dat)
+    Nothing  -> fmap (getInlineDatum =<< ) $ getTxOut ref
+
+-- | Reads typed datum from blockchain that belongs to UTXO (by reference) by Hash.
+getHashDatum :: FromData a => TxOutRef -> Run (Maybe a)
+getHashDatum ref = do
   dhs <- gets bchDatums
   mDh <- (txOutDatumHash =<<) <$> getTxOut ref
   pure $ fromBuiltinData . getDatum =<< (`M.lookup` dhs) =<< mDh
+
+getInlineDatum :: FromData dat => TxOut -> Maybe dat
+getInlineDatum tout =
+  case txOutDatum tout of
+    OutputDatum dat -> fromBuiltinData (getDatum dat)
+    _               -> Nothing
 
 txOutDatumHash :: TxOut -> Maybe DatumHash
 txOutDatumHash tout =

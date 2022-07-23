@@ -5,7 +5,7 @@ module Suites.Plutus.Model.Script.V1.Onchain.Counter.Script (
 
 import PlutusTx qualified
 import Suites.Plutus.Model.Script.V1.Onchain.Counter
-import Plutus.Test.Model (toBuiltinValidator, TypedValidator, mkTypedValidatorV1)
+import Plutus.Test.Model.V1 (toBuiltinValidator, TypedValidator, mkTypedValidatorV1)
 
 type Counter = TypedValidator CounterDatum CounterAct
 

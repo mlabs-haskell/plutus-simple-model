@@ -5,7 +5,7 @@ module Suites.Plutus.Model.Script.V1.Onchain.Safe.Script (
 
 import PlutusTx qualified
 import Suites.Plutus.Model.Script.V1.Onchain.Safe
-import Plutus.Test.Model (toBuiltinValidator, TypedValidator, mkTypedValidatorV1)
+import Plutus.Test.Model.V1 (toBuiltinValidator, TypedValidator, mkTypedValidatorV1)
 
 type Safe = TypedValidator SafeDatum SafeAct
 

@@ -106,7 +106,7 @@ initSafeTx :: UserSpend -> Value -> PubKeyHash -> Tx
 initSafeTx usp val pkh =
   mconcat
     [ userSpend usp
-    , payToScript safe (Safe pkh) val
+    , payToScript safe (HashDatum $ Safe pkh) val
     ]
 
 spendTx :: PubKeyHash -> TxOutRef -> Value -> Tx
@@ -114,7 +114,7 @@ spendTx pkh safeRef safeVal =
   mconcat
     [ spendScript safe safeRef Spend (Safe pkh)
     , payToPubKey pkh (safeVal <> adaValue (-1))
-    , payToScript safe (Safe pkh) (adaValue 1)
+    , payToScript safe (HashDatum $ Safe pkh) (adaValue 1)
     ]
 
 depositTx :: UserSpend -> Value -> PubKeyHash -> TxOutRef -> Value -> Tx
@@ -122,5 +122,5 @@ depositTx sp dep pkh safeRef safeVal =
   mconcat
     [ userSpend sp
     , spendScript safe safeRef Deposit (Safe pkh)
-    , payToScript safe (Safe pkh) (safeVal <> dep)
+    , payToScript safe (HashDatum $ Safe pkh) (safeVal <> dep)
     ]

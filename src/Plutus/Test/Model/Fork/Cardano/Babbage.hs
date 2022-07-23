@@ -184,7 +184,7 @@ toBabbageTxOut scriptMap network (P.TxOut addr value mdh mScriptHash) = do
           cdh <- toDataHash dh
           pure $ C.TxOutCompactDH caddr cval cdh
         P.NoOutputDatum -> pure $ C.TxOutCompact caddr cval
-        P.OutputDatum _ -> Left "Output datum not supported in alonzo era"
+        P.OutputDatum dat -> pure $ C.TxOutCompactDatum caddr cval (C.dataToBinaryData $ toDatum dat)
 
 toOutputDatum :: P.OutputDatum -> Either ToCardanoError (C.Datum Era)
 toOutputDatum = \case

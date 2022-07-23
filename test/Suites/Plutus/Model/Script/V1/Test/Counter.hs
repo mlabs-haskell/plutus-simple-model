@@ -83,7 +83,7 @@ initCounterTx :: UserSpend -> Value -> Tx
 initCounterTx usp minAda =
   mconcat
     [ userSpend usp
-    , payToScript counterScript (CounterDatum 0) minAda
+    , payToScript counterScript (HashDatum $ CounterDatum 0) minAda
     ]
 
 -- | Increments counter and checks that user and script gathered no new value.
@@ -102,5 +102,5 @@ incrementTx :: TxOutRef -> Value -> CounterDatum -> Integer -> Tx
 incrementTx counterRef counterVal dat inc =
   mconcat
     [ spendScript counterScript counterRef Bump dat
-    , payToScript counterScript (CounterDatum $ getCounterDatum dat + inc) counterVal
+    , payToScript counterScript (HashDatum $ CounterDatum $ getCounterDatum dat + inc) counterVal
     ]

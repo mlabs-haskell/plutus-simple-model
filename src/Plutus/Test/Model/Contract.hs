@@ -36,6 +36,7 @@ module Plutus.Test.Model.Contract (
 
   -- * Build TX
   signTx,
+  DatumMode(..),
   payToPubKey,
   payWithDatumToPubKey,
   payToScript,
@@ -287,17 +288,35 @@ spend' pkh expected = do
         change = foldMap (txOutValue . snd) utxos <> Plutus.negate expected
 
 ------------------------------------------------------------------------
+-- datum mode
+
+data DatumMode a
+  = InlineDatum a
+  | HashDatum a
+  deriving (Show, Eq)
+
+fromDatumMode :: ToData a => DatumMode a -> (OutputDatum, Map DatumHash Datum)
+fromDatumMode = \case
+  HashDatum dat ->
+    let dh = datumHash datum
+        datum = Datum $ toBuiltinData dat
+    in (OutputDatumHash dh, M.singleton dh datum)
+  InlineDatum dat ->
+    let datum = Datum $ toBuiltinData dat
+    in  (OutputDatum datum, M.empty)
+
+
+------------------------------------------------------------------------
 -- build Tx
 
-payWithDatumToPubKey :: ToData a => PubKeyHash -> a -> Value -> Tx
+payWithDatumToPubKey :: ToData a => PubKeyHash -> DatumMode a -> Value -> Tx
 payWithDatumToPubKey pkh dat val = toExtra $
   mempty
-    { P.txOutputs = [TxOut (pubKeyHashAddress pkh) val (OutputDatumHash dh) Nothing]
-    , P.txData = M.singleton dh datum
+    { P.txOutputs = [TxOut (pubKeyHashAddress pkh) val outDatum Nothing]
+    , P.txData = datumMap
     }
   where
-    dh = datumHash datum
-    datum = Datum $ toBuiltinData dat
+    (outDatum, datumMap) = fromDatumMode dat
 
 -- | Pay value to the owner of PubKeyHash.
 -- We use address to supply staking credential if we need it.
@@ -310,15 +329,14 @@ payToPubKey pkh val = toExtra $
 -- | Pay to the script.
 -- We can use TypedValidator as argument and it will be checked that the datum is correct.
 payToScript :: (HasAddress script, ToData datum) =>
-  script -> datum -> Value -> Tx
+  script -> DatumMode datum -> Value -> Tx
 payToScript script dat val = toExtra $
   mempty
-    { P.txOutputs = [TxOut (toAddress script) val (OutputDatumHash dh) Nothing]
-    , P.txData = M.singleton dh datum
+    { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
+    , P.txData = datumMap
     }
   where
-    dh = datumHash datum
-    datum = Datum $ toBuiltinData dat
+    (outDatum, datumMap) = fromDatumMode dat
 
 -- | Pay fee for TX-submission
 payFee :: Ada -> Tx
@@ -381,14 +399,14 @@ readOnlyBox :: (IsValidator script)
   -> TxBox script
   -> RedeemerType script
   -> Tx
-readOnlyBox tv box act = modifyBox tv box act id id
+readOnlyBox tv box act = modifyBox tv box act HashDatum id
 
 -- | Modifies the box. We specify how script box datum and value are updated.
 modifyBox :: (IsValidator script)
   => script
   -> TxBox script
   -> RedeemerType script
-  -> (DatumType script -> DatumType script)
+  -> (DatumType script -> DatumMode (DatumType script))
   -> (Value -> Value)
   -> Tx
 modifyBox tv box act modDatum modValue = mconcat

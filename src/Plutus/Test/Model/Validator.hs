@@ -12,9 +12,6 @@ module Plutus.Test.Model.Validator(
   mkTypedPolicyV2,
   mkTypedStakeV2,
   -- utils
-  toBuiltinValidator,
-  toBuiltinPolicy,
-  toBuiltinStake,
 
   -- * Hashes
   validatorHash,
@@ -34,7 +31,6 @@ import Plutus.Test.Model.Blockchain (
   AppendStaking(..),
   HasStakingCredential(..),
   )
-import PlutusTx.Prelude qualified as Plutus
 import Plutus.Test.Model.Fork.TxExtra qualified as Fork
 import Plutus.Test.Model.Fork.Ledger.Scripts (Versioned(..), toV1, toV2)
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as Fork
@@ -129,33 +125,4 @@ stakeValidatorHash :: TypedStake a -> StakeValidatorHash
 stakeValidatorHash (TypedStake script) = Fork.stakeValidatorHash script
 
 ---------------------------------------------------------------------------------
-
--- | Coverts to low-level validator representation
-{-# INLINABLE toBuiltinValidator #-}
-toBuiltinValidator :: (UnsafeFromData datum, UnsafeFromData redeemer)
-  => (datum -> redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> BuiltinData -> ())
-toBuiltinValidator script datum act ctx =
-  Plutus.check (
-    script (unsafeFromBuiltinData datum)
-            (unsafeFromBuiltinData act)
-            (unsafeFromBuiltinData ctx))
-
-
--- | Coverts to low-level validator representation
-{-# INLINABLE toBuiltinPolicy #-}
-toBuiltinPolicy :: (UnsafeFromData redeemer)
-  => (redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> ())
-toBuiltinPolicy script act ctx =
-  Plutus.check (
-    script (unsafeFromBuiltinData act)
-            (unsafeFromBuiltinData ctx))
-
--- | Coverts to low-level validator representation
-{-# INLINABLE toBuiltinStake #-}
-toBuiltinStake :: (UnsafeFromData redeemer)
-  => (redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> ())
-toBuiltinStake script act ctx =
-  Plutus.check (
-    script (unsafeFromBuiltinData act)
-            (unsafeFromBuiltinData ctx))
 
