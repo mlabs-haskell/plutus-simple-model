@@ -1,4 +1,4 @@
-module Suites.Plutus.Model.Script.Test.Safe (
+module Suites.Plutus.Model.Script.V1.Test.Safe (
   tests,
 ) where
 
@@ -11,8 +11,8 @@ import Test.Tasty.HUnit
 
 import Plutus.Test.Model
 import Plutus.V2.Ledger.Api
-import Suites.Plutus.Model.Script.Onchain.Safe
-import Suites.Plutus.Model.Script.Onchain.Safe.Script
+import Suites.Plutus.Model.Script.V1.Onchain.Safe
+import Suites.Plutus.Model.Script.V1.Onchain.Safe.Script
 import Suites.Plutus.Model.Util
 
 tests :: BchConfig -> TestTree

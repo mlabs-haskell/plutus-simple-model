@@ -1,10 +1,10 @@
-module Suites.Plutus.Model.Script.Onchain.Game.Script (
+module Suites.Plutus.Model.Script.V1.Onchain.Game.Script (
   Game,
   gameScript,
 ) where
 
 import PlutusTx qualified
-import Suites.Plutus.Model.Script.Onchain.Game
+import Suites.Plutus.Model.Script.V1.Onchain.Game
 import Plutus.Test.Model (toBuiltinValidator, TypedValidator, mkTypedValidatorV1)
 
 type Game = TypedValidator GameDatum GameAct

@@ -1,4 +1,4 @@
-module Suites.Plutus.Model.Script.Test.Nft (
+module Suites.Plutus.Model.Script.V1.Test.Nft (
   tests,
 ) where
 
@@ -11,7 +11,7 @@ import Test.Tasty.HUnit
 
 import Plutus.Test.Model
 import Plutus.V1.Ledger.Api
-import Suites.Plutus.Model.Script.Onchain.Nft
+import Suites.Plutus.Model.Script.V1.Onchain.Nft
 import Suites.Plutus.Model.Util
 
 tests :: BchConfig -> TestTree

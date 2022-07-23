@@ -3,7 +3,7 @@
  User can submit value to script that is locked by the hash of some secret.
  If other user can guess the hash then user can grab the value.
 -}
-module Suites.Plutus.Model.Script.Onchain.Game (
+module Suites.Plutus.Model.Script.V1.Onchain.Game (
   GameDatum (..),
   GameAct (..),
   gameContract,

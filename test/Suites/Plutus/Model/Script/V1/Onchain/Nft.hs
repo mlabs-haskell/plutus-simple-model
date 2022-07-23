@@ -1,7 +1,7 @@
 {- | Nft contract. User can create NFT that is safe to assume unique
  by depenedence on concrete @TxOutRef@.
 -}
-module Suites.Plutus.Model.Script.Onchain.Nft (
+module Suites.Plutus.Model.Script.V1.Onchain.Nft (
   NftParams (NftParams),
   nftContract,
   nftMintingPolicy,

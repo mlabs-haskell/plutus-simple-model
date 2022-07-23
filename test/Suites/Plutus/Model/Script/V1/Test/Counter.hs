@@ -1,4 +1,4 @@
-module Suites.Plutus.Model.Script.Test.Counter(
+module Suites.Plutus.Model.Script.V1.Test.Counter(
   tests,
   initCounter,
   goodCounter,
@@ -13,8 +13,8 @@ import Test.Tasty
 import Test.Tasty.HUnit
 
 import Plutus.V2.Ledger.Api
-import Suites.Plutus.Model.Script.Onchain.Counter
-import Suites.Plutus.Model.Script.Onchain.Counter.Script
+import Suites.Plutus.Model.Script.V1.Onchain.Counter
+import Suites.Plutus.Model.Script.V1.Onchain.Counter.Script
 import Suites.Plutus.Model.Util
 
 import Plutus.Test.Model

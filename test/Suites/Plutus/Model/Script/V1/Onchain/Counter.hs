@@ -1,5 +1,5 @@
 -- | Simple counter that increments internal counter on every usage in TX.
-module Suites.Plutus.Model.Script.Onchain.Counter(
+module Suites.Plutus.Model.Script.V1.Onchain.Counter(
   CounterDatum(..),
   CounterAct(..),
   counterContract,
@@ -13,7 +13,7 @@ import PlutusTx.Prelude qualified as Plutus
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Contexts
 
-import Suites.Plutus.Model.Script.Onchain.Util (datumOf)
+import Suites.Plutus.Model.Script.V1.Onchain.Util (datumOf)
 
 ----------------------------------------------------------------------------
 -- types

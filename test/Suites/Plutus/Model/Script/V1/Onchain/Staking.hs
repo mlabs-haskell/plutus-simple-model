@@ -1,4 +1,4 @@
-module Suites.Plutus.Model.Script.Onchain.Staking (
+module Suites.Plutus.Model.Script.V1.Onchain.Staking (
   stakeValidator
 ) where
 

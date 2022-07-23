@@ -153,21 +153,21 @@ test-suite plutus-simple-model-test
   main-is:          Spec.hs
   other-modules:
     Suites.Plutus.Model.FakeCoin
-    Suites.Plutus.Model.Script
-    Suites.Plutus.Model.Script.Onchain.Counter
-    Suites.Plutus.Model.Script.Onchain.Counter.Script
-    Suites.Plutus.Model.Script.Onchain.Game
-    Suites.Plutus.Model.Script.Onchain.Game.Script
-    Suites.Plutus.Model.Script.Onchain.Nft
-    Suites.Plutus.Model.Script.Onchain.Safe
-    Suites.Plutus.Model.Script.Onchain.Safe.Script
-    Suites.Plutus.Model.Script.Onchain.Staking
-    Suites.Plutus.Model.Script.Onchain.Util
-    Suites.Plutus.Model.Script.Test.Counter
-    Suites.Plutus.Model.Script.Test.Game
-    Suites.Plutus.Model.Script.Test.Nft
-    Suites.Plutus.Model.Script.Test.Safe
-    Suites.Plutus.Model.Script.Test.Staking
+    Suites.Plutus.Model.Script.V1
+    Suites.Plutus.Model.Script.V1.Onchain.Counter
+    Suites.Plutus.Model.Script.V1.Onchain.Counter.Script
+    Suites.Plutus.Model.Script.V1.Onchain.Game
+    Suites.Plutus.Model.Script.V1.Onchain.Game.Script
+    Suites.Plutus.Model.Script.V1.Onchain.Nft
+    Suites.Plutus.Model.Script.V1.Onchain.Safe
+    Suites.Plutus.Model.Script.V1.Onchain.Safe.Script
+    Suites.Plutus.Model.Script.V1.Onchain.Staking
+    Suites.Plutus.Model.Script.V1.Onchain.Util
+    Suites.Plutus.Model.Script.V1.Test.Counter
+    Suites.Plutus.Model.Script.V1.Test.Game
+    Suites.Plutus.Model.Script.V1.Test.Nft
+    Suites.Plutus.Model.Script.V1.Test.Safe
+    Suites.Plutus.Model.Script.V1.Test.Staking
     Suites.Plutus.Model.User
     Suites.Plutus.Model.Util
   build-depends:    plutus-simple-model

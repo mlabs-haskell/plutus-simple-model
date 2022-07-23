@@ -1,5 +1,5 @@
 import Plutus.Test.Model (BchConfig, defaultAlonzo, defaultBabbage)
-import Suites.Plutus.Model.Script qualified as Script
+import Suites.Plutus.Model.Script.V1 qualified as Script
 import Suites.Plutus.Model.User qualified as User
 import Test.Tasty (TestTree, defaultMain, testGroup)
 import Prelude

@@ -2,7 +2,7 @@
  After safe is created user can add values before time to spend has come and
  can spend it only when time is due.
 -}
-module Suites.Plutus.Model.Script.Onchain.Safe (
+module Suites.Plutus.Model.Script.V1.Onchain.Safe (
   SafeDatum (..),
   SafeAct (..),
   SafeParams (..),

@@ -1,4 +1,4 @@
-module Suites.Plutus.Model.Script.Onchain.Util(
+module Suites.Plutus.Model.Script.V1.Onchain.Util(
   datumOf
 ) where
 

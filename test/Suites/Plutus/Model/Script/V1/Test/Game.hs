@@ -1,4 +1,4 @@
-module Suites.Plutus.Model.Script.Test.Game (
+module Suites.Plutus.Model.Script.V1.Test.Game (
   tests,
   initGuessGame,
   makeGuessGame,
@@ -14,8 +14,8 @@ import Test.Tasty
 
 import Plutus.V2.Ledger.Api
 import PlutusTx.Prelude qualified as Plutus
-import Suites.Plutus.Model.Script.Onchain.Game
-import Suites.Plutus.Model.Script.Onchain.Game.Script
+import Suites.Plutus.Model.Script.V1.Onchain.Game
+import Suites.Plutus.Model.Script.V1.Onchain.Game.Script
 import Suites.Plutus.Model.Util
 
 import Plutus.Test.Model

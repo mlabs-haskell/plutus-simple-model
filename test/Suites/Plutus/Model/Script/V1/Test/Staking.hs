@@ -1,4 +1,4 @@
-module Suites.Plutus.Model.Script.Test.Staking (
+module Suites.Plutus.Model.Script.V1.Test.Staking (
   tests
 ) where
 
@@ -9,7 +9,7 @@ import Plutus.Test.Model
 import Plutus.Test.Model.Ledger.Ada (Ada)
 import Plutus.Test.Model.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Api
-import Suites.Plutus.Model.Script.Onchain.Staking
+import Suites.Plutus.Model.Script.V1.Onchain.Staking
 import Suites.Plutus.Model.Util
 
 tests :: BchConfig -> TestTree
