@@ -42,7 +42,7 @@ nftContract (NftParams ref tok) _ ctx =
 
 nftMintingPolicy :: NftParams -> TypedPolicy ()
 nftMintingPolicy nftp =
-  mkTypedPolicyV1 $
+  mkTypedPolicy $
     $$(PlutusTx.compile [|| \param -> toBuiltinPolicy (nftContract param)||])
       `PlutusTx.applyCode` PlutusTx.liftCode nftp
 

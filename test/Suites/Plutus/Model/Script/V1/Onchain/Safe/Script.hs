@@ -5,12 +5,12 @@ module Suites.Plutus.Model.Script.V1.Onchain.Safe.Script (
 
 import PlutusTx qualified
 import Suites.Plutus.Model.Script.V1.Onchain.Safe
-import Plutus.Test.Model.V1 (toBuiltinValidator, TypedValidator, mkTypedValidatorV1)
+import Plutus.Test.Model.V1 (toBuiltinValidator, TypedValidator, mkTypedValidator)
 
 type Safe = TypedValidator SafeDatum SafeAct
 
 -- | The GeroGov validator script instance
 safeScript :: SafeParams -> Safe
-safeScript params = mkTypedValidatorV1 (
+safeScript params = mkTypedValidator (
   $$(PlutusTx.compile [|| \ps -> toBuiltinValidator (safeContract ps) ||])
   `PlutusTx.applyCode` PlutusTx.liftCode params)

@@ -5,13 +5,6 @@ module Plutus.Test.Model.Validator(
   TypedStake(..),
   IsValidator(..),
   Versioned(..),
-  mkTypedValidatorV1,
-  mkTypedPolicyV1,
-  mkTypedStakeV1,
-  mkTypedValidatorV2,
-  mkTypedPolicyV2,
-  mkTypedStakeV2,
-  -- utils
 
   -- * Hashes
   validatorHash,
@@ -24,7 +17,6 @@ import Prelude
 import Data.Kind (Type)
 import Cardano.Ledger.Alonzo.Language qualified as C
 
-import PlutusTx.Code (CompiledCode)
 import Plutus.V1.Ledger.Api
 import Plutus.Test.Model.Blockchain (
   HasAddress(..),
@@ -32,7 +24,7 @@ import Plutus.Test.Model.Blockchain (
   HasStakingCredential(..),
   )
 import Plutus.Test.Model.Fork.TxExtra qualified as Fork
-import Plutus.Test.Model.Fork.Ledger.Scripts (Versioned(..), toV1, toV2)
+import Plutus.Test.Model.Fork.Ledger.Scripts (Versioned(..))
 import Plutus.Test.Model.Fork.Ledger.Scripts qualified as Fork
 
 class (HasAddress script, ToData (DatumType script), FromData (DatumType script), ToData (RedeemerType script), FromData (RedeemerType script))
@@ -79,24 +71,6 @@ data TypedPolicy redeemer =
 
 instance (ToData redeemer, FromData redeemer) => HasAddress (TypedPolicy redeemer) where
   toAddress = toAddress . validatorHash
-
-mkTypedValidatorV1 :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> TypedValidator datum redeemer
-mkTypedValidatorV1 = TypedValidator . toV1 . mkValidatorScript
-
-mkTypedValidatorV2 :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> TypedValidator datum redeemer
-mkTypedValidatorV2 = TypedValidator . toV2 . mkValidatorScript
-
-mkTypedPolicyV1 :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedPolicy redeemer
-mkTypedPolicyV1 = TypedPolicy . toV1 . mkMintingPolicyScript
-
-mkTypedPolicyV2 :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedPolicy redeemer
-mkTypedPolicyV2 = TypedPolicy . toV2 . mkMintingPolicyScript
-
-mkTypedStakeV1 :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedStake redeemer
-mkTypedStakeV1 = TypedStake . toV1 . mkStakeValidatorScript
-
-mkTypedStakeV2 :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedStake redeemer
-mkTypedStakeV2 = TypedStake . toV2 . mkStakeValidatorScript
 
 newtype TypedStake redeemer =
   TypedStake { unTypedStake :: Versioned StakeValidator }

@@ -426,7 +426,7 @@ mintTx :: Mint -> Tx
 mintTx m = mempty { tx'extra = mempty { extra'mints = [m] } }
 
 -- | Mints value. To use redeemer see function @addMintRedeemer@.
-mintValue :: IsValidator (TypedPolicy redeemer)
+mintValue :: (ToData redeemer)
   => TypedPolicy redeemer -> redeemer -> Value -> Tx
 mintValue (TypedPolicy policy) redeemer val =
   mintTx (Mint val (Redeemer $ toBuiltinData redeemer) policy)
@@ -647,7 +647,7 @@ withdrawTx w = mempty { tx'extra = mempty { extra'withdraws = [w] } }
 toRedeemer :: ToData red => red -> Redeemer
 toRedeemer = Redeemer . toBuiltinData
 
-withStakeScript :: (IsValidator (TypedStake red))
+withStakeScript :: (ToData red)
   => TypedStake red -> red -> Maybe (Redeemer, Versioned StakeValidator)
 withStakeScript (TypedStake script) red = Just (toRedeemer red, script)
 
@@ -657,7 +657,7 @@ withdrawStakeKey key (Lovelace amount) = withdrawTx $
   Withdraw (keyToStaking key) amount Nothing
 
 -- | Add staking withdrawal based on script
-withdrawStakeScript :: (IsValidator (TypedStake redeemer))
+withdrawStakeScript :: (ToData redeemer)
   => TypedStake redeemer -> redeemer -> Ada -> Tx
 withdrawStakeScript (TypedStake validator) red (Lovelace amount) = withdrawTx $
   Withdraw (scriptToStaking validator) amount (withStakeScript (TypedStake validator) red)
@@ -690,7 +690,7 @@ deregisterStakeKey pkh = certTx $
   Certificate (DCertDelegDeRegKey $ keyToStaking pkh) Nothing
 
 -- | DeRegister staking credential by stake validator
-deregisterStakeScript :: IsValidator (TypedStake redeemer) =>
+deregisterStakeScript :: (ToData redeemer) =>
   TypedStake redeemer -> redeemer -> Tx
 deregisterStakeScript script red = certTx $
   Certificate (DCertDelegDeRegKey $ toStakingCredential script) (withStakeScript script red)
@@ -723,7 +723,7 @@ delegateStakeKey stakeKey (PoolId poolKey) = certTx $
   Certificate (DCertDelegDelegate (keyToStaking stakeKey) poolKey) Nothing
 
 -- | Delegates staking credential (specified by stakevalidator) to pool
-delegateStakeScript :: IsValidator (TypedStake redeemer) =>
+delegateStakeScript :: (ToData redeemer) =>
   TypedStake redeemer -> redeemer -> PoolId -> Tx
 delegateStakeScript script red (PoolId poolKey) = certTx $
   Certificate (DCertDelegDelegate (toStakingCredential script) poolKey) (withStakeScript script red)
