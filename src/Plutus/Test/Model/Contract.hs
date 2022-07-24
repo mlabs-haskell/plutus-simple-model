@@ -45,8 +45,8 @@ module Plutus.Test.Model.Contract (
   spendPubKey,
   spendScript,
   spendBox,
-  readInput,
-  readBox,
+  refInput,
+  refBox,
   collateralInput,
   readOnlyBox,
   modifyBox,
@@ -366,8 +366,8 @@ spendScript tv ref red dat = toExtra $
     }
 
 -- | Reference input
-readInput :: TxOutRef -> Tx
-readInput ref = toExtra $
+refInput :: TxOutRef -> Tx
+refInput ref = toExtra $
   mempty
     { P.txReferenceInputs = S.singleton $ Fork.TxIn ref Nothing
     }
@@ -380,8 +380,8 @@ collateralInput ref = toExtra $
     }
 
 -- | Reference box
-readBox :: TxBox script -> Tx
-readBox = readInput . txBoxRef
+refBox :: TxBox script -> Tx
+refBox = refInput . txBoxRef
 
 -- | Spend script input.
 spendBox ::
