@@ -13,13 +13,17 @@ module Plutus.Test.Model.Contract (
   waitUntil,
 
   -- * Query blockchain
+  withMay,
+  withMayBy,
   UserSpend (..),
   getHeadRef,
   spend,
   spend',
   noErrors,
   valueAt,
+  withUtxo,
   utxoAt,
+  withDatum,
   datumAt,
   rewardAt,
   stakesAt,
@@ -35,6 +39,7 @@ module Plutus.Test.Model.Contract (
   withNft,
   currentSlot,
   currentTime,
+  getPrettyAddress,
 
   -- * Build TX
   signTx,
@@ -484,16 +489,10 @@ nftAt tv = head <$> boxAt tv
 
 -- | Safe query for single Box
 withBox :: IsValidator script => (TxBox script -> Bool) -> script -> (TxBox script -> Run ()) -> Run ()
-withBox isBox script cont = do
-  bs <- boxAt script
-  case L.find isBox bs of
-    Just box -> cont box
-    Nothing  -> do
-      name <- gets (toName . bchNames)
-      logError $ "No UTxO box for: " <> name
+withBox isBox script cont =
+  withMayBy readMsg (L.find isBox <$> boxAt script) cont
   where
-    toName names = fromMaybe (show addr) $ readAddressName names addr
-    addr = toAddress script
+    readMsg = ("No UTxO box for: " <> ) <$> getPrettyAddress (toAddress script)
 
 -- | Reads single box from the list. we expect NFT to be a single UTXO for a given script.
 withNft :: IsValidator script => script -> (TxBox script -> Run ()) -> Run ()

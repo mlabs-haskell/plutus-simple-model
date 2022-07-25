@@ -44,6 +44,10 @@ module Plutus.Test.Model.Blockchain (
   readAssetClassName,
   readCurrencySymbolName,
   readTxName,
+  getPrettyAddress,
+  getPrettyCurrencySymbol,
+  getPrettyAssetClass,
+  getPrettyTxId,
   Run (..),
   runBch,
   initBch,
@@ -67,8 +71,12 @@ module Plutus.Test.Model.Blockchain (
   pureFail,
   txOutRefAt,
   getTxOut,
+  withMay,
+  withMayBy,
   utxoAt,
+  withUtxo,
   utxoAtState,
+  withDatum,
   datumAt,
   getHashDatum,
   getInlineDatum,
@@ -115,6 +123,7 @@ module Plutus.Test.Model.Blockchain (
 ) where
 
 import Prelude
+import Control.Applicative (Alternative(..))
 import GHC.Records
 
 import Control.Monad.Identity
@@ -126,6 +135,7 @@ import qualified Data.Map as Map
 import qualified Data.Array as Array
 import Data.Text (Text)
 
+import Data.List qualified as L
 import Data.Vector qualified as V
 import Data.Maybe
 import Data.Set (Set)
@@ -149,7 +159,7 @@ import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Test.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.V1.Ledger.Value (AssetClass)
-import Plutus.V1.Ledger.Address (pubKeyHashAddress)
+import Plutus.V1.Ledger.Address (pubKeyHashAddress, toPubKeyHash)
 import Cardano.Ledger.Core qualified as Core
 import GHC.Natural
 
@@ -299,6 +309,32 @@ readCurrencySymbolName names cs = M.lookup cs (bchNameCurrencySymbols names)
 -- | Gets human-readable name of transaction
 readTxName :: BchNames -> TxId -> Maybe String
 readTxName names cs = M.lookup cs (bchNameTxns names)
+
+-- | Reads pretty name for user or script
+getPrettyAddress :: HasAddress user => user -> Run String
+getPrettyAddress user = do
+  names <- gets bchNames
+  pure $ fromMaybe (show addr) $ readAddressName names addr <|> (readUserName names =<< toPubKeyHash addr)
+  where
+    addr = toAddress user
+
+-- | Reads pretty name for currency symbol or just shows the raw one.
+getPrettyCurrencySymbol :: CurrencySymbol -> Run String
+getPrettyCurrencySymbol cs = do
+  names <- gets bchNames
+  pure $ fromMaybe (show cs) $ readCurrencySymbolName names cs
+
+-- | Reads pretty name for currency symbol or just shows the raw one.
+getPrettyAssetClass :: AssetClass -> Run String
+getPrettyAssetClass ac = do
+  names <- gets bchNames
+  pure $ fromMaybe (show ac) $ readAssetClassName names ac
+
+-- | Reads pretty name for currency symbol or just shows the raw one.
+getPrettyTxId :: TxId -> Run String
+getPrettyTxId tid = do
+  names <- gets bchNames
+  pure $ fromMaybe (show tid) $ readTxName names tid
 
 --------------------------------------------------------
 -- API
@@ -723,6 +759,14 @@ txOutRefAtState addr st = maybe [] S.toList . M.lookup addr $ bchAddresses st
 utxoAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
 utxoAt addr = utxoAtState addr <$> get
 
+withUtxo :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
+withUtxo isUtxo user cont =
+  withMayBy readMsg (L.find isUtxo <$> utxoAt user) cont
+  where
+    readMsg = do
+      fmap (\name -> "No UTxO for: " <> name) $ getPrettyAddress user
+
+
 -- | Get all UTXOs that belong to an address
 utxoAtState :: HasAddress user => user -> Blockchain -> [(TxOutRef, TxOut)]
 utxoAtState (toAddress -> addr) st =
@@ -737,6 +781,27 @@ datumAt ref = do
   case mdat of
     Just dat -> pure (Just dat)
     Nothing  -> fmap (getInlineDatum =<< ) $ getTxOut ref
+
+-- | Reads datum with continuation
+withDatum :: FromData a => TxOutRef -> (a -> Run ()) -> Run ()
+withDatum ref cont = withMay err (datumAt ref) cont
+  where
+    err = "No datum for TxOutRef: "<> show ref
+
+-- | Continuation based queries.
+withMay :: String -> Run (Maybe a) -> (a -> Run ()) -> Run ()
+withMay msg act cont = do
+  mRes <- act
+  case mRes of
+    Just res -> cont res
+    Nothing  -> logError msg
+
+withMayBy :: Run String -> Run (Maybe a) -> (a -> Run ()) -> Run ()
+withMayBy msg act cont = do
+  mRes <- act
+  case mRes of
+    Just res -> cont res
+    Nothing  -> logError =<< msg
 
 -- | Reads typed datum from blockchain that belongs to UTXO (by reference) by Hash.
 getHashDatum :: FromData a => TxOutRef -> Run (Maybe a)
