@@ -9,20 +9,18 @@ module Suites.Plutus.Model.Script.V2.Onchain.Game (
   gameContract,
 ) where
 
-import Prelude
 import Plutus.V2.Ledger.Api
 import PlutusTx qualified
-import PlutusTx.Prelude qualified as Plutus
+import PlutusTx.Prelude
 
-newtype GameDatum = GuessHash Plutus.BuiltinByteString
-  deriving (Eq)
+newtype GameDatum = GuessHash BuiltinByteString
 
-newtype GameAct = Guess Plutus.BuiltinByteString
+newtype GameAct = Guess BuiltinByteString
 
 {-# inlinable gameContract #-}
 gameContract :: GameDatum -> GameAct -> ScriptContext -> Bool
 gameContract (GuessHash h) (Guess answer) _ =
-  Plutus.sha2_256 answer Plutus.== h
+  traceIfFalse "Wrong guess" $ sha2_256 answer == h
 
 PlutusTx.unstableMakeIsData ''GameDatum
 PlutusTx.unstableMakeIsData ''GameAct
