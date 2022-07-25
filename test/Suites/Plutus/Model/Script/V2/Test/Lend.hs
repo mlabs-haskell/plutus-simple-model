@@ -80,8 +80,8 @@ newApp = App
     policy = lendPolicy lendMintParams
     lendMintParams = LendMintParams (LendHash $ validatorHash lendScript)
 
-getLend :: App -> Run (TxBox Lend)
-getLend App{..} = head <$> boxAt app'lendScript
+withLend :: App -> (TxBox Lend -> Run ()) -> Run ()
+withLend App{..} = withNft app'lendScript
 
 initApp :: Run (App, [PubKeyHash])
 initApp = do
@@ -99,9 +99,9 @@ initLend App{..} pkh = do
 
 sell :: App -> PubKeyHash -> Ada -> Run ()
 sell app@App{..} user amount = do
-  lendBox <- getLend app
-  withSpend user (Ada.toValue amount <> riderAda) $ \usp ->
-    submitTx user $ sellTx usp lendBox
+  withLend app $ \lendBox ->
+    withSpend user (Ada.toValue amount <> riderAda) $ \usp ->
+      submitTx user $ sellTx usp lendBox
   where
     sellTx usp lendBox =
       mconcat
@@ -115,9 +115,9 @@ sell app@App{..} user amount = do
 
 buy :: App -> PubKeyHash -> Integer -> Run ()
 buy app@App{..} user amount = do
-  lendBox <- getLend app
-  withSpend user mintVal $ \usp ->
-    submitTx user $ buyTx usp lendBox
+  withLend app $ \lendBox ->
+    withSpend user mintVal $ \usp ->
+      submitTx user $ buyTx usp lendBox
   where
     buyTx usp lendBox =
       mconcat
@@ -143,6 +143,4 @@ stealTokens App{..} user amount = do
         ]
 
     mintVal = app'lendValue amount
-
-
 

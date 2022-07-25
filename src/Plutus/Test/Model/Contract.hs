@@ -31,6 +31,8 @@ module Plutus.Test.Model.Contract (
   txBoxValue,
   boxAt,
   nftAt,
+  withBox,
+  withNft,
   currentSlot,
   currentTime,
 
@@ -104,6 +106,7 @@ import Control.Monad.State.Strict
 import Prelude
 
 import Data.Bifunctor (second)
+import Data.List qualified as L
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
 import Data.Maybe
@@ -479,6 +482,23 @@ boxAt addr = do
 nftAt :: IsValidator script => script -> Run (TxBox script)
 nftAt tv = head <$> boxAt tv
 
+-- | Safe query for single Box
+withBox :: IsValidator script => (TxBox script -> Bool) -> script -> (TxBox script -> Run ()) -> Run ()
+withBox isBox script cont = do
+  bs <- boxAt script
+  case L.find isBox bs of
+    Just box -> cont box
+    Nothing  -> do
+      name <- gets (toName . bchNames)
+      logError $ "No UTxO box for: " <> name
+  where
+    toName names = fromMaybe (show addr) $ readAddressName names addr
+    addr = toAddress script
+
+-- | Reads single box from the list. we expect NFT to be a single UTXO for a given script.
+withNft :: IsValidator script => script -> (TxBox script -> Run ()) -> Run ()
+withNft = withBox (const True)
+
 ----------------------------------------------------------------------
 -- time helpers
 
@@ -614,7 +634,6 @@ checkBalanceBy getDiffs act = do
               , "Got:" <+> ppBalanceWith names got
               ]
           ]
-
 
     check :: [Address] -> Map Address Value -> [Value] -> [Value] -> Maybe [(Address, Value, Value)]
     check addrs diffs before after
