@@ -746,4 +746,3 @@ delegateStakeScript :: (ToData redeemer) =>
 delegateStakeScript script red (PoolId poolKey) = certTx $
   Certificate (DCertDelegDelegate (toStakingCredential script) poolKey) (withStakeScript script red)
 
-
