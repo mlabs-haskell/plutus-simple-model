@@ -1,7 +1,6 @@
+-- | Guess hash Game with inlined datum
 module Suites.Plutus.Model.Script.V2.Test.Game (
   tests,
-  initGuessGame,
-  makeGuessGame,
 ) where
 
 import Control.Monad (unless)
@@ -24,26 +23,12 @@ tests :: BchConfig -> TestTree
 tests cfg =
   testGroup
     "Game scripts (Inline datum)"
-    [ good "Init script (Guess game)" initGuessGame
-    , good "Spend script (Guess game)" makeGuessGame
+    [ good "Spend script (Guess game)" makeGuessGame
     , bad "Bad guess" badGuessGame
     ]
   where
     bad msg act = good msg (mustFail act)
     good msg act = testNoErrors (adaValue 10_000_000) cfg msg act
-
-initGuessGame :: Run ()
-initGuessGame = do
-  users <- setupUsers
-  let u1 = head users
-      answer = "secret"
-      prize = adaValue 100
-  initGame u1 prize answer
-  gameUtxos <- utxoAt gameScript
-  let [(_gameRef, gameOut)] = gameUtxos
-  let mDat = getInlineDatum gameOut
-  unless (mDat == Just (GuessHash $ Plutus.sha2_256 answer)) $
-    logError "Constraints violated"
 
 badGuessGame :: Run ()
 badGuessGame = makeGuessGameBy gameSecret "bad guess"
@@ -64,7 +49,6 @@ makeGuessGameBy secret answer = do
   let [v1, v2, _] = vals
   unless (postedTx && v1 == adaValue 900 && v2 == adaValue 1100) $
     logError "Constraint error"
-
 
 initGame :: PubKeyHash -> Value -> BuiltinByteString -> Run ()
 initGame pkh prize answer =

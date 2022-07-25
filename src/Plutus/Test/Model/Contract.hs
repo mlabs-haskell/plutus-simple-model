@@ -21,6 +21,7 @@ module Plutus.Test.Model.Contract (
   spend',
   noErrors,
   valueAt,
+  refValueAt,
   withUtxo,
   utxoAt,
   withDatum,
@@ -47,10 +48,13 @@ module Plutus.Test.Model.Contract (
   payToPubKey,
   payWithDatumToPubKey,
   payToScript,
+  loadRefScript,
+  payToRef,
   payFee,
   userSpend,
   spendPubKey,
   spendScript,
+  spendScriptRef,
   spendBox,
   refInput,
   refBox,
@@ -222,13 +226,20 @@ waitUntil time = do
 noErrors :: Run Bool
 noErrors = nullLog <$> gets bchFails
 
--- | Get total value on the address or user by @PubKeyHash@.
+-- | Get total value on the address or user by @PubKeyHash@ (but not on reference script UTXOs).
 valueAt :: HasAddress user => user -> Run Value
 valueAt user = foldMap (txOutValue . snd) <$> utxoAt user
 
--- | Get total value on the address or user by @PubKeyHash@.
+-- | Get total value on the address or user by address on reference script UTXOs.
+refValueAt :: HasAddress user => user -> Run Value
+refValueAt user = foldMap (txOutValue . snd) <$> refScriptAt user
+
 valueAtState :: HasAddress user => user -> Blockchain -> Value
-valueAtState user st = foldMap (txOutValue . snd) $ utxoAtState user st
+valueAtState user = valueAtStateBy bchUtxos user <> valueAtStateBy bchRefScripts user
+
+-- | Get total value on the address or user by @PubKeyHash@.
+valueAtStateBy :: HasAddress user => (Blockchain -> Map TxOutRef TxOut) -> user -> Blockchain -> Value
+valueAtStateBy extract user st = foldMap (txOutValue . snd) $ utxoAtStateBy extract user st
 
 {- | To spend some value user should provide valid set of UTXOs owned by the user.
  Also it holds the change. For example if user has one UTXO that holds 100 coins
@@ -336,9 +347,37 @@ payToPubKey pkh val = toExtra $
 
 -- | Pay to the script.
 -- We can use TypedValidator as argument and it will be checked that the datum is correct.
-payToScript :: (HasAddress script, ToData datum) =>
-  script -> DatumMode datum -> Value -> Tx
+payToScript :: (IsValidator script) =>
+  script -> DatumMode (DatumType script) -> Value -> Tx
 payToScript script dat val = toExtra $
+  mempty
+    { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
+    , P.txData = datumMap
+    }
+  where
+    (outDatum, datumMap) = fromDatumMode dat
+
+-- | Uploads the reference script to blockchain
+loadRefScript :: (IsValidator script) =>
+  script -> Maybe (DatumMode (DatumType script)) -> Value -> Tx
+loadRefScript script mDat val = toExtra $
+  mempty
+    { P.txOutputs = [TxOut (toAddress script) val outDatum (Just sh)]
+    , P.txData = datumMap
+    , P.txScripts = M.singleton sh validator
+    }
+  where
+    sh = scriptHash script
+    validator = toVersionedScript script
+    (outDatum, datumMap) =
+      case mDat of
+        Just dat -> fromDatumMode dat
+        Nothing  -> (NoOutputDatum, M.empty)
+
+-- | Pays to the TxOut that references some script
+payToRef :: (IsValidator script) =>
+  script -> DatumMode (DatumType script) -> Value -> Tx
+payToRef script dat val = toExtra $
   mempty
     { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
     , P.txData = datumMap
@@ -360,6 +399,7 @@ spendPubKey ref = toExtra $
     { P.txInputs = S.singleton $ Fork.TxIn ref (Just Fork.ConsumePublicKeyAddress)
     }
 
+
 -- | Spend script input.
 spendScript ::
   (IsValidator script) =>
@@ -370,8 +410,27 @@ spendScript ::
   Tx
 spendScript tv ref red dat = toExtra $
   mempty
-    { P.txInputs = S.singleton $ Fork.TxIn ref (Just $ Fork.ConsumeScriptAddress (Versioned (getLanguage tv) (toValidator tv)) (Redeemer $ toBuiltinData red) (Datum $ toBuiltinData dat))
+    { P.txInputs = S.singleton $ Fork.TxIn ref (Just $ Fork.ConsumeScriptAddress (Just $ Versioned (getLanguage tv) (toValidator tv)) (toRedeemer red) (toDatum dat))
     }
+
+-- | Spends script that references other script
+spendScriptRef ::
+  (IsValidator script) =>
+  TxOutRef ->
+  script ->
+  TxOutRef ->
+  RedeemerType script ->
+  DatumType script ->
+  Tx
+spendScriptRef refScript script refOut red dat = toExtra $
+  mempty
+    { P.txInputs = S.singleton $ Fork.TxIn refOut (Just $ Fork.ConsumeScriptAddress Nothing (toRedeemer red) (toDatum dat))
+    , P.txReferenceInputs = S.singleton $ Fork.TxIn refScript Nothing
+    , P.txScripts = M.singleton sh validator
+    }
+  where
+    sh = scriptHash script
+    validator = toVersionedScript script
 
 -- | Reference input
 refInput :: TxOutRef -> Tx
@@ -664,6 +723,9 @@ withdrawTx w = mempty { tx'extra = mempty { extra'withdraws = [w] } }
 
 toRedeemer :: ToData red => red -> Redeemer
 toRedeemer = Redeemer . toBuiltinData
+
+toDatum :: ToData dat => dat -> Datum
+toDatum = Datum . toBuiltinData
 
 withStakeScript :: (ToData red)
   => TypedStake red -> red -> Maybe (Redeemer, Versioned StakeValidator)

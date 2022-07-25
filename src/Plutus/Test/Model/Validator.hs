@@ -5,19 +5,23 @@ module Plutus.Test.Model.Validator(
   TypedStake(..),
   IsValidator(..),
   Versioned(..),
+  toVersionedScript,
 
   -- * Hashes
   validatorHash,
+  scriptHash,
   scriptCurrencySymbol,
   stakeValidatorHash,
   mintingPolicyHash,
 ) where
 
 import Prelude
+import Data.Coerce (coerce)
 import Data.Kind (Type)
 import Cardano.Ledger.Alonzo.Language qualified as C
 
 import Plutus.V1.Ledger.Api
+import Plutus.V1.Ledger.Scripts (ScriptHash(..))
 import Plutus.Test.Model.Blockchain (
   HasAddress(..),
   AppendStaking(..),
@@ -54,8 +58,14 @@ instance (ToData redeemer, FromData redeemer) => IsValidator (TypedPolicy redeem
   toValidator (TypedPolicy (Versioned _lang (MintingPolicy script))) = Validator script
   getLanguage = versioned'language . unTypedPolicy
 
+toVersionedScript :: IsValidator a => a -> Versioned Script
+toVersionedScript a = Versioned (getLanguage a) (getValidator $ toValidator a)
+
 validatorHash :: IsValidator a => a -> ValidatorHash
 validatorHash v = Fork.validatorHash $ Versioned (getLanguage v) (toValidator v)
+
+scriptHash :: IsValidator a => a -> ScriptHash
+scriptHash = coerce . validatorHash
 
 -- | Phantom type to annotate types
 newtype TypedValidator datum redeemer =

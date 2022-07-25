@@ -54,8 +54,9 @@ data Tx = Tx {
     -- ^ Signatures of this transaction.
     txRedeemers   :: Redeemers,
     -- ^ Redeemers of the minting scripts.
-    txData        :: Map.Map DatumHash Datum
+    txData        :: Map.Map DatumHash Datum,
     -- ^ Datum objects recorded on this transaction.
+    txScripts     :: Map.Map ScriptHash (Versioned Script)
     } deriving stock (Show, Generic)
       deriving anyclass ({-ToJSON, FromJSON, Serialise, -} NFData)
 
@@ -74,11 +75,12 @@ instance Semigroup Tx where
         txMintScripts = txMintScripts tx1 <> txMintScripts tx2,
         txSignatures = txSignatures tx1 <> txSignatures tx2,
         txRedeemers = txRedeemers tx1 <> txRedeemers tx2,
-        txData = txData tx1 <> txData tx2
+        txData = txData tx1 <> txData tx2,
+        txScripts = txScripts tx1 <> txScripts tx2
         }
 
 instance Monoid Tx where
-    mempty = Tx mempty mempty mempty mempty Nothing mempty mempty mempty top mempty mempty mempty mempty
+    mempty = Tx mempty mempty mempty mempty Nothing mempty mempty mempty top mempty mempty mempty mempty mempty
 
 -- | Compute the id of a transaction.
 txId :: Tx -> TxId
@@ -117,7 +119,7 @@ data TxIn = TxIn
 
 data TxInType =
     -- TODO: these should all be hashes, with the validators and data segregated to the side
-    ConsumeScriptAddress !(Versioned Validator) !Redeemer !Datum -- ^ A transaction input that consumes a script address with the given validator, redeemer, and datum.
+    ConsumeScriptAddress !(Maybe (Versioned Validator)) !Redeemer !Datum -- ^ A transaction input that consumes a script address with the given validator, redeemer, and datum.
   | ConsumePublicKeyAddress -- ^ A transaction input that consumes a public key address.
   | ConsumeSimpleScriptAddress -- ^ Consume a simple script
   deriving stock (Show, Eq, Ord, Generic)

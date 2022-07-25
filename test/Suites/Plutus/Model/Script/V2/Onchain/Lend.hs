@@ -1,7 +1,7 @@
-{- | Onchain code for guess a hash game.
+{- | Onchain code for exchange platform.
 
- User can submit value to script that is locked by the hash of some secret.
- If other user can guess the hash then user can grab the value.
+ User can sell tokens on the scripts for tokens for Ada and buy the Ada back.
+ It tests minting policy that forwards to script that is spend with certain redeemer.
 -}
 module Suites.Plutus.Model.Script.V2.Onchain.Lend (
   LendDatum (..),

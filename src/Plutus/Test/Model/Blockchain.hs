@@ -74,8 +74,12 @@ module Plutus.Test.Model.Blockchain (
   withMay,
   withMayBy,
   utxoAt,
+  refScriptAt,
   withUtxo,
-  utxoAtState,
+  withFirstUtxo,
+  withRefScript,
+  withFirstRefScript,
+  utxoAtStateBy,
   withDatum,
   datumAt,
   getHashDatum,
@@ -189,7 +193,6 @@ import Plutus.Test.Model.Fork.Cardano.Common (fromTxId)
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
 import Plutus.Test.Model.Fork.Ledger.Ada (Ada(..))
-import Plutus.Test.Model.Fork.Ledger.Scripts (Versioned(..))
 import Plutus.Test.Model.Blockchain.BchConfig
 import Plutus.Test.Model.Blockchain.Log
 import Plutus.Test.Model.Blockchain.Address
@@ -216,8 +219,8 @@ data Blockchain = Blockchain
   { bchUsers        :: !(Map PubKeyHash User)
   , bchAddresses    :: !(Map Address (Set TxOutRef))
   , bchUtxos        :: !(Map TxOutRef TxOut)
+  , bchRefScripts   :: !(Map TxOutRef TxOut)
   , bchDatums       :: !(Map DatumHash Datum)
-  , bchRefScripts   :: !(Map ScriptHash (Versioned Script))
   , bchStake        :: !Stake
   , bchTxs          :: !(Log TxStat)
   , bchConfig       :: !BchConfig
@@ -535,8 +538,8 @@ checkSingleTx params (Tx extra tx) =
 
     withTxBody cont = do
       cfg <- gets bchConfig
-      scriptMap <- gets bchRefScripts
-      case Class.toCardanoTx scriptMap (bchConfigNetworkId cfg) params (Tx extra tx) of
+      let localScriptMap = P.txScripts tx
+      case Class.toCardanoTx localScriptMap (bchConfigNetworkId cfg) params (Tx extra tx) of
         Right txBody -> cont txBody
         Left err -> leftFail $ GenericFail err
 
@@ -667,10 +670,9 @@ compareLimits maxLimits stat = catMaybes
 -- | Read UTxO relevant to transaction
 getUTxO :: (Class.IsCardanoTx era) => P.Tx -> Run (Maybe (Either String (Ledger.UTxO era)))
 getUTxO tx = do
-  scriptMap <- gets bchRefScripts
   networkId <- bchConfigNetworkId <$> gets bchConfig
   mOuts <- sequence <$> mapM (getTxOut . Plutus.txInRef) ins
-  pure $ fmap (Class.toUtxo scriptMap networkId . zip ins) mOuts
+  pure $ fmap (Class.toUtxo localScriptMap networkId . zip ins) mOuts
   where
     ins =
       mconcat
@@ -679,9 +681,15 @@ getUTxO tx = do
         , S.toList $ P.txReferenceInputs tx
         ]
 
+    localScriptMap = P.txScripts tx
+
 -- | Reads TxOut by its reference.
 getTxOut :: TxOutRef -> Run (Maybe TxOut)
-getTxOut ref = M.lookup ref <$> gets bchUtxos
+getTxOut ref = do
+  mTout <- M.lookup ref <$> gets bchUtxos
+  case mTout of
+    Just tout -> pure $ Just tout
+    Nothing   -> M.lookup ref <$> gets bchRefScripts
 
 bumpSlot :: Run ()
 bumpSlot = modify' $ \s -> s {bchCurrentSlot = bchCurrentSlot s + 1}
@@ -733,7 +741,11 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
         addr = txOutAddress out
 
         insertAddresses = modify' $ \s -> s {bchAddresses = M.alter (Just . maybe (S.singleton ref) (S.insert ref)) addr $ bchAddresses s}
-        insertUtxos = modify' $ \s -> s {bchUtxos = M.singleton ref out <> bchUtxos s}
+        insertUtxos
+          | isRefScript = modify' $ \s -> s {bchRefScripts = M.singleton ref out <> bchRefScripts s}
+          | otherwise   = modify' $ \s -> s {bchUtxos = M.singleton ref out <> bchUtxos s}
+
+        isRefScript = isJust (txOutReferenceScript out)
 
     updateRewards = mapM_ modifyWithdraw $ extra'withdraws extra
       where
@@ -755,9 +767,17 @@ txOutRefAt addr = txOutRefAtState addr <$> get
 txOutRefAtState :: Address -> Blockchain -> [TxOutRef]
 txOutRefAtState addr st = maybe [] S.toList . M.lookup addr $ bchAddresses st
 
--- | Get all UTXOs that belong to an address
+-- | Get all UTXOs that belong to an address (it does not include reference script UTXOs)
 utxoAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
-utxoAt addr = utxoAtState addr <$> get
+utxoAt addr = utxoAtStateBy bchUtxos addr <$> get
+
+-- | Get all reference script UTXOs that belong to an address
+refScriptAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
+refScriptAt addr = utxoAtStateBy bchRefScripts addr <$> get
+
+-- | Reads the first UTXO by address
+withFirstUtxo :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
+withFirstUtxo = withUtxo (const True)
 
 withUtxo :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
 withUtxo isUtxo user cont =
@@ -766,11 +786,22 @@ withUtxo isUtxo user cont =
     readMsg = do
       fmap (\name -> "No UTxO for: " <> name) $ getPrettyAddress user
 
+-- | Reads the first reference script UTXO by address
+withFirstRefScript :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
+withFirstRefScript = withRefScript (const True)
+
+withRefScript :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
+withRefScript isUtxo user cont =
+  withMayBy readMsg (L.find isUtxo <$> refScriptAt user) cont
+  where
+    readMsg = do
+      fmap (\name -> "No UTxO for: " <> name) $ getPrettyAddress user
+
 
 -- | Get all UTXOs that belong to an address
-utxoAtState :: HasAddress user => user -> Blockchain -> [(TxOutRef, TxOut)]
-utxoAtState (toAddress -> addr) st =
-  mapMaybe (\r -> (r,) <$> M.lookup r (bchUtxos st)) refs
+utxoAtStateBy :: HasAddress user => (Blockchain -> Map TxOutRef TxOut) -> user -> Blockchain -> [(TxOutRef, TxOut)]
+utxoAtStateBy extract (toAddress -> addr) st =
+  mapMaybe (\r -> (r,) <$> M.lookup r (extract st)) refs
   where
     refs = txOutRefAtState addr st
 
