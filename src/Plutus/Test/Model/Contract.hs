@@ -49,6 +49,7 @@ module Plutus.Test.Model.Contract (
   payWithDatumToPubKey,
   payToScript,
   loadRefScript,
+  loadRefScriptDatum,
   payToRef,
   payFee,
   userSpend,
@@ -358,9 +359,17 @@ payToScript script dat val = toExtra $
     (outDatum, datumMap) = fromDatumMode dat
 
 -- | Uploads the reference script to blockchain
-loadRefScript :: (IsValidator script) =>
+loadRefScript :: (IsValidator script) => script -> Value -> Tx
+loadRefScript script val = loadRefScriptBy script Nothing val
+
+-- | Uploads the reference script to blockchain
+loadRefScriptDatum :: (IsValidator script) => script -> DatumMode (DatumType script) -> Value -> Tx
+loadRefScriptDatum script dat val = loadRefScriptBy script (Just dat) val
+
+-- | Uploads the reference script to blockchain
+loadRefScriptBy :: (IsValidator script) =>
   script -> Maybe (DatumMode (DatumType script)) -> Value -> Tx
-loadRefScript script mDat val = toExtra $
+loadRefScriptBy script mDat val = toExtra $
   mempty
     { P.txOutputs = [TxOut (toAddress script) val outDatum (Just sh)]
     , P.txData = datumMap

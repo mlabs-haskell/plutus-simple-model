@@ -63,7 +63,7 @@ initGame loadScript pkh prize answer = do
     loadGameScriptTx usp =
       mconcat
         [ userSpend usp
-        , loadRefScript gameScript Nothing riderAda
+        , loadRefScript gameScript riderAda
         ]
 
     loadPrizeTx usp =
