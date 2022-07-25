@@ -19,6 +19,7 @@ newtype GameDatum = GuessHash Plutus.BuiltinByteString
 
 newtype GameAct = Guess Plutus.BuiltinByteString
 
+{-# inlinable gameContract #-}
 gameContract :: GameDatum -> GameAct -> ScriptContext -> Bool
 gameContract (GuessHash h) (Guess answer) _ =
   Plutus.sha2_256 answer Plutus.== h

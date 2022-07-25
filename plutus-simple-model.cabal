@@ -175,9 +175,12 @@ test-suite plutus-simple-model-test
     Suites.Plutus.Model.Script.V2
     Suites.Plutus.Model.Script.V2.Onchain.Game.Script
     Suites.Plutus.Model.Script.V2.Onchain.Game
+    Suites.Plutus.Model.Script.V2.Onchain.Lend.Script
+    Suites.Plutus.Model.Script.V2.Onchain.Lend
     Suites.Plutus.Model.Script.V2.Onchain.Oracle
     Suites.Plutus.Model.Script.V2.Onchain.Oracle.Script
     Suites.Plutus.Model.Script.V2.Test.Game
+    Suites.Plutus.Model.Script.V2.Test.Lend
     Suites.Plutus.Model.Script.V2.Test.Oracle
     Suites.Plutus.Model.Script.V2.Onchain.Util
     Suites.Plutus.Model.User

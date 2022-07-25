@@ -56,10 +56,8 @@ betContract (BetParams oraclePkh) (BetDatum answers) act ctx =
         (txOutValue tout == txOutValue tin <> singleton adaSymbol adaToken betStep)
       where
         Just (BetDatum answersOut) = datumOf info tout
-        [tout] = getContinuingOutputs ctx
+        (tin, tout) = getThrough ctx
         [pkh] = txInfoSignatories info
-        Just tinInfo = findOwnInput ctx
-        tin = txInInfoResolved tinInfo
 
     answer =
       traceIfFalse "Script is fully spent"
