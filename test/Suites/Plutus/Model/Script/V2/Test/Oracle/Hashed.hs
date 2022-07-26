@@ -145,7 +145,7 @@ victoryBy Fraud{..} app@App{..} user oracle =
     victoryTx oracleRef betBox oracleDatum =
       mconcat
         [ spendBox app'betScript Answer betBox
-        , fraud'refInput $ refHashInput oracleRef oracleDatum
+        , fraud'refInput $ refInputHash oracleRef oracleDatum
         , payToKey user (txBoxValue betBox)
         ]
 

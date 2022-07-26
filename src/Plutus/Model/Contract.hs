@@ -57,10 +57,10 @@ module Plutus.Model.Contract (
   spendScript,
   spendScriptRef,
   spendBox,
-  refInlineInput,
-  refHashInput,
-  refInlineBox,
-  refHashBox,
+  refInputInline,
+  refInputHash,
+  refBoxInline,
+  refBoxHash,
   collateralInput,
   readOnlyBox,
   modifyBox,
@@ -443,15 +443,15 @@ spendScriptRef refScript script refOut red dat = toExtra $
     validator = toVersionedScript script
 
 -- | Reference input with inlined datum
-refInlineInput :: TxOutRef -> Tx
-refInlineInput ref = toExtra $
+refInputInline :: TxOutRef -> Tx
+refInputInline ref = toExtra $
   mempty
     { P.txReferenceInputs = S.singleton $ Fork.TxIn ref Nothing
     }
 
 -- | Reference input with hashed datum
-refHashInput :: ToData datum => TxOutRef -> datum -> Tx
-refHashInput ref dat = toExtra $
+refInputHash :: ToData datum => TxOutRef -> datum -> Tx
+refInputHash ref dat = toExtra $
   mempty
     { P.txReferenceInputs = S.singleton $ Fork.TxIn ref Nothing
     , P.txData = M.singleton dh datum
@@ -467,12 +467,12 @@ collateralInput ref = toExtra $
     }
 
 -- | Reference box with inlined datum
-refInlineBox :: TxBox script -> Tx
-refInlineBox = refInlineInput . txBoxRef
+refBoxInline :: TxBox script -> Tx
+refBoxInline = refInputInline . txBoxRef
 
 -- | Reference box with hashed datum
-refHashBox :: IsValidator script => TxBox script -> DatumType script -> Tx
-refHashBox = refHashInput . txBoxRef
+refBoxHash :: IsValidator script => TxBox script -> DatumType script -> Tx
+refBoxHash = refInputHash . txBoxRef
 
 -- | Spend script input.
 spendBox ::
