@@ -78,7 +78,7 @@ scriptHash = coerce . validatorHash
 
 -- | Typed validator. It's phantom type to annotate types for validators
 newtype TypedValidator datum redeemer =
-  TypedValidator { unTypedValidator :: (Versioned Validator) }
+  TypedValidator { unTypedValidator :: Versioned Validator }
 
 instance (ToData datum, ToData redeemer, FromData datum, FromData redeemer)
   => HasAddress (TypedValidator datum redeemer) where

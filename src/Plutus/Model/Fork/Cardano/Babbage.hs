@@ -188,7 +188,7 @@ toBabbageTxOut scriptMap network (P.TxOut addr value mdh mScriptHash) = do
 
 toOutputDatum :: P.OutputDatum -> Either ToCardanoError (C.Datum Era)
 toOutputDatum = \case
-  P.NoOutputDatum      -> pure $ C.NoDatum
+  P.NoOutputDatum      -> pure C.NoDatum
   P.OutputDatumHash dh -> C.DatumHash <$> toDataHash dh
   P.OutputDatum dat    -> pure $ C.Datum $ C.dataToBinaryData $ toDatum dat
 

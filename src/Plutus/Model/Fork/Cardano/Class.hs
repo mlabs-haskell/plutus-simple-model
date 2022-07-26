@@ -15,10 +15,9 @@ import Cardano.Ledger.Core qualified as C
 import Cardano.Ledger.Shelley.UTxO qualified as C
 import Plutus.V2.Ledger.Api qualified as P
 import Plutus.Model.Fork.TxExtra qualified as P
-import Plutus.Model.Fork.Cardano.Common (ToCardanoError)
+import Plutus.Model.Fork.Cardano.Common (ToCardanoError, toTxIn)
 import Plutus.Model.Fork.Ledger.Scripts qualified as C
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
-import Plutus.Model.Fork.Cardano.Common (toTxIn)
 
 class (C.Crypto era ~ StandardCrypto) => IsCardanoTx era where
   toCardanoTx ::

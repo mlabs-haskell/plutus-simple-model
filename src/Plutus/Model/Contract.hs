@@ -382,10 +382,7 @@ loadRefScriptBy script mDat val = toExtra $
   where
     sh = scriptHash script
     validator = toVersionedScript script
-    (outDatum, datumMap) =
-      case mDat of
-        Just dat -> fromDatumMode dat
-        Nothing  -> (NoOutputDatum, M.empty)
+    (outDatum, datumMap) = maybe (NoOutputDatum, M.empty) fromDatumMode mDat
 
 -- | Pays to the TxOut that references some script stored on ledger
 payToRef :: (IsValidator script) =>

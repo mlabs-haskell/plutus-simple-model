@@ -124,7 +124,6 @@ module Plutus.Model.Mock (
   -- * internal
   intToUser,
   userPubKeyHash,
-  txOutDatumHash,
 ) where
 
 import Prelude

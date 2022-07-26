@@ -16,12 +16,15 @@ import PlutusTx.Code (CompiledCode)
 import Plutus.Model.Validator (TypedValidator(..), TypedPolicy(..), TypedStake(..))
 import Plutus.Model.Fork.Ledger.Scripts (toV2)
 
+-- | Create Plutus V2 typed validator
 mkTypedValidator :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> TypedValidator datum redeemer
 mkTypedValidator = TypedValidator . toV2 . mkValidatorScript
 
+-- | Create Plutus V2 typed minting policy
 mkTypedPolicy :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedPolicy redeemer
 mkTypedPolicy = TypedPolicy . toV2 . mkMintingPolicyScript
 
+-- | Create Plutus V2 typed stake validator
 mkTypedStake :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedStake redeemer
 mkTypedStake = TypedStake . toV2 . mkStakeValidatorScript
 

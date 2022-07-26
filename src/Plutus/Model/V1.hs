@@ -1,3 +1,4 @@
+-- | Reexports all Plutus V1 related modules
 module Plutus.Model.V1(
   module X
 ) where
