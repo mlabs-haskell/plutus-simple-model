@@ -192,7 +192,7 @@ import Plutus.Model.Fork.Cardano.Babbage  ()
 import Plutus.Model.Fork.Cardano.Common (fromTxId)
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
-import Plutus.Model.Fork.Ledger.Ada (Ada(..))
+import Plutus.Model.Ada (Ada(..))
 import Plutus.Model.Blockchain.BchConfig
 import Plutus.Model.Blockchain.Log
 import Plutus.Model.Blockchain.Address

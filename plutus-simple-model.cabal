@@ -115,6 +115,7 @@ library
   import:           deps
   exposed-modules:
     Plutus.Model
+    Plutus.Model.Ada
     Plutus.Model.V1
     Plutus.Model.V2
     Plutus.Model.Blockchain
@@ -130,14 +131,11 @@ library
     Plutus.Model.Validator
     Plutus.Model.Validator.V1
     Plutus.Model.Validator.V2
-    Plutus.Model.Ledger.Ada
-    Plutus.Model.Ledger.Scripts
   other-modules:
     Plutus.Model.Fork.Cardano.Alonzo
     Plutus.Model.Fork.Cardano.Babbage
     Plutus.Model.Fork.Cardano.Class
     Plutus.Model.Fork.Cardano.Common
-    Plutus.Model.Fork.Ledger.Ada
     Plutus.Model.Fork.Ledger.Scripts
     Plutus.Model.Fork.Ledger.Slot
     Plutus.Model.Fork.Ledger.TimeSlot

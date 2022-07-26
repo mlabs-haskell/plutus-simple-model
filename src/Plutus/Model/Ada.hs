@@ -9,8 +9,10 @@
 {-# OPTIONS_GHC -Wno-identities #-}
 {-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
 -- | Functions for working with 'Ada' in Template Haskell.
-module Plutus.Model.Fork.Ledger.Ada(
+module Plutus.Model.Ada(
       Ada (..)
+    , adaValue
+    , lovelaceValue
     , getAda
     , adaSymbol
     , adaToken
@@ -77,6 +79,15 @@ getAda (Lovelace i) = MkFixed i
 -- | Create a 'Value' containing only the given 'Ada'.
 toValue :: Ada -> Value
 toValue (Lovelace i) = TH.singleton adaSymbol adaToken i
+
+{-# inlinable adaValue #-}
+adaValue :: Integer -> Value
+adaValue n = toValue (Lovelace (n * 1_000_000))
+
+{-# inlinable lovelaceValue #-}
+lovelaceValue :: Integer -> Value
+lovelaceValue n = toValue (Lovelace n)
+
 
 {-# INLINABLE fromValue #-}
 -- | Get the 'Ada' in the given 'Value'.

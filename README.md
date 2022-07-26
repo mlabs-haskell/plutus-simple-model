@@ -1072,8 +1072,9 @@ making transactions that contain fees granted with `payFee` function.
 ## Ledger reexports
 
 As plutus-ledger is not available with removing plutus-apps dependency. 
-We still provide some useful functionality from it. It's placed under `Plutus.Model.Ledger`:
+We still provide some useful functionality from it. We have:
 
-* `Ledger.Ada`  - `Ada` type wrapper and functions for it
-* `Ledger.Scripts` - useful functions to calculate hashes
+* `Plutus.Model.Ada` - for type-safe wrapper for Ada values
+* `Plutus.Model.Validator` - for typed validators and minting policies and calculation of hashes for them.
+
 

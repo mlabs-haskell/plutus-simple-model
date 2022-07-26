@@ -6,8 +6,8 @@ import Prelude
 import Test.Tasty
 
 import Plutus.Model
-import Plutus.Model.Ledger.Ada (Ada)
-import Plutus.Model.Ledger.Ada qualified as Ada
+import Plutus.Model.Ada (Ada)
+import Plutus.Model.Ada qualified as Ada
 import Plutus.V1.Ledger.Api
 import Suites.Plutus.Model.Script.V1.Onchain.Staking
 import Suites.Plutus.Model.Util

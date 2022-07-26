@@ -13,6 +13,9 @@ module Plutus.Model.Validator(
   scriptCurrencySymbol,
   stakeValidatorHash,
   mintingPolicyHash,
+  dataHash,
+  datumHash,
+  redeemerHash,
 ) where
 
 import Prelude
@@ -28,7 +31,7 @@ import Plutus.Model.Blockchain (
   HasStakingCredential(..),
   )
 import Plutus.Model.Fork.TxExtra qualified as Fork
-import Plutus.Model.Fork.Ledger.Scripts (Versioned(..))
+import Plutus.Model.Fork.Ledger.Scripts (Versioned(..), dataHash, datumHash, redeemerHash)
 import Plutus.Model.Fork.Ledger.Scripts qualified as Fork
 
 class (HasAddress script, ToData (DatumType script), FromData (DatumType script), ToData (RedeemerType script), FromData (RedeemerType script))

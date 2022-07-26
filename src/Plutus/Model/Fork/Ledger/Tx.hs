@@ -24,7 +24,7 @@ import Codec.Serialise
 import Cardano.Ledger.Keys qualified as C
 import Cardano.Ledger.Crypto qualified as C (StandardCrypto)
 
-import Plutus.Model.Fork.Ledger.Ada (Ada)
+import Plutus.Model.Ada (Ada)
 import Plutus.Model.Fork.Ledger.Slot
 import Plutus.Model.Fork.Ledger.Scripts (Versioned(..))
 

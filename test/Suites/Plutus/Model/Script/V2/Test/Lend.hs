@@ -14,8 +14,8 @@ import PlutusTx.Prelude qualified as Plutus
 import Suites.Plutus.Model.Script.V2.Onchain.Lend
 import Suites.Plutus.Model.Script.V2.Onchain.Lend.Script
 import Suites.Plutus.Model.Util
-import Plutus.Model.Ledger.Ada (Ada(..))
-import Plutus.Model.Ledger.Ada qualified as Ada
+import Plutus.Model.Ada (Ada(..))
+import Plutus.Model.Ada qualified as Ada
 
 import Plutus.Model
 

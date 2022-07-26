@@ -129,7 +129,6 @@ import Data.Sequence qualified as Seq (drop, length)
 import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
 
-import Plutus.Model.Fork.Ledger.Scripts (datumHash)
 import Plutus.Model.Fork.Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
 import Plutus.V1.Ledger.Address
 import Plutus.V2.Ledger.Api hiding (Map)
@@ -145,7 +144,7 @@ import Plutus.Model.Stake qualified as Stake
 import Plutus.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Model.Fork.Ledger.Tx qualified as Fork
 import Plutus.Model.Validator as X
-import Plutus.Model.Ledger.Ada (Ada(..))
+import Plutus.Model.Ada (Ada(..))
 
 ------------------------------------------------------------------------
 -- modify blockchain
