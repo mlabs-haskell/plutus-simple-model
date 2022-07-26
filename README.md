@@ -45,6 +45,11 @@ To add library with flakes we need to add it to the list of inputs (in the flake
 ```
 TODO: implement simple scaffold for PSM as example
 ```
+
+## Table of contents
+
+* (Creation of transaction)(#creation-of-transactions)
+
 ## Quick start guide
 
 We can create simple mock blockchain data structure and update within context of State monad.
