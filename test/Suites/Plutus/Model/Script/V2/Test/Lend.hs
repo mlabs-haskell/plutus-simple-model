@@ -14,8 +14,7 @@ import PlutusTx.Prelude qualified as Plutus
 import Suites.Plutus.Model.Script.V2.Onchain.Lend
 import Suites.Plutus.Model.Script.V2.Onchain.Lend.Script
 import Suites.Plutus.Model.Util
-import Plutus.Model.Ada (Ada(..))
-import Plutus.Model.Ada qualified as Ada
+import Plutus.Model.Ada
 
 import Plutus.Model
 
@@ -102,18 +101,18 @@ initLend App{..} pkh = do
 sell :: App -> PubKeyHash -> Ada -> Run ()
 sell app@App{..} user amount = do
   withLend app $ \lendBox ->
-    withSpend user (Ada.toValue amount <> riderAda) $ \usp ->
+    withSpend user (ada amount <> riderAda) $ \usp ->
       submitTx user $ sellTx usp lendBox
   where
     sellTx usp lendBox =
       mconcat
         [ userSpend usp
         , mintValue app'lendMint () mintVal
-        , modifyBox app'lendScript lendBox Exchange HashDatum ( <> Ada.toValue amount)
+        , modifyBox app'lendScript lendBox Exchange HashDatum ( <> ada amount)
         , payToKey user (riderAda <> mintVal)
         ]
 
-    mintVal = app'lendValue $ Ada.getLovelace amount
+    mintVal = app'lendValue $ getLovelace amount
 
 buy :: App -> PubKeyHash -> Integer -> Run ()
 buy app@App{..} user amount = do
@@ -129,7 +128,7 @@ buy app@App{..} user amount = do
         , payToKey user userVal
         ]
 
-    userVal = Ada.lovelaceValue amount
+    userVal = ada (Lovelace amount)
     mintVal = app'lendValue amount
 
 stealTokens :: App -> PubKeyHash -> Integer -> Run ()

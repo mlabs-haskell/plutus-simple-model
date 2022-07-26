@@ -6,8 +6,6 @@ import Prelude
 import Test.Tasty
 
 import Plutus.Model
-import Plutus.Model.Ada (Ada)
-import Plutus.Model.Ada qualified as Ada
 import Plutus.V1.Ledger.Api
 import Suites.Plutus.Model.Script.V1.Onchain.Staking
 import Suites.Plutus.Model.Util
@@ -25,13 +23,13 @@ tests cfg =
 stakingTest :: Run ()
 stakingTest = do
   u1 : u2 : _ <- setupUsers
-  let fee1 = Ada.Lovelace 100
+  let fee1 = Lovelace 100
       stakeScript = stakeValidator $ toAddress u2
   pool <- head <$> getPools
-  sp1 <- spend u1 (Ada.toValue fee1)
+  sp1 <- spend u1 (ada fee1)
   submitTx u1 $ registerCredentialTx stakeScript pool sp1 fee1
-  let fee2 = Ada.Lovelace 10
-  sp2 <- spend u1 (Ada.toValue fee2)
+  let fee2 = Lovelace 10
+  sp2 <- spend u1 (ada fee2)
   submitTx u1 (withdrawTx stakeScript u1 u2 sp2 fee2)
 
 withdrawTx :: TypedStake () -> PubKeyHash -> PubKeyHash -> UserSpend -> Ada -> Tx

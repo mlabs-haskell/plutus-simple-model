@@ -11,7 +11,6 @@ import Plutus.V1.Ledger.Value
 import Plutus.V1.Ledger.Api
 
 import Plutus.Model
-import Suites.Plutus.Model.Util
 
 tests :: MockConfig -> TestTree
 tests cfg = good "Simple fake coin exchange" simpleSpend

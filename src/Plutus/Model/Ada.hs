@@ -1,54 +1,34 @@
-
-{-# LANGUAGE DataKinds         #-}
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE DerivingVia       #-}
-{-# LANGUAGE NoImplicitPrelude #-}
-{-# LANGUAGE TemplateHaskell   #-}
--- Otherwise we get a complaint about the 'fromIntegral' call in the generated instance of 'Integral' for 'Ada'
-{-# OPTIONS_GHC -Wno-identities #-}
-{-# OPTIONS_GHC -fno-omit-interface-pragmas #-}
--- | Functions for working with 'Ada' in Template Haskell.
+-- | Functions for working with 'Ada'.
 module Plutus.Model.Ada(
-      Ada (..)
-    , adaValue
-    , lovelaceValue
-    , getAda
-    , adaSymbol
-    , adaToken
-    -- * Constructors
-    , fromValue
-    , toValue
-    , lovelaceOf
-    , adaOf
-    , lovelaceValueOf
-    , adaValueOf
-    -- * Num operations
-    , divide
-    -- * Etc.
-    , isZero
+      Ada (..),
+      adaOf,
+      ada,
+      adaValue,
+      isZero,
+      asAda,
+      lovelaceToAda,
+      adaSymbol,
+      adaToken,
+      divideAda,
     ) where
 
 import Prelude qualified as Haskell
 
 import Control.DeepSeq (NFData)
-import Data.Fixed
 
 import Codec.Serialise.Class (Serialise)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Tagged
 import GHC.Generics (Generic)
 import Plutus.V1.Ledger.Value (Value, adaSymbol, adaToken)
-import Plutus.V1.Ledger.Value qualified as TH
+import Plutus.V1.Ledger.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Lift (makeLift)
-import PlutusTx.Prelude hiding (divide)
-import PlutusTx.Prelude qualified as P
+import PlutusTx.Prelude
 import Prettyprinter (Pretty)
 
 -- | ADA, the special currency on the Cardano blockchain. The unit of Ada is Lovelace, and
 --   1M Lovelace is one Ada.
---   See note [Currencies] in 'Ledger.Validation.Value.TH'.
 newtype Ada = Lovelace { getLovelace :: Integer }
     deriving (Haskell.Enum)
     deriving stock (Haskell.Eq, Haskell.Ord, Haskell.Show, Generic)
@@ -68,65 +48,38 @@ instance Haskell.Monoid Ada where
 instance Monoid Ada where
     mempty = Lovelace 0
 
+instance Module Integer Ada where
+  scale n (Lovelace v) = Lovelace (n * v)
+
 makeLift ''Ada
 
-{-# INLINABLE getAda #-}
--- | Get the amount of Ada (the unit of the currency Ada) in this 'Ada' value.
-getAda :: Ada -> Micro
-getAda (Lovelace i) = MkFixed i
-
-{-# INLINABLE toValue #-}
--- | Create a 'Value' containing only the given 'Ada'.
-toValue :: Ada -> Value
-toValue (Lovelace i) = TH.singleton adaSymbol adaToken i
-
-{-# inlinable adaValue #-}
-adaValue :: Integer -> Value
-adaValue n = toValue (Lovelace (n * 1_000_000))
-
-{-# inlinable lovelaceValue #-}
-lovelaceValue :: Integer -> Value
-lovelaceValue n = toValue (Lovelace n)
-
-
-{-# INLINABLE fromValue #-}
--- | Get the 'Ada' in the given 'Value'.
-fromValue :: Value -> Ada
-fromValue v = Lovelace (TH.valueOf v adaSymbol adaToken)
-
-{-# INLINABLE lovelaceOf #-}
--- | Create 'Ada' representing the given quantity of Lovelace (the unit of the currency Ada).
-lovelaceOf :: Integer -> Ada
-lovelaceOf = Lovelace
-
 {-# INLINABLE adaOf #-}
--- | Create 'Ada' representing the given quantity of Ada (1M Lovelace).
-adaOf :: Micro -> Ada
-adaOf (MkFixed x) = Lovelace x
+adaOf :: Value -> Ada
+adaOf v = Lovelace (Value.valueOf v adaSymbol adaToken)
 
-{-# INLINABLE lovelaceValueOf #-}
--- | A 'Value' with the given amount of Lovelace (the currency unit).
---
---   @lovelaceValueOf == toValue . lovelaceOf@
---
-lovelaceValueOf :: Integer -> Value
-lovelaceValueOf = TH.singleton adaSymbol adaToken
+{-# INLINABLE ada #-}
+ada :: Ada -> Value
+ada (Lovelace amount) = Value.singleton adaSymbol adaToken amount
 
-{-# INLINABLE adaValueOf #-}
--- | A 'Value' with the given amount of Ada (the currency unit).
---
---   @adaValueOf == toValue . adaOf@
---
-adaValueOf :: Micro -> Value
-adaValueOf (MkFixed x) = TH.singleton adaSymbol adaToken x
-
-{-# INLINABLE divide #-}
--- | Divide one 'Ada' value by another.
-divide :: Ada -> Ada -> Ada
-divide (Lovelace a) (Lovelace b) = Lovelace (P.divide a b)
+{-# INLINABLE adaValue #-}
+adaValue :: Integer -> Value
+adaValue = ada . Lovelace
 
 {-# INLINABLE isZero #-}
 -- | Check whether an 'Ada' value is zero.
 isZero :: Ada -> Bool
 isZero (Lovelace i) = i == 0
 
+{-# INLINABLE asAda #-}
+-- | Counts in Ada's not in lovelaces
+asAda :: Integer -> Ada
+asAda = Lovelace . lovelaceToAda
+
+{-# INLINABLE lovelaceToAda #-}
+lovelaceToAda :: Integer -> Integer
+lovelaceToAda n = 1_000_000 * n
+
+{-# INLINABLE divideAda #-}
+-- | Divide one 'Ada' value by another.
+divideAda :: Ada -> Ada -> Ada
+divideAda (Lovelace a) (Lovelace b) = Lovelace (divide a b)
