@@ -48,7 +48,7 @@ TODO: implement simple scaffold for PSM as example
 
 ## Table of contents
 
-* (Creation of transaction)(#creation-of-transactions)
+* [Creation of transaction](#creation-of-transactions)
 
 ## Quick start guide
 
