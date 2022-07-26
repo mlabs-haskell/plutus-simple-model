@@ -26,15 +26,12 @@ import Cardano.Ledger.Babbage.Translation qualified as B
 
 import PlutusCore (defaultCostModelParams)
 
+-- | Type that unifies protocol parameters across eras.
 data PParams
   = AlonzoParams (Alonzo.PParams (AlonzoEra StandardCrypto))
+  -- ^ alonzo era protocol parameters
   | BabbageParams (Babbage.PParams (BabbageEra StandardCrypto))
-
-{- TODO: NO JSON instance for BabbageEra PPArams
--- | Reads protocol parameters from file.
-readBabbageParams :: FilePath -> IO PParams
-readBabbageParams = fmap BabbageParams . readJson
--}
+  -- ^ babbage era protocol parameters
 
 -- | Reads protocol parameters from file.
 readAlonzoParams :: FilePath -> IO PParams
@@ -51,6 +48,7 @@ rational = fromJust . Alonzo.boundRational
 
 -- Alonzo
 
+-- | Default Alonzo era parameters
 defaultAlonzoParams :: PParams
 defaultAlonzoParams = AlonzoParams defaultAlonzoParams'
 
@@ -94,6 +92,7 @@ defaultCostModels = Alonzo.CostModels $
 
 -- Babbage
 
+-- | Default Babbage era parameters
 defaultBabbageParams :: PParams
 defaultBabbageParams = BabbageParams $ B.translatePParams defaultAlonzoParams'
 

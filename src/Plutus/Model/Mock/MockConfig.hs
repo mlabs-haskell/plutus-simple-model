@@ -1,3 +1,4 @@
+-- | Config for Mock ledger
 module Plutus.Model.Mock.MockConfig(
   Stat(..),
   MockConfig(..),
@@ -43,9 +44,13 @@ defaultSlotConfig =
     , scSlotZeroTime = 0 -- starts at unix epoch start
     }
 
+-- | Default Babbage era config. If we use this parameter
+-- then Alonzo era TXs will be used for testing
 defaultAlonzo :: MockConfig
 defaultAlonzo = defaultMockConfig defaultAlonzoParams
 
+-- | Default Babbage era config. If we use this parameter
+-- then Babbage era TXs will be used for testing
 defaultBabbage :: MockConfig
 defaultBabbage = defaultMockConfig defaultBabbageParams
 

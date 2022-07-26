@@ -34,12 +34,15 @@ import Plutus.Model.Fork.TxExtra qualified as Fork
 import Plutus.Model.Fork.Ledger.Scripts (Versioned(..), dataHash, datumHash, redeemerHash)
 import Plutus.Model.Fork.Ledger.Scripts qualified as Fork
 
+-- | Class for typed vlaidators with versioning by Plutus language
 class (HasAddress script, ToData (DatumType script), FromData (DatumType script), ToData (RedeemerType script), FromData (RedeemerType script))
   => IsValidator script where
   type DatumType script    :: Type
   type RedeemerType script :: Type
   toValidator :: script -> Validator
+  -- ^ Get internal alidator
   getLanguage :: script -> C.Language
+  -- ^ Get plutus language version
 
 instance (ToData datum, FromData datum, ToData redeemer, FromData redeemer)
   => IsValidator (TypedValidator datum redeemer) where
@@ -61,16 +64,19 @@ instance (ToData redeemer, FromData redeemer) => IsValidator (TypedPolicy redeem
   toValidator (TypedPolicy (Versioned _lang (MintingPolicy script))) = Validator script
   getLanguage = versioned'language . unTypedPolicy
 
+-- | Converts typed validator to versioned script
 toVersionedScript :: IsValidator a => a -> Versioned Script
 toVersionedScript a = Versioned (getLanguage a) (getValidator $ toValidator a)
 
+-- | Get valdiator hash
 validatorHash :: IsValidator a => a -> ValidatorHash
 validatorHash v = Fork.validatorHash $ Versioned (getLanguage v) (toValidator v)
 
+-- | Get script hash
 scriptHash :: IsValidator a => a -> ScriptHash
 scriptHash = coerce . validatorHash
 
--- | Phantom type to annotate types
+-- | Typed validator. It's phantom type to annotate types for validators
 newtype TypedValidator datum redeemer =
   TypedValidator { unTypedValidator :: (Versioned Validator) }
 
@@ -78,13 +84,14 @@ instance (ToData datum, ToData redeemer, FromData datum, FromData redeemer)
   => HasAddress (TypedValidator datum redeemer) where
   toAddress = toAddress . validatorHash
 
--- | Phantom type to annotate types
+-- | Typed minting policy. It's phantom type to annotate types for minting policies
 data TypedPolicy redeemer =
   TypedPolicy { unTypedPolicy :: Versioned MintingPolicy }
 
 instance (ToData redeemer, FromData redeemer) => HasAddress (TypedPolicy redeemer) where
   toAddress = toAddress . validatorHash
 
+-- | Typed stake valdiators. It's phantom type to annotate types for stake valdiators
 newtype TypedStake redeemer =
   TypedStake { unTypedStake :: Versioned StakeValidator }
 
@@ -102,14 +109,15 @@ instance HasStakingCredential (TypedStake redeemer) where
 
 ---------------------------------------------------------------------------------
 
+-- | Get currency symbol for minting policy
 scriptCurrencySymbol :: TypedPolicy a -> CurrencySymbol
 scriptCurrencySymbol (TypedPolicy script) = Fork.scriptCurrencySymbol script
 
+-- | Get minting policy hash
 mintingPolicyHash :: TypedPolicy a -> MintingPolicyHash
 mintingPolicyHash (TypedPolicy script) = Fork.mintingPolicyHash script
 
+-- | Get stake vlaidator hash
 stakeValidatorHash :: TypedStake a -> StakeValidatorHash
 stakeValidatorHash (TypedStake script) = Fork.stakeValidatorHash script
-
----------------------------------------------------------------------------------
 

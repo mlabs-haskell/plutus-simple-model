@@ -1,3 +1,4 @@
+-- | Tx execution statistics (execution units budget)
 module Plutus.Model.Mock.Stat(
   TxStat(..),
   txStatId,

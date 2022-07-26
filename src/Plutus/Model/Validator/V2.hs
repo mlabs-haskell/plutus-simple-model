@@ -1,3 +1,4 @@
+-- | Creation of typed validators for Plutus V2
 module Plutus.Model.Validator.V2(
   mkTypedValidator,
   mkTypedPolicy,

@@ -311,11 +311,13 @@ spend' pkh expected = do
 ------------------------------------------------------------------------
 -- datum mode
 
+-- | How to store datum (as Hash or Inlined to TxOut)
 data DatumMode a
   = InlineDatum a
   | HashDatum a
   deriving (Show, Eq)
 
+-- | Convert DatumMode to pieces of TXs related to datum storage
 fromDatumMode :: ToData a => DatumMode a -> (OutputDatum, Map DatumHash Datum)
 fromDatumMode = \case
   HashDatum dat ->
@@ -330,6 +332,7 @@ fromDatumMode = \case
 ------------------------------------------------------------------------
 -- build Tx
 
+-- | Pay to public key with datum
 payToKeyDatum :: ToData a => PubKeyHash -> DatumMode a -> Value -> Tx
 payToKeyDatum pkh dat val = toExtra $
   mempty
@@ -384,7 +387,7 @@ loadRefScriptBy script mDat val = toExtra $
         Just dat -> fromDatumMode dat
         Nothing  -> (NoOutputDatum, M.empty)
 
--- | Pays to the TxOut that references some script
+-- | Pays to the TxOut that references some script stored on ledger
 payToRef :: (IsValidator script) =>
   script -> DatumMode (DatumType script) -> Value -> Tx
 payToRef script dat val = toExtra $
@@ -460,6 +463,7 @@ refInputHash ref dat = toExtra $
     dh = datumHash datum
     datum = Datum $ toBuiltinData dat
 
+-- | Set collateral input
 collateralInput :: TxOutRef -> Tx
 collateralInput ref = toExtra $
   mempty
@@ -534,11 +538,11 @@ validateIn times = updatePlutusTx $ \tx -> do
 ----------------------------------------------------------------------
 -- queries
 
--- | Typed txOut that contains decoded datum
-data TxBox a = TxBox
-  { txBoxRef   :: TxOutRef     -- ^ tx out reference
-  , txBoxOut   :: TxOut        -- ^ tx out
-  , txBoxDatum :: DatumType a  -- ^ datum
+-- | Typed txOut that contains decoded datum typed to script/validator
+data TxBox script = TxBox
+  { txBoxRef   :: TxOutRef          -- ^ tx out reference
+  , txBoxOut   :: TxOut             -- ^ tx out
+  , txBoxDatum :: DatumType script  -- ^ datum
   }
 
 deriving instance Show (DatumType a) => Show (TxBox a)
@@ -584,21 +588,27 @@ withNft = withBox (const True)
 ----------------------------------------------------------------------
 -- time helpers
 
+-- | Convert amount of milliseconds to POSIXTime
 millis :: Integer -> POSIXTime
 millis = POSIXTime
 
+-- | Convert amount of seconds to POSIXTime
 seconds :: Integer -> POSIXTime
 seconds n = millis (1000 * n)
 
+-- | Convert amount of minutes to POSIXTime
 minutes :: Integer -> POSIXTime
 minutes n = seconds (60 * n)
 
+-- | Convert amount of hours to POSIXTime
 hours :: Integer -> POSIXTime
 hours n = minutes (60 * n)
 
+-- | Convert amount of days to POSIXTime
 days :: Integer -> POSIXTime
 days n = hours (24 * n)
 
+-- | Convert amount of weeks to POSIXTime
 weeks :: Integer -> POSIXTime
 weeks n = days (7 * n)
 
@@ -742,12 +752,15 @@ gives userA val userB = owns userA (Plutus.negate val) <> owns userB val
 -----------------------------------------------------------
 -- staking and certificates
 
+-- | Construct Tx from withdraw parts
 withdrawTx :: Withdraw -> Tx
 withdrawTx w = mempty { tx'extra = mempty { extra'withdraws = [w] } }
 
+-- | Convert to internal redeemer
 toRedeemer :: ToData red => red -> Redeemer
 toRedeemer = Redeemer . toBuiltinData
 
+-- | Convert to internal datum
 toDatum :: ToData dat => dat -> Datum
 toDatum = Datum . toBuiltinData
 

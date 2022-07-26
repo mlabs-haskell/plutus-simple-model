@@ -84,6 +84,7 @@ module Plutus.Model.Mock (
   datumAt,
   getHashDatum,
   getInlineDatum,
+  txOutDatumHash,
   rewardAt,
   stakesAt,
   hasPool,
@@ -402,11 +403,13 @@ dummyHash = Crypto.castHash $ Crypto.hashWith CBOR.serialize' ()
 genesisTxId :: TxId
 genesisTxId = fromTxId . Ledger.TxId $ Ledger.unsafeMakeSafeHash dummyHash
 
+-- | Get public key hash for a user
 userPubKeyHash :: User -> PubKeyHash
 userPubKeyHash (User (C.KeyPair vk _sk)) =
   case C.hashKey vk of
     C.KeyHash h -> PubKeyHash $ toBuiltin $ C.hashToBytes h
 
+-- | Create User out of integer
 intToUser :: Integer -> User
 intToUser n = User $ C.KeyPair vk sk
   where
@@ -501,6 +504,7 @@ sendSingleTx tx = do
     AlonzoParams params  -> checkSingleTx @Alonzo.Era  params tx
     BabbageParams params -> checkSingleTx @Babbage.Era params tx
 
+-- | Confirms that single TX is valid. Works across several Eras (see @Plutus.Model.Fork.Cardano.Class@)
 checkSingleTx ::
   forall era .
   ( Era era,
@@ -651,8 +655,6 @@ checkSingleTx params (Tx extra tx) =
       logFail err
       pure $ Left err
 
-
-
 compareLimits :: Stat -> Stat -> [LimitOverflow]
 compareLimits maxLimits stat = catMaybes
   [ cmp TxSizeError statSize
@@ -691,6 +693,7 @@ getTxOut ref = do
     Just tout -> pure $ Just tout
     Nothing   -> M.lookup ref <$> gets mockRefScripts
 
+-- | Update slot counter by one.
 bumpSlot :: Run ()
 bumpSlot = modify' $ \s -> s {mockCurrentSlot = mockCurrentSlot s + 1}
 
@@ -779,6 +782,12 @@ refScriptAt addr = utxoAtStateBy mockRefScripts addr <$> get
 withFirstUtxo :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
 withFirstUtxo = withUtxo (const True)
 
+-- | Reads list of UTXOs that belong to address and applies predicate to search for
+-- certain UTXO in that list. It proceeds with continuation if UTXO is present
+-- and fails with @logError@ if there is no such UTXO.
+--
+-- Note that it does not search among UTXOs that store scripts (used for reference scripts).
+-- It's done for convenience.
 withUtxo :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
 withUtxo isUtxo user cont =
   withMayBy readMsg (L.find isUtxo <$> utxoAt user) cont
@@ -790,13 +799,18 @@ withUtxo isUtxo user cont =
 withFirstRefScript :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
 withFirstRefScript = withRefScript (const True)
 
+-- | Reads list of reference script UTXOs that belong to address and applies predicate to search for
+-- certain UTXO in that list. It proceeds with continuation if UTXO is present
+-- and fails with @logError@ if there is no such UTXO.
+--
+-- Note that it searches only among UTXOs that store scripts (used for reference scripts).
+-- It's done for convenience.
 withRefScript :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
 withRefScript isUtxo user cont =
   withMayBy readMsg (L.find isUtxo <$> refScriptAt user) cont
   where
     readMsg = do
       fmap (\name -> "No UTxO for: " <> name) $ getPrettyAddress user
-
 
 -- | Get all UTXOs that belong to an address
 utxoAtStateBy :: HasAddress user => (Mock -> Map TxOutRef TxOut) -> user -> Mock -> [(TxOutRef, TxOut)]
@@ -805,7 +819,7 @@ utxoAtStateBy extract (toAddress -> addr) st =
   where
     refs = txOutRefAtState addr st
 
--- | Reads both hash and inline datum
+-- | Reads both hash and inline datums
 datumAt :: FromData a => TxOutRef -> Run (Maybe a)
 datumAt ref = do
   mdat <- getHashDatum ref
@@ -827,6 +841,8 @@ withMay msg act cont = do
     Just res -> cont res
     Nothing  -> logError msg
 
+-- | Continuation based queries with effectful error messages.
+-- It can be useful to read human readable names for addresses, TXs, currency symbols etc.
 withMayBy :: Run String -> Run (Maybe a) -> (a -> Run ()) -> Run ()
 withMayBy msg act cont = do
   mRes <- act
@@ -841,12 +857,14 @@ getHashDatum ref = do
   mDh <- (txOutDatumHash =<<) <$> getTxOut ref
   pure $ fromBuiltinData . getDatum =<< (`M.lookup` dhs) =<< mDh
 
+-- | Reads inlined datum from @TxOut@
 getInlineDatum :: FromData dat => TxOut -> Maybe dat
 getInlineDatum tout =
   case txOutDatum tout of
     OutputDatum dat -> fromBuiltinData (getDatum dat)
     _               -> Nothing
 
+-- | Reads datum hash for @TxOut@
 txOutDatumHash :: TxOut -> Maybe DatumHash
 txOutDatumHash tout =
   case txOutDatum tout of
@@ -869,6 +887,7 @@ hasPool (PoolId pkh) = gets (M.member (PoolId pkh) . stake'pools. mockStake)
 hasStake :: HasStakingCredential a => a -> Run Bool
 hasStake key = gets (M.member (toStakingCredential key) . stake'stakes. mockStake)
 
+-- | Read pool ids registered on ledger.
 getPools :: Run [PoolId]
 getPools = gets (V.toList . stake'poolIds . mockStake)
 

@@ -24,6 +24,7 @@ import Plutus.Model.Stake
 import Plutus.Model.Mock.Stat
 import Plutus.Model.Fork.Ledger.Slot
 
+-- | Log of Slot-timestamped events
 newtype Log a = Log { unLog :: Seq (Slot, a) }
   deriving (Functor)
 
@@ -37,12 +38,15 @@ instance Semigroup (Log a) where
           then a Seq.<| merge as (b Seq.<| bs)
           else b Seq.<| merge (a Seq.<| as) bs
 
+-- | Insert event to log
 appendLog :: Slot -> a -> Log a -> Log a
 appendLog slot val (Log xs) = Log (xs Seq.|> (slot, val))
 
+-- | Empty log
 nullLog :: Log a -> Bool
 nullLog (Log a) = Seq.null a
 
+-- | Convert log to plain list
 fromLog :: Log a -> [(Slot, a)]
 fromLog (Log s) = toList s
 
