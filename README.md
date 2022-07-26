@@ -444,7 +444,7 @@ guessTx :: PubKeyHash -> TxOutRef -> Value -> GameDatum -> BuiltinByteString -> 
 guessTx pkh gameRef gameVal dat answer =
   mconcat
     [ spendScript gameScript gameRef (Guess answer) dat
-    , payToPubKey pkh gameVal
+    , payToKey pkh gameVal
     ]
 ```
 
@@ -466,7 +466,7 @@ The next thing is that we want to take the prize. For that we create output that
 protected by our own pub key. We do it with the function:
 
 ```haskell
-payToPubKey :: PubKeyHash -> Value -> Tx
+payToKey :: PubKeyHash -> Value -> Tx
 ```
 
 
@@ -878,7 +878,7 @@ payToScript :: (IsValidator v) => v -> DatumType v -> Value -> Tx
 The same function exists to pay to pub key hash:
 
 ```haskell
-payToPubKey :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
+payToKey :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
 ```
 
 ### Certificates and withdrawals of the rewards

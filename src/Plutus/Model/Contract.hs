@@ -45,8 +45,8 @@ module Plutus.Model.Contract (
   -- * Build TX
   signTx,
   DatumMode(..),
-  payToPubKey,
-  payToPubKeyDatum,
+  payToKey,
+  payToKeyDatum,
   payToScript,
   loadRefScript,
   loadRefScriptDatum,
@@ -180,7 +180,7 @@ sendValue fromPkh amt toPkh = do
     Just val -> void $ sendTx =<< signTx fromPkh (toTx val)
     Nothing -> logFail (NotEnoughFunds fromPkh amt)
   where
-    toTx sp = userSpend sp <> payToPubKey toPkh amt
+    toTx sp = userSpend sp <> payToKey toPkh amt
 
 -- | Spend or fail if there are no funds
 withSpend :: PubKeyHash -> Value -> (UserSpend -> Run ()) -> Run ()
@@ -330,8 +330,8 @@ fromDatumMode = \case
 ------------------------------------------------------------------------
 -- build Tx
 
-payToPubKeyDatum :: ToData a => PubKeyHash -> DatumMode a -> Value -> Tx
-payToPubKeyDatum pkh dat val = toExtra $
+payToKeyDatum :: ToData a => PubKeyHash -> DatumMode a -> Value -> Tx
+payToKeyDatum pkh dat val = toExtra $
   mempty
     { P.txOutputs = [TxOut (pubKeyHashAddress pkh) val outDatum Nothing]
     , P.txData = datumMap
@@ -341,8 +341,8 @@ payToPubKeyDatum pkh dat val = toExtra $
 
 -- | Pay value to the owner of PubKeyHash.
 -- We use address to supply staking credential if we need it.
-payToPubKey :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
-payToPubKey pkh val = toExtra $
+payToKey :: HasAddress pubKeyHash => pubKeyHash -> Value -> Tx
+payToKey pkh val = toExtra $
   mempty
     { P.txOutputs = [TxOut (toAddress pkh) val NoOutputDatum Nothing]
     }

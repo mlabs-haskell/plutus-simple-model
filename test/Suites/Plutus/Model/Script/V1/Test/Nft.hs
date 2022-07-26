@@ -42,7 +42,7 @@ noRefMint = do
   let [u1, u2, _] = users
   sp1 <- spend u1 (adaValue 1000)
   let params = NftParams (getHeadRef sp1) tn
-  tx1 <- signTx u1 $ userSpend sp1 <> payToPubKey u1 (adaValue 1000)
+  tx1 <- signTx u1 $ userSpend sp1 <> payToKey u1 (adaValue 1000)
   void $ sendTx tx1
   sp2 <- spend u2 (adaValue 1)
   tx2 <- signTx u1 $ nftTx params sp2 u2
@@ -69,7 +69,7 @@ nftTxWith mintVal p sp pkh =
    in mconcat
         [ mintValue mp () mintVal
         , userSpend sp
-        , payToPubKey pkh (adaValue 1 <> mintVal)
+        , payToKey pkh (adaValue 1 <> mintVal)
         ]
 
 tn :: TokenName

@@ -87,5 +87,5 @@ guessTx :: TxOutRef -> PubKeyHash -> TxOutRef -> Value -> GameDatum -> BuiltinBy
 guessTx refScript pkh gameRef gameVal dat answer =
   mconcat
     [ spendScriptRef refScript gameScript gameRef (Guess answer) dat
-    , payToPubKey pkh gameVal
+    , payToKey pkh gameVal
     ]

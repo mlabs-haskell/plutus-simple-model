@@ -115,7 +115,7 @@ postAnswer oraclePkh answer = do
   submitTx oraclePkh $
     mconcat
       [ userSpend usp
-      , payToPubKeyDatum oraclePkh (InlineDatum (AnswerDatum answer)) riderAda
+      , payToKeyDatum oraclePkh (InlineDatum (AnswerDatum answer)) riderAda
       ]
 
 -- | Parameters of malicious behavior
@@ -149,7 +149,7 @@ victoryBy Fraud{..} app@App{..} user oracle =
       mconcat
         [ spendBox app'betScript Answer betBox
         , fraud'refInput $ refInlineInput oracleRef
-        , payToPubKey user (txBoxValue betBox)
+        , payToKey user (txBoxValue betBox)
         ]
 
 -- | @TxOut@ contains a datum with Oracle answer

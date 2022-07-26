@@ -39,8 +39,8 @@ withdrawTx stakeScript u1 u2 sp fee =
   mconcat
     [ userSpend sp
     , payFee fee
-    , payToPubKey u1 (adaValue 25)
-    , payToPubKey u2 (adaValue 25)
+    , payToKey u1 (adaValue 25)
+    , payToKey u2 (adaValue 25)
     , withdrawStakeScript stakeScript () 50
     ]
 

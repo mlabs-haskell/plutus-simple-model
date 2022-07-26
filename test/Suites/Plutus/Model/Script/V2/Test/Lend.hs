@@ -110,7 +110,7 @@ sell app@App{..} user amount = do
         [ userSpend usp
         , mintValue app'lendMint () mintVal
         , modifyBox app'lendScript lendBox Exchange HashDatum ( <> Ada.toValue amount)
-        , payToPubKey user (riderAda <> mintVal)
+        , payToKey user (riderAda <> mintVal)
         ]
 
     mintVal = app'lendValue $ Ada.getLovelace amount
@@ -126,7 +126,7 @@ buy app@App{..} user amount = do
         [ userSpend usp
         , mintValue app'lendMint () (Plutus.negate mintVal)
         , modifyBox app'lendScript lendBox Exchange HashDatum ( <> Plutus.negate userVal)
-        , payToPubKey user userVal
+        , payToKey user userVal
         ]
 
     userVal = Ada.lovelaceValue amount
@@ -141,7 +141,7 @@ stealTokens App{..} user amount = do
       mconcat
         [ userSpend usp
         , mintValue app'lendMint () mintVal
-        , payToPubKey user mintVal
+        , payToKey user mintVal
         ]
 
     mintVal = app'lendValue amount

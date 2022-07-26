@@ -113,7 +113,7 @@ spendTx :: PubKeyHash -> TxOutRef -> Value -> Tx
 spendTx pkh safeRef safeVal =
   mconcat
     [ spendScript safe safeRef Spend (Safe pkh)
-    , payToPubKey pkh (safeVal <> adaValue (-1))
+    , payToKey pkh (safeVal <> adaValue (-1))
     , payToScript safe (HashDatum $ Safe pkh) (adaValue 1)
     ]
 
