@@ -1,3 +1,4 @@
+-- | Utility functions for Plutus V2 scripts
 module Suites.Plutus.Model.Script.V2.Onchain.Util(
   datumOf,
   inlinedDatum,

@@ -5,9 +5,9 @@ module Suites.Plutus.Model.Script.V1.Test.Staking (
 import Prelude
 import Test.Tasty
 
-import Plutus.Test.Model
-import Plutus.Test.Model.Ledger.Ada (Ada)
-import Plutus.Test.Model.Ledger.Ada qualified as Ada
+import Plutus.Model
+import Plutus.Model.Ledger.Ada (Ada)
+import Plutus.Model.Ledger.Ada qualified as Ada
 import Plutus.V1.Ledger.Api
 import Suites.Plutus.Model.Script.V1.Onchain.Staking
 import Suites.Plutus.Model.Util

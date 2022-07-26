@@ -1,3 +1,4 @@
+-- | Compiled script for Hash Game example
 module Suites.Plutus.Model.Script.V2.Onchain.Game.Script (
   Game,
   gameScript,
@@ -5,7 +6,7 @@ module Suites.Plutus.Model.Script.V2.Onchain.Game.Script (
 
 import PlutusTx qualified
 import Suites.Plutus.Model.Script.V2.Onchain.Game
-import Plutus.Test.Model.V2 (toBuiltinValidator, TypedValidator, mkTypedValidator)
+import Plutus.Model.V2 (toBuiltinValidator, TypedValidator, mkTypedValidator)
 
 type Game = TypedValidator GameDatum GameAct
 

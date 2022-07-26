@@ -17,7 +17,7 @@ import Suites.Plutus.Model.Script.V1.Onchain.Counter
 import Suites.Plutus.Model.Script.V1.Onchain.Counter.Script
 import Suites.Plutus.Model.Util
 
-import Plutus.Test.Model
+import Plutus.Model
 
 tests :: BchConfig -> TestTree
 tests cfg =

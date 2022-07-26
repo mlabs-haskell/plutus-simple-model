@@ -4,7 +4,7 @@ module Suites.Plutus.Model.Script (
 
 import Test.Tasty
 
-import Plutus.Test.Model
+import Plutus.Model
 import Suites.Plutus.Model.Script.V1 qualified as V1
 
 tests :: BchConfig -> TestTree

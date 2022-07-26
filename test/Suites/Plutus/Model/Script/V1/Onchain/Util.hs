@@ -1,3 +1,4 @@
+-- | Utility functions for Plutus V1 scripts
 module Suites.Plutus.Model.Script.V1.Onchain.Util(
   datumOf
 ) where

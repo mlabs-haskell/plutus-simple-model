@@ -10,7 +10,7 @@ import Prelude
 import Plutus.V1.Ledger.Value
 import Plutus.V1.Ledger.Api
 
-import Plutus.Test.Model
+import Plutus.Model
 import Suites.Plutus.Model.Util
 
 tests :: BchConfig -> TestTree

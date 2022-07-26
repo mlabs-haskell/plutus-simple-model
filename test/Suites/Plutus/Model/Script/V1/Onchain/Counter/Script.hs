@@ -1,3 +1,4 @@
+-- | Compiled script for Counter example
 module Suites.Plutus.Model.Script.V1.Onchain.Counter.Script (
   Counter,
   counterScript,
@@ -5,10 +6,10 @@ module Suites.Plutus.Model.Script.V1.Onchain.Counter.Script (
 
 import PlutusTx qualified
 import Suites.Plutus.Model.Script.V1.Onchain.Counter
-import Plutus.Test.Model.V1 (toBuiltinValidator, TypedValidator, mkTypedValidator)
+import Plutus.Model.V1 (toBuiltinValidator, TypedValidator, mkTypedValidator)
 
 type Counter = TypedValidator CounterDatum CounterAct
 
--- | The GeroGov validator script instance
+-- | The TypedValidator for counter contract
 counterScript :: Counter
 counterScript = mkTypedValidator $$(PlutusTx.compile [|| toBuiltinValidator counterContract ||])

@@ -1,4 +1,4 @@
--- | Tets for reference scripts. We deploy script wth hash game
+-- | Tets for reference scripts. We deploy script for hash game
 -- to UTxO and use it as reference input
 module Suites.Plutus.Model.Script.V2.Test.GameRef (
   tests,
@@ -13,7 +13,7 @@ import Suites.Plutus.Model.Script.V2.Onchain.Game
 import Suites.Plutus.Model.Script.V2.Onchain.Game.Script
 import Suites.Plutus.Model.Util
 
-import Plutus.Test.Model
+import Plutus.Model
 
 tests :: BchConfig -> TestTree
 tests cfg =

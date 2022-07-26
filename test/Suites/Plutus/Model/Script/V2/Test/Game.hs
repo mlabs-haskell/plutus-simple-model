@@ -17,7 +17,7 @@ import Suites.Plutus.Model.Script.V2.Onchain.Game
 import Suites.Plutus.Model.Script.V2.Onchain.Game.Script
 import Suites.Plutus.Model.Util
 
-import Plutus.Test.Model
+import Plutus.Model
 
 tests :: BchConfig -> TestTree
 tests cfg =

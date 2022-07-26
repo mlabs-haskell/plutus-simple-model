@@ -4,11 +4,12 @@ module Suites.Plutus.Model.Script.V2 (
 
 import Test.Tasty
 
-import Plutus.Test.Model
+import Plutus.Model
 import Suites.Plutus.Model.Script.V2.Test.Game qualified as Game
 import Suites.Plutus.Model.Script.V2.Test.GameRef qualified as GameRef
 import Suites.Plutus.Model.Script.V2.Test.Lend qualified as Lend
-import Suites.Plutus.Model.Script.V2.Test.Oracle qualified as Oracle
+import Suites.Plutus.Model.Script.V2.Test.Oracle.Inlined qualified as Oracle.Inlined
+import Suites.Plutus.Model.Script.V2.Test.Oracle.Hashed qualified as Oracle.Hashed
 
 tests :: BchConfig -> TestTree
 tests cfg =
@@ -17,5 +18,6 @@ tests cfg =
     [ Game.tests cfg
     , GameRef.tests cfg
     , Lend.tests cfg
-    , Oracle.tests cfg
+    , Oracle.Inlined.tests cfg
+    , Oracle.Hashed.tests cfg
     ]

@@ -1,3 +1,4 @@
+-- | Compiled script for Lend example
 module Suites.Plutus.Model.Script.V2.Onchain.Lend.Script (
   Lend,
   lendScript,
@@ -8,7 +9,7 @@ module Suites.Plutus.Model.Script.V2.Onchain.Lend.Script (
 import Prelude (($))
 import PlutusTx qualified
 import Suites.Plutus.Model.Script.V2.Onchain.Lend
-import Plutus.Test.Model.V2 (
+import Plutus.Model.V2 (
   toBuiltinValidator,
   TypedValidator,
   mkTypedValidator,
@@ -19,7 +20,7 @@ import Plutus.Test.Model.V2 (
 
 type Lend = TypedValidator LendDatum LendAct
 
--- | The GeroGov validator script instance
+-- | The TypedValidator for Lend contract
 lendScript :: Lend
 lendScript = mkTypedValidator $$(PlutusTx.compile [|| toBuiltinValidator lendContract ||])
 

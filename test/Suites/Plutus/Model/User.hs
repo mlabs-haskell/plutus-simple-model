@@ -9,7 +9,7 @@ import Test.Tasty.HUnit
 import Prelude
 
 import Data.Functor (void)
-import Plutus.Test.Model
+import Plutus.Model
 import Suites.Plutus.Model.Util
 import qualified Suites.Plutus.Model.FakeCoin as FakeCoin
 

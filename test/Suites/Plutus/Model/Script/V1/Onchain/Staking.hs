@@ -2,11 +2,11 @@ module Suites.Plutus.Model.Script.V1.Onchain.Staking (
   stakeValidator
 ) where
 
-import           Plutus.V1.Ledger.Api
-import           Plutus.V1.Ledger.Value
-import qualified PlutusTx
-import           PlutusTx.Prelude
-import Plutus.Test.Model.V1
+import Plutus.V1.Ledger.Api
+import Plutus.V1.Ledger.Value
+import PlutusTx qualified
+import PlutusTx.Prelude
+import Plutus.Model.V1
 
 {-# INLINABLE mkStakingValidator #-}
 mkStakingValidator :: Address -> () -> ScriptContext -> Bool

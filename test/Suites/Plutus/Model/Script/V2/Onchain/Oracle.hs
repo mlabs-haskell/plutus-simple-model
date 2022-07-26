@@ -1,4 +1,5 @@
--- | Oracle example to test reference inputs.
+-- | Oracle example to test reference inputs
+-- with inlined and hashed datums.
 --
 -- The players bet on integer value and oracle should provide an aswer.
 -- Answer is read by reference input. Oracle inlines the answer to datum.
@@ -41,8 +42,8 @@ data BetAct
 newtype BetParams = BetParams { betParams'oracle :: PubKeyHash }
 
 {-# inlinable betContract #-}
-betContract :: BetParams -> BetDatum -> BetAct -> ScriptContext -> Bool
-betContract (BetParams oraclePkh) (BetDatum answers) act ctx =
+betContract :: (TxInfo -> TxOut -> Maybe AnswerDatum) -> BetParams -> BetDatum -> BetAct -> ScriptContext -> Bool
+betContract readDatum (BetParams oraclePkh) (BetDatum answers) act ctx =
   case act of
     Bet n  -> bet n
     Answer -> answer
@@ -71,7 +72,7 @@ betContract (BetParams oraclePkh) (BetDatum answers) act ctx =
         Just guess = find ((== pkh) . fst) answers
         [oracleInfo] = txInfoReferenceInputs info
         oracleIn = txInInfoResolved oracleInfo
-        Just (AnswerDatum oracleAnswer) = inlinedDatum oracleIn
+        Just (AnswerDatum oracleAnswer) = readDatum info oracleIn
         answerDiff = getAnswerDiff guess
 
         getAnswerDiff (_key, n) = abs (oracleAnswer - n)
@@ -80,11 +81,4 @@ PlutusTx.unstableMakeIsData ''AnswerDatum
 PlutusTx.unstableMakeIsData ''BetDatum
 PlutusTx.unstableMakeIsData ''BetAct
 PlutusTx.makeLift ''BetParams
-
-
-
-
-
-
-
 

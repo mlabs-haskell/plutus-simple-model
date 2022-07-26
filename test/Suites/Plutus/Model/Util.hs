@@ -5,7 +5,7 @@ module Suites.Plutus.Model.Util (
 ) where
 
 import Control.Monad (replicateM)
-import Plutus.Test.Model
+import Plutus.Model
 import Plutus.V1.Ledger.Api
 import Prelude
 

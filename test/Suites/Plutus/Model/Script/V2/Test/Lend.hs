@@ -1,3 +1,5 @@
+-- | Test for forward to redeemer. We delegate minting to the spending
+-- of script with certain redeemer.
 module Suites.Plutus.Model.Script.V2.Test.Lend (
   tests,
 ) where
@@ -12,10 +14,10 @@ import PlutusTx.Prelude qualified as Plutus
 import Suites.Plutus.Model.Script.V2.Onchain.Lend
 import Suites.Plutus.Model.Script.V2.Onchain.Lend.Script
 import Suites.Plutus.Model.Util
-import Plutus.Test.Model.Ledger.Ada (Ada(..))
-import Plutus.Test.Model.Ledger.Ada qualified as Ada
+import Plutus.Model.Ledger.Ada (Ada(..))
+import Plutus.Model.Ledger.Ada qualified as Ada
 
-import Plutus.Test.Model
+import Plutus.Model
 
 tests :: BchConfig -> TestTree
 tests cfg =

@@ -4,7 +4,7 @@ module Suites.Plutus.Model.Script.V1 (
 
 import Test.Tasty
 
-import Plutus.Test.Model
+import Plutus.Model
 import Suites.Plutus.Model.Script.V1.Test.Counter qualified as Counter
 import Suites.Plutus.Model.Script.V1.Test.Game qualified as Game
 import Suites.Plutus.Model.Script.V1.Test.Nft qualified as Nft

@@ -1,3 +1,4 @@
+-- | Compiled script for Safe example
 module Suites.Plutus.Model.Script.V1.Onchain.Safe.Script (
   Safe,
   safeScript,
@@ -5,11 +6,11 @@ module Suites.Plutus.Model.Script.V1.Onchain.Safe.Script (
 
 import PlutusTx qualified
 import Suites.Plutus.Model.Script.V1.Onchain.Safe
-import Plutus.Test.Model.V1 (toBuiltinValidator, TypedValidator, mkTypedValidator)
+import Plutus.Model.V1 (toBuiltinValidator, TypedValidator, mkTypedValidator)
 
 type Safe = TypedValidator SafeDatum SafeAct
 
--- | The GeroGov validator script instance
+-- | The TypedValidator for Safe contract
 safeScript :: SafeParams -> Safe
 safeScript params = mkTypedValidator (
   $$(PlutusTx.compile [|| \ps -> toBuiltinValidator (safeContract ps) ||])

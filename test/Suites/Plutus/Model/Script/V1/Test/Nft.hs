@@ -9,7 +9,7 @@ import Prelude
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import Plutus.Test.Model
+import Plutus.Model
 import Plutus.V1.Ledger.Api
 import Suites.Plutus.Model.Script.V1.Onchain.Nft
 import Suites.Plutus.Model.Util

@@ -187,7 +187,7 @@ don't use higher-level types from `plutus-ledger`.
 Nonetheless it's great to have type-safety and watch out for which datums and redeemers are
 applied to specific validators. For that the library `plutus-simple-model` uses 
 lightweight wrappers to enforce types for datums and redeemers based on scripts. 
-They are defined in the module `Plutus.Test.Model.Validator`.
+They are defined in the module `Plutus.Model.Validator`.
 
 There are three types of typed valdiators:
 
@@ -307,7 +307,7 @@ gameContract (GuessHash h) (Guess answer) _ =
 Let's compile the script and create `TypedValdiator` for testing with our library:
 
 ```haskell
-import Plutus.Test.Model (toBuiltinValidator, TypedValidator, mkTypedValidator)
+import Plutus.Model (toBuiltinValidator, TypedValidator, mkTypedValidator)
 
 type Game = TypedValidator GameDatum GameAct
 
@@ -901,7 +901,7 @@ all staking credentials that belong to the pool:
 payFee :: Ada -> Tx
 ```
 The `Ada` is a newtpye wrapper over `Integer` that specifies amount of lovelaces.
-It is defined in the module `Plutus.Test.Model.Ledger.Ada`.
+It is defined in the module `Plutus.Model.Ledger.Ada`.
 
 
 #### How reward distribution works
@@ -1072,7 +1072,7 @@ making transactions that contain fees granted with `payFee` function.
 ## Ledger reexports
 
 As plutus-ledger is not available with removing plutus-apps dependency. 
-We still provide some useful functionality from it. It's placed under `Plutus.Test.Model.Ledger`:
+We still provide some useful functionality from it. It's placed under `Plutus.Model.Ledger`:
 
 * `Ledger.Ada`  - `Ada` type wrapper and functions for it
 * `Ledger.Scripts` - useful functions to calculate hashes
