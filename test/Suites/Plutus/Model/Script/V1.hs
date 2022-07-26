@@ -11,7 +11,7 @@ import Suites.Plutus.Model.Script.V1.Test.Nft qualified as Nft
 import Suites.Plutus.Model.Script.V1.Test.Safe qualified as Safe
 import Suites.Plutus.Model.Script.V1.Test.Staking qualified as Staking
 
-tests :: BchConfig -> TestTree
+tests :: MockConfig -> TestTree
 tests cfg =
   testGroup
     "Plutus V1 scripts"

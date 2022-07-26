@@ -118,12 +118,12 @@ library
     Plutus.Model.Ada
     Plutus.Model.V1
     Plutus.Model.V2
-    Plutus.Model.Blockchain
-    Plutus.Model.Blockchain.Address
-    Plutus.Model.Blockchain.BchConfig
-    Plutus.Model.Blockchain.Log
-    Plutus.Model.Blockchain.ProtocolParameters
-    Plutus.Model.Blockchain.Stat
+    Plutus.Model.Mock
+    Plutus.Model.Mock.Address
+    Plutus.Model.Mock.MockConfig
+    Plutus.Model.Mock.Log
+    Plutus.Model.Mock.ProtocolParameters
+    Plutus.Model.Mock.Stat
     Plutus.Model.Contract
     Plutus.Model.Mint
     Plutus.Model.Pretty

@@ -1,4 +1,4 @@
-module Plutus.Model.Blockchain.ProtocolParameters(
+module Plutus.Model.Mock.ProtocolParameters(
   PParams(..),
   readAlonzoParams,
   -- readBabbageParams,

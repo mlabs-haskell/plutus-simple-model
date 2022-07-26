@@ -1,4 +1,4 @@
-import Plutus.Model (BchConfig, defaultAlonzo, defaultBabbage)
+import Plutus.Model (MockConfig, defaultAlonzo, defaultBabbage)
 import Suites.Plutus.Model.Script.V1 qualified as Script.V1
 import Suites.Plutus.Model.Script.V2 qualified as Script.V2
 import Suites.Plutus.Model.User qualified as User
@@ -14,7 +14,7 @@ main = do
       , plutusV2 "Babbage" defaultBabbage
       ]
 
-plutusV1 :: String -> BchConfig -> TestTree
+plutusV1 :: String -> MockConfig -> TestTree
 plutusV1 name cfg =
   testGroup
     ("PlutusV1 " <> name)
@@ -22,7 +22,7 @@ plutusV1 name cfg =
     , Script.V1.tests cfg
     ]
 
-plutusV2 :: String -> BchConfig -> TestTree
+plutusV2 :: String -> MockConfig -> TestTree
 plutusV2 name cfg =
   testGroup
     ("PlutusV2 " <> name)

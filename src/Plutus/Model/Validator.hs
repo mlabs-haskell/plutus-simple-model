@@ -25,7 +25,7 @@ import Cardano.Ledger.Alonzo.Language qualified as C
 
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Scripts (ScriptHash(..))
-import Plutus.Model.Blockchain (
+import Plutus.Model.Mock (
   HasAddress(..),
   AppendStaking(..),
   HasStakingCredential(..),

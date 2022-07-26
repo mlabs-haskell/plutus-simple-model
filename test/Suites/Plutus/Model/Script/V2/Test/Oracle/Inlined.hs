@@ -16,7 +16,7 @@ import Suites.Plutus.Model.Util
 
 import Plutus.Model
 
-tests :: BchConfig -> TestTree
+tests :: MockConfig -> TestTree
 tests cfg =
   testGroup
     "Oracle Bet scripts (reference inputs, inlined datum)"

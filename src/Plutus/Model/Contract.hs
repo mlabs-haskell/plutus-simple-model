@@ -136,7 +136,7 @@ import Plutus.V1.Ledger.Value
 import PlutusTx.Prelude qualified as Plutus
 import Plutus.Model.Fork.Ledger.Slot (Slot (..))
 
-import Plutus.Model.Blockchain
+import Plutus.Model.Mock
 import Plutus.Model.Fork.TxExtra
 import Plutus.Model.Pretty
 import Prettyprinter (Doc, vcat, indent, (<+>), pretty)
@@ -152,7 +152,7 @@ import Plutus.Model.Ada (Ada(..))
 {- | Create new user with given amount of funds.
  It sends funds from the main admin user. Note that the admin
  should have those funds otherwise it will fail. Allocation of the funds
- for admin happens at the function @initBch@.
+ for admin happens at the function @initMock@.
 -}
 newUser :: Value -> Run PubKeyHash
 newUser val = do
@@ -163,12 +163,12 @@ newUser val = do
   pure pkh
   where
     emptyUser = do
-      userCount <- gets bchUserStep
+      userCount <- gets mockUserStep
       let user = intToUser userCount
           pkh = userPubKeyHash user
           addr = pubKeyHashAddress pkh
           userNo = "User " ++ show userCount
-      modify' $ \s -> s {bchUserStep = userCount + 1, bchUsers = M.insert pkh user (bchUsers s)}
+      modify' $ \s -> s {mockUserStep = userCount + 1, mockUsers = M.insert pkh user (mockUsers s)}
       writeUserName pkh userNo >> writeAddressName addr userNo
       pure pkh
 
@@ -199,12 +199,12 @@ submitTx pkh tx = void $ sendTx =<< signTx pkh tx
 
 -- | Current slot of blockchain.
 currentSlot :: Run Slot
-currentSlot = gets bchCurrentSlot
+currentSlot = gets mockCurrentSlot
 
 -- | Current time of blockchain
 currentTime :: Run POSIXTime
 currentTime = do
-  slotCfg <- gets (bchConfigSlotConfig . bchConfig)
+  slotCfg <- gets (mockConfigSlotConfig . mockConfig)
   slotToEndPOSIXTime slotCfg <$> currentSlot
 
 {- | Waits for specified amount of time.
@@ -212,7 +212,7 @@ currentTime = do
 -}
 wait :: POSIXTime -> Run ()
 wait time = do
-  slotCfg <- gets (bchConfigSlotConfig . bchConfig)
+  slotCfg <- gets (mockConfigSlotConfig . mockConfig)
   waitNSlots $ posixTimeToEnclosingSlot slotCfg time
 
 {- | Waits until the specified time.
@@ -221,12 +221,12 @@ wait time = do
 waitUntil :: POSIXTime -> Run ()
 waitUntil time = do
   slot <- currentSlot
-  slotCfg <- gets (bchConfigSlotConfig . bchConfig)
+  slotCfg <- gets (mockConfigSlotConfig . mockConfig)
   waitNSlots $ posixTimeToEnclosingSlot slotCfg time - slot
 
 -- | blockhain runs without errors, all submited transactions were accepted.
 noErrors :: Run Bool
-noErrors = nullLog <$> gets bchFails
+noErrors = nullLog <$> gets mockFails
 
 -- | Get total value on the address or user by @PubKeyHash@ (but not on reference script UTXOs).
 valueAt :: HasAddress user => user -> Run Value
@@ -236,11 +236,11 @@ valueAt user = foldMap (txOutValue . snd) <$> utxoAt user
 refValueAt :: HasAddress user => user -> Run Value
 refValueAt user = foldMap (txOutValue . snd) <$> refScriptAt user
 
-valueAtState :: HasAddress user => user -> Blockchain -> Value
-valueAtState user = valueAtStateBy bchUtxos user <> valueAtStateBy bchRefScripts user
+valueAtState :: HasAddress user => user -> Mock -> Value
+valueAtState user = valueAtStateBy mockUtxos user <> valueAtStateBy mockRefScripts user
 
 -- | Get total value on the address or user by @PubKeyHash@.
-valueAtStateBy :: HasAddress user => (Blockchain -> Map TxOutRef TxOut) -> user -> Blockchain -> Value
+valueAtStateBy :: HasAddress user => (Mock -> Map TxOutRef TxOut) -> user -> Mock -> Value
 valueAtStateBy extract user st = foldMap (txOutValue . snd) $ utxoAtStateBy extract user st
 
 {- | To spend some value user should provide valid set of UTXOs owned by the user.
@@ -274,7 +274,7 @@ spend pkh val = do
 spend' :: PubKeyHash -> Value -> Run (Maybe UserSpend)
 spend' pkh expected = do
   refs <- txOutRefAt (pubKeyHashAddress pkh)
-  mUtxos <- fmap (\m -> mapM (\r -> (r,) <$> M.lookup r m) refs) $ gets bchUtxos
+  mUtxos <- fmap (\m -> mapM (\r -> (r,) <$> M.lookup r m) refs) $ gets mockUtxos
   case mUtxos of
     Just utxos -> pure $ toRes $ foldl go (expected, []) utxos
     Nothing -> pure Nothing
@@ -525,7 +525,7 @@ mintValue (TypedPolicy policy) redeemer val =
 -- | Set validation time
 validateIn :: POSIXTimeRange -> Tx -> Run Tx
 validateIn times = updatePlutusTx $ \tx -> do
-  slotCfg <- gets (bchConfigSlotConfig . bchConfig)
+  slotCfg <- gets (mockConfigSlotConfig . mockConfig)
   pure $
     tx
       { P.txValidRange = Plutus.fmap (posixTimeToEnclosingSlot slotCfg) times
@@ -626,8 +626,8 @@ mustFailWithName name msg act = do
   if noNewErrors preFails postFails
     then logError msg
     else do
-      infoLog <- gets bchInfo
-      put st  { bchInfo = infoLog
+      infoLog <- gets mockInfo
+      put st  { mockInfo = infoLog
              , mustFailLog = mkMustFailLog preFails postFails
              }
   where
@@ -640,7 +640,7 @@ mustFailWithName name msg act = do
 checkErrors :: Run (Maybe String)
 checkErrors = do
   failures <- fromLog <$> getFails
-  names <- gets bchNames
+  names <- gets mockNames
   pure $
     if null failures
       then Nothing
@@ -650,32 +650,32 @@ checkErrors = do
 -- failing and successful tests. The recommended way to choose
 -- between those two is using @tasty@ 'askOption'. To pull in
 -- parameters use an 'Ingredient' built with 'includingOptions'.
-testNoErrorsTrace :: Value -> BchConfig -> String -> Run a -> TestTree
+testNoErrorsTrace :: Value -> MockConfig -> String -> Run a -> TestTree
 testNoErrorsTrace funds cfg msg act =
     testCaseInfo msg $
-      maybe (pure bchLog)
-        assertFailure $ errors >>= \errs -> pure $ errs <> bchLog
+      maybe (pure mockLog)
+        assertFailure $ errors >>= \errs -> pure $ errs <> mockLog
   where
-    (errors, bch) = runBch (act >> checkErrors) $ initBch cfg funds
-    bchLog = "\nBlockchain log :\n----------------\n" <> ppBchEvent (bchNames bch) (getLog bch)
+    (errors, mock) = runMock (act >> checkErrors) $ initMock cfg funds
+    mockLog = "\nBlockchain log :\n----------------\n" <> ppMockEvent (mockNames mock) (getLog mock)
 
 -- | Logs the blockchain state, i.e. balance sheet in the log
 logBalanceSheet :: Run ()
 logBalanceSheet =
-  modify' $ \s -> s { bchInfo = appendLog (bchCurrentSlot s) (ppBalanceSheet s) (bchInfo s) }
+  modify' $ \s -> s { mockInfo = appendLog (mockCurrentSlot s) (ppBalanceSheet s) (mockInfo s) }
 
-testNoErrors :: Value -> BchConfig -> String -> Run a -> TestTree
+testNoErrors :: Value -> MockConfig -> String -> Run a -> TestTree
 testNoErrors funds cfg msg act =
    testCase msg $ maybe (pure ()) assertFailure $
-    fst (runBch (act >> checkErrors) (initBch cfg funds))
+    fst (runMock (act >> checkErrors) (initMock cfg funds))
 
 -- | check transaction limits
-testLimits :: Value -> BchConfig -> String -> (Log TxStat -> Log TxStat) -> Run a -> TestTree
+testLimits :: Value -> MockConfig -> String -> (Log TxStat -> Log TxStat) -> Run a -> TestTree
 testLimits initFunds cfg msg tfmLog act =
   testCase msg $ assertBool limitLog isOk
   where
-    (isOk, bch) = runBch (act >> noErrors) (initBch (warnLimits cfg) initFunds)
-    limitLog = ppLimitInfo (bchNames bch) $ tfmLog $ bchTxs bch
+    (isOk, mock) = runMock (act >> noErrors) (initMock (warnLimits cfg) initFunds)
+    limitLog = ppLimitInfo (mockNames mock) $ tfmLog $ mockTxs mock
 
 ----------------------------------------------------------------------
 -- balance diff
@@ -707,7 +707,7 @@ checkBalanceBy getDiffs act = do
   where
     ppError :: (Address, Value, Value) -> Run (Doc ann)
     ppError (addr, expected, got) = do
-      names <- gets bchNames
+      names <- gets mockNames
       let addrName = maybe (pretty addr) pretty $ readAddressName names addr
       pure $ vcat
           [ "Balance error for:" <+> addrName
@@ -809,12 +809,12 @@ registerPool (PoolId pkh) = certTx $
 -- | Insert pool id to the list of stake pools
 insertPool :: PoolId -> Run ()
 insertPool pid = modify' $ \st ->
-  st { bchStake = Stake.regPool pid $ bchStake st }
+  st { mockStake = Stake.regPool pid $ mockStake st }
 
 -- | delete pool from the list of stake pools
 deletePool :: PoolId -> Run ()
 deletePool pid = modify' $ \st ->
-  st { bchStake = Stake.retirePool pid $ bchStake st }
+  st { mockStake = Stake.retirePool pid $ mockStake st }
 
 -- | Retire staking pool
 retirePool :: PoolId -> Tx

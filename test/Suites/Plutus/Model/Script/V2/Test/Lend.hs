@@ -19,7 +19,7 @@ import Plutus.Model.Ada qualified as Ada
 
 import Plutus.Model
 
-tests :: BchConfig -> TestTree
+tests :: MockConfig -> TestTree
 tests cfg =
   testGroup
     "Lend scripts (forward to redeemer)"

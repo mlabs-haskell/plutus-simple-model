@@ -12,7 +12,7 @@ import Suites.Plutus.Model.Script.V2.Onchain.Oracle
 import Suites.Plutus.Model.Script.V2.Onchain.Oracle.Hashed
 import Suites.Plutus.Model.Util
 
-tests :: BchConfig -> TestTree
+tests :: MockConfig -> TestTree
 tests cfg =
   testGroup
     "Oracle Bet scripts (reference inputs, hashed datum)"

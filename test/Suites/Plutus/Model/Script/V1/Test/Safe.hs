@@ -15,7 +15,7 @@ import Suites.Plutus.Model.Script.V1.Onchain.Safe
 import Suites.Plutus.Model.Script.V1.Onchain.Safe.Script
 import Suites.Plutus.Model.Util
 
-tests :: BchConfig -> TestTree
+tests :: MockConfig -> TestTree
 tests cfg =
   testGroup
     "Safe scripts"
@@ -27,7 +27,7 @@ tests cfg =
   where
     good = check True
     bad = check False
-    check res msg act = testCase msg $ fst (runBch act (initBch cfg $ adaValue 10_000_000)) @?= res
+    check res msg act = testCase msg $ fst (runMock act (initMock cfg $ adaValue 10_000_000)) @?= res
 
 safe :: Safe
 safe = safeScript safeParams

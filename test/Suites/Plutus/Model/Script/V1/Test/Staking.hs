@@ -12,7 +12,7 @@ import Plutus.V1.Ledger.Api
 import Suites.Plutus.Model.Script.V1.Onchain.Staking
 import Suites.Plutus.Model.Util
 
-tests :: BchConfig -> TestTree
+tests :: MockConfig -> TestTree
 tests cfg =
   testGroup
     "Staking scripts"

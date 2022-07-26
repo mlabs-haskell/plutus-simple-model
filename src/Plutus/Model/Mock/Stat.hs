@@ -1,4 +1,4 @@
-module Plutus.Model.Blockchain.Stat(
+module Plutus.Model.Mock.Stat(
   TxStat(..),
   txStatId,
   Stat(..),

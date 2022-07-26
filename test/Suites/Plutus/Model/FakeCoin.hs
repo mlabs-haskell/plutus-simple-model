@@ -13,11 +13,11 @@ import Plutus.V1.Ledger.Api
 import Plutus.Model
 import Suites.Plutus.Model.Util
 
-tests :: BchConfig -> TestTree
+tests :: MockConfig -> TestTree
 tests cfg = good "Simple fake coin exchange" simpleSpend
   where
     good = check True
-    check res msg act = testCase msg $ fst (runBch act (initBch cfg $ adaValue 10_000_000 <> dollar 10000 <> euro 10000 <> lira 10000)) @?= res
+    check res msg act = testCase msg $ fst (runMock act (initMock cfg $ adaValue 10_000_000 <> dollar 10000 <> euro 10000 <> lira 10000)) @?= res
 
 dollar, euro, lira :: Integer -> Value
 dollar = fakeValue (FakeCoin "dollar")

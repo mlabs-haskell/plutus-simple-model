@@ -1,4 +1,4 @@
-module Plutus.Model.Blockchain.Log(
+module Plutus.Model.Mock.Log(
   Log(..),
   appendLog,
   nullLog,
@@ -7,7 +7,7 @@ module Plutus.Model.Blockchain.Log(
   MustFailLog(..),
   FailReason(..),
   LimitOverflow(..),
-  BchEvent(..),
+  MockEvent(..),
   silentLog,
   failLog,
   filterSlot,
@@ -21,7 +21,7 @@ import Data.Sequence (Seq(..))
 import Data.Sequence qualified as Seq
 import Plutus.V2.Ledger.Api
 import Plutus.Model.Stake
-import Plutus.Model.Blockchain.Stat
+import Plutus.Model.Mock.Stat
 import Plutus.Model.Fork.Ledger.Slot
 
 newtype Log a = Log { unLog :: Seq (Slot, a) }
@@ -90,30 +90,30 @@ data LimitOverflow
   deriving (Show, Eq)
 
 -- | Blockchain events to log.
-data BchEvent
+data MockEvent
   -- | Sucessful TXs
-  = BchTx
-    { bchTx'name   :: Maybe String -- ^ Optional tx's name
-    , bchTx'txStat :: TxStat       -- ^ Tx and stat
+  = MockTx
+    { mockTx'name   :: Maybe String -- ^ Optional tx's name
+    , mockTx'txStat :: TxStat       -- ^ Tx and stat
     }
-  | BchInfo String             -- ^ Info messages
-  | BchFail FailReason         -- ^ Errors
-  | BchMustFailLog MustFailLog -- ^ Expected errors, see 'mustFail'
+  | MockInfo String             -- ^ Info messages
+  | MockFail FailReason         -- ^ Errors
+  | MockMustFailLog MustFailLog -- ^ Expected errors, see 'mustFail'
 
 -- | Skip all info messages
-silentLog :: Log BchEvent -> Log BchEvent
+silentLog :: Log MockEvent -> Log MockEvent
 silentLog (Log xs) = Log $ Seq.filter (not . isInfo . snd) xs
   where
     isInfo = \case
-      BchInfo _ -> True
+      MockInfo _ -> True
       _         -> False
 
 -- | Skip successful TXs
-failLog :: Log BchEvent -> Log BchEvent
+failLog :: Log MockEvent -> Log MockEvent
 failLog (Log xs) = Log $ Seq.filter (not . isTx . snd) xs
   where
     isTx = \case
-      BchTx _ _ -> True
+      MockTx _ _ -> True
       _         -> False
 
 -- | filter by slot. Can be useful to filter out unnecessary info.

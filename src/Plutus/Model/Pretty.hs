@@ -3,8 +3,8 @@
 module Plutus.Model.Pretty(
   ppBalanceSheet,
   ppBalanceWith,
-  ppBchEvent,
-  ppBlockchain,
+  ppMockEvent,
+  ppMock,
   ppFailure,
   ppLimitInfo,
   ppPercent,
@@ -24,7 +24,7 @@ import Plutus.V2.Ledger.Api
 import Plutus.V1.Ledger.Value (assetClass, flattenValue, toString)
 import Plutus.Model.Fork.Ledger.Slot (Slot (..))
 
-import Plutus.Model.Blockchain
+import Plutus.Model.Mock
 import Plutus.Model.Fork.TxExtra
 import Plutus.Model.Stake (DCertError(..), WithdrawError(..))
 
@@ -35,14 +35,14 @@ ppStatPercent = show . pretty
 ppPercent :: Percent -> String
 ppPercent (Percent x) = printf "%.2f" x <> "%"
 
-ppBchEvent :: BchNames -> Log BchEvent -> String
-ppBchEvent _names = show . vcat . fmap ppSlot . fromGroupLog
+ppMockEvent :: MockNames -> Log MockEvent -> String
+ppMockEvent _names = show . vcat . fmap ppSlot . fromGroupLog
   where
     ppSlot (slot, events) = vcat [pretty slot <> colon, indent 2 (vcat $ pretty <$> events)]
 
-ppLimitInfo :: BchNames -> Log TxStat -> String
-ppLimitInfo names bch =
-  show $ vcat $ fmap ppGroup $ fromGroupLog bch
+ppLimitInfo :: MockNames -> Log TxStat -> String
+ppLimitInfo names mock =
+  show $ vcat $ fmap ppGroup $ fromGroupLog mock
   where
     ppGroup (slot, events) =
       vcat [ pretty slot <> colon
@@ -58,14 +58,14 @@ ppLimitInfo names bch =
       maybe (pretty ident) pretty (readTxName names ident)
 
 -- | Pretty-prints the blockchain state
-ppBlockchain :: Blockchain -> String
-ppBlockchain bch = show $ pretty bch
+ppMock :: Mock -> String
+ppMock mock = show $ pretty mock
 
 -- | Pretty-prints a failure
-ppFailure :: BchNames -> (Slot, FailReason) -> String
+ppFailure :: MockNames -> (Slot, FailReason) -> String
 ppFailure names fails = show $ ppFailureWith names fails
 
-ppFailureWith :: BchNames -> (Slot, FailReason) -> Doc ann
+ppFailureWith :: MockNames -> (Slot, FailReason) -> Doc ann
 ppFailureWith names (slot, fReason) =
   "Slot" <+> pretty (getSlot slot) <> colon <+> align prettyFailReason
   where
@@ -87,7 +87,7 @@ ppFailureWith names (slot, fReason) =
 ppTransaction :: Tx -> String
 ppTransaction = show . pretty
 
-ppBalanceWith :: BchNames -> Value -> Doc ann
+ppBalanceWith :: MockNames -> Value -> Doc ann
 ppBalanceWith names val = vcat $ fmap
   (\(cs, tn, amt) ->
     (if cs == adaSymbol && tn == adaToken
@@ -113,58 +113,58 @@ instance Pretty StatPercent where
 instance Pretty Percent where
   pretty = pretty . ppPercent
 
-instance Pretty Blockchain where
-  pretty bch = vcat
-      [ prettyBalanceSheet bch
-      , "Current slot:" <+> pretty (getSlot $ bchCurrentSlot bch)
-      , case toList . unLog $ bchFails bch of
+instance Pretty Mock where
+  pretty mock = vcat
+      [ prettyBalanceSheet mock
+      , "Current slot:" <+> pretty (getSlot $ mockCurrentSlot mock)
+      , case toList . unLog $ mockFails mock of
          [] -> mempty
          xs -> vcat [ "Failures:"
                     , indent 2 . vcat . map (ppFailureWith names) $ xs
                     ]
       ]
     where
-      names = bchNames bch
+      names = mockNames mock
 
-type BchUtxos = M.Map TxOutRef TxOut
+type MockUtxos = M.Map TxOutRef TxOut
 type Utxos = Set TxOutRef
 
-prettyBalances :: BchNames -> BchUtxos -> [(Address, Utxos)] -> [Doc ann]
+prettyBalances :: MockNames -> MockUtxos -> [(Address, Utxos)] -> [Doc ann]
 prettyBalances names utxos =
   fmap (balance names utxos). L.sortBy (\(a,_) (b,_) -> compare a b) . fmap (toAddrName names)
 
-toAddrName :: BchNames -> (Address, b) -> (String, b)
+toAddrName :: MockNames -> (Address, b) -> (String, b)
 toAddrName names (addr, txSet) =
   case readAddressName names addr of
     Just addrName -> (addrName, txSet)
     Nothing -> (show . pretty $ addr, txSet)
 
-balance :: BchNames -> BchUtxos -> (String, Utxos) -> Doc ann1
+balance :: MockNames -> MockUtxos -> (String, Utxos) -> Doc ann1
 balance names utxos (prettyAddr, txSet) = vcat
   [ pretty prettyAddr <> colon
   , indent 2 (ppBalanceWith names (valueSet utxos txSet))
   ]
 
-valueSet :: BchUtxos -> Utxos -> Value
+valueSet :: MockUtxos -> Utxos -> Value
 valueSet utxos = foldMap $ maybe mempty txOutValue . (\ref -> M.lookup ref utxos)
 
 -- | Pretty-prints balance for all users/scripts
-ppBalanceSheet :: Blockchain -> String
+ppBalanceSheet :: Mock -> String
 ppBalanceSheet = show . prettyBalanceSheet
 
-prettyBalanceSheet :: Blockchain -> Doc ann
-prettyBalanceSheet bch = vcat
+prettyBalanceSheet :: Mock -> Doc ann
+prettyBalanceSheet mock = vcat
    [ "Balances:"
    , indent 2 . vcat $
        prettyBalances names utxos pubKeyAddrs <>
        prettyBalances names utxos scriptAddrs
    ]
  where
-   names = bchNames bch
-   utxos = bchUtxos bch
+   names = mockNames mock
+   utxos = mockUtxos mock
 
    (pubKeyAddrs, scriptAddrs) =
-     L.partition isPubKeyCredential $ M.toList (bchAddresses bch)
+     L.partition isPubKeyCredential $ M.toList (mockAddresses mock)
 
    isPubKeyCredential (addr,_) = case addressCredential addr of
                                    PubKeyCredential _ -> True
@@ -177,7 +177,7 @@ instance Pretty FailReason where
     NotEnoughFunds pkh val -> vcat
       [ "User with PubKeyHash" <+> pretty (getPubKeyHash pkh)
         <+> "doesn't have enough funds to pay:"
-      , indent 5 (ppBalanceWith (BchNames M.empty M.empty M.empty M.empty M.empty) val)
+      , indent 5 (ppBalanceWith (MockNames M.empty M.empty M.empty M.empty M.empty) val)
       ]
     NotBalancedTx -> "Not balanced transaction"
     FailToReadUtxo -> "UTXO not found"
@@ -205,12 +205,12 @@ instance Pretty DCertError where
     CertGenesisNotSupported -> "Genesis certificate not supported"
     CertMirNotSupported     -> "Mir certificate not supported"
 
-instance Pretty BchEvent where
+instance Pretty MockEvent where
   pretty = \case
-    BchInfo msg                              -> "[info] " <+> align (pretty msg)
-    BchTx mbName txStat                      -> "[tx]   " <+> align (ppTxStat mbName txStat)
-    BchFail fReason                          -> "[error]" <+> align (pretty fReason)
-    BchMustFailLog (MustFailLog msg fReason) -> "[fail] " <+> align (vcat [pretty msg, pretty fReason])
+    MockInfo msg                              -> "[info] " <+> align (pretty msg)
+    MockTx mbName txStat                      -> "[tx]   " <+> align (ppTxStat mbName txStat)
+    MockFail fReason                          -> "[error]" <+> align (pretty fReason)
+    MockMustFailLog (MustFailLog msg fReason) -> "[fail] " <+> align (vcat [pretty msg, pretty fReason])
     where
       ppTxStat mbName txStat =
         vcat [ ppTxName mbName (txStatId txStat)

@@ -19,7 +19,7 @@ import Suites.Plutus.Model.Util
 
 import Plutus.Model
 
-tests :: BchConfig -> TestTree
+tests :: MockConfig -> TestTree
 tests cfg =
   testGroup
     "Game scripts (Inline datum)"

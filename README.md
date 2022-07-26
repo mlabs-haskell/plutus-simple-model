@@ -37,31 +37,31 @@ source-repository-package
 We can create simple blockchain data structure and update within context of State monad.
 Update happens as a pure function and along TX-confirmation we have useful stats to estimate usage of resources.
 
-To create blockchain we first need to specify blockchain config (`BchConfig`).
+To create blockchain we first need to specify blockchain config (`MockConfig`).
 Config is specified by protocol parameters (`PParams`) and era history (`EraHistory CardanoMode`).
 They are cardano config data types. To avoid gory details it's safe to use predefined config
 and default parameters for Alonzo era:
 
 ```haskell
-defaultAlonzo :: BchConfig
+defaultAlonzo :: MockConfig
 ```
 
 Once we have config available we can create initial state for blockchain with function:
 
 ```haskell
-initBch :: BchConfig -> Value -> Blockchain
-initBch config adminValue = ...
+initMock :: MockConfig -> Value -> Mock
+initMock config adminValue = ...
 ```
 
 It creates blockchain that has only one UTXO that belongs to the admin user. The value is how many coins
 we are going to give to the admin. Admin can distribute values to test users from admin's reserves.
 
-The rest of the code happens within `Run` monad which is a thin wrapper on State over Blockchain under the hood.
+The rest of the code happens within `Run` monad which is a thin wrapper on State over Mock under the hood.
 We have scenarios of script usages as actions in the `Run` monad. When we are done we can get the result:
 
 
 ```haskell
-runBch :: Run a -> Blockchain -> (a, Blockchain)
+runMock :: Run a -> Mock -> (a, Mock)
 ```
 
 It just runs the state updates.
@@ -117,7 +117,7 @@ To check for TX errors we use:
 noErrors :: Run Bool
 ```
 
-Blockchain logs all failed transactions to te list `bchFails`. We check that this list is empty.
+Blockchain logs all failed transactions to te list `mockFails`. We check that this list is empty.
 
 To read total value for the user we use:
 
@@ -529,7 +529,7 @@ wait $ hours 4
 ```
 
 That's it. you can find complete example at the test suite (see `Suites.Plutus.Model.Script.Test.Game`).
-There are other useful function to dicuss. Look up the docs for the `Blockchain` and `Contract` modules.
+There are other useful function to dicuss. Look up the docs for the `Mock` and `Contract` modules.
 
 ### How to use custom coins
 
@@ -552,7 +552,7 @@ With those functions we can assign some fake coins to admin user on start up of 
 
 ```haskell
 testValue = fakeValue testCoin
-bch = initBch config (adaValue 1000_000 <> testValue 1000)
+mock = initMock config (adaValue 1000_000 <> testValue 1000)
 ```
 
 In the blockchain code we can give those fake coins to users when we create them:
@@ -592,16 +592,16 @@ It saves information to the log. the log of errors is unaffected.
 We can read log messages with function:
 
 ```haskell
-getLog :: Blockchain -> Log BchEvent
+getLog :: Mock -> Log MockEvent
 ```
 
-Where BchEvent is one of the events:
+Where MockEvent is one of the events:
 
 ```haskell
-data BchEvent
-  = BchTx TxStat           -- ^ Sucessful TXs
-  | BchInfo String         -- ^ Info messages
-  | BchFail FailReason     -- ^ Errors
+data MockEvent
+  = MockTx TxStat           -- ^ Sucessful TXs
+  | MockInfo String         -- ^ Info messages
+  | MockFail FailReason     -- ^ Errors
 ```
 
 #### How to skip messages from the logs
@@ -619,7 +619,7 @@ But errors are logged. If we want more fine-grain control we can use `noLogTx` a
 #### Logging blockchain state
 
 The ability to observe what's going on in the blockchain is a great way to understand things.
-To log balances use `logBchState` action, which saves current state as a log entry. To show
+To log balances use `logMockState` action, which saves current state as a log entry. To show
 log use `testNoErrorsTrace` helper (see below).
 
 ### How to check balances
@@ -677,8 +677,8 @@ See more examples at tests for `Game` and `Counter` scripts.
 For convenience there is a function `testNoErrors`:
 
 ```haskell
-testNoErrors :: Value -> BchConfig -> String -> Run a -> TestTree
-testNoErrors totalBchFunds bchConfig testMessage script = ...
+testNoErrors :: Value -> MockConfig -> String -> Run a -> TestTree
+testNoErrors totalMockFunds mockConfig testMessage script = ...
 ```
 
 It checks that given script runs without errors. Note that if we want to use custom
@@ -694,7 +694,7 @@ to implement this).
 If we want to check only logic but not resource usage we can use:
 
 ```haskell
-skipLimits :: BchConfig -> BchConfig
+skipLimits :: MockConfig -> MockConfig
 ```
 
 Also, there is function `warnLimits` that logs errors of resources usage
@@ -736,12 +736,12 @@ TXs like this can not be executed on chain. To watch out for that we have specia
 ```haskell
 testLimits ::
    Value
-   -> BchConfig
+   -> MockConfig
    -> String
    -> (Log TxStat -> Log TxStat)
    -> Run a
    -> TestTree
-testLimits totalBchFunds bchConfig testMessage logFilter script
+testLimits totalMockFunds mockConfig testMessage logFilter script
 ```
 
 Let's break apart what it does. It runs blockchain with limit check config set to @WarnLimits@.
@@ -772,7 +772,7 @@ good "Reward scripts" (filterSlot (> 4)) (Rewards.simpleRewardTestBy 1)
 
 It's good to implement complete set of unit tests first and then add limits tests.
 So that every transformation to optimise on resources is checked by ordinary unit tests.
-On unit tests we can skip limit checks with `skipLimits :: BchConfig -> BchConfig`.
+On unit tests we can skip limit checks with `skipLimits :: MockConfig -> MockConfig`.
 
 ### Box - a typed TxOut
 

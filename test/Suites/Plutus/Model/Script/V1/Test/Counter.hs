@@ -19,7 +19,7 @@ import Suites.Plutus.Model.Util
 
 import Plutus.Model
 
-tests :: BchConfig -> TestTree
+tests :: MockConfig -> TestTree
 tests cfg =
   testGroup
     "Counter scripts"
@@ -29,7 +29,7 @@ tests cfg =
     ]
   where
     check :: String -> Run a -> (a -> Assertion) -> TestTree
-    check msg act f = testCase msg $ f $ fst (runBch act (initBch cfg $ adaValue 10_000_000))
+    check msg act f = testCase msg $ f $ fst (runMock act (initMock cfg $ adaValue 10_000_000))
 
     good msg act = check msg (act >> checkErrors) ( @?= Nothing)
     bad msg act = check msg (fmap isJust $ act >> checkErrors) ( @?= True)

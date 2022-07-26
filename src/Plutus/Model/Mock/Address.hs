@@ -1,4 +1,4 @@
-module Plutus.Model.Blockchain.Address(
+module Plutus.Model.Mock.Address(
   HasAddress(..),
   HasStakingCredential(..),
   AppendStaking(..),

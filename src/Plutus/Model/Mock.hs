@@ -11,7 +11,7 @@
 
  Also it estimates execution of the TXs accordig to cardano model.
 -}
-module Plutus.Model.Blockchain (
+module Plutus.Model.Mock (
   -- * Address helpers
   HasAddress(..),
   HasStakingCredential(..),
@@ -19,11 +19,11 @@ module Plutus.Model.Blockchain (
   appendStakingCredential,
   appendStakingPubKey,
   appendStakingScript,
-  -- * Blockchain model
-  Blockchain (..),
-  BchConfig (..),
+  -- * Mock blockchain model
+  Mock (..),
+  MockConfig (..),
   CheckLimits(..),
-  BchNames (..),
+  MockNames (..),
   User (..),
   TxStat (..),
   txStatId,
@@ -33,7 +33,7 @@ module Plutus.Model.Blockchain (
   isOkResult,
   FailReason (..),
   LimitOverflow (..),
-  modifyBchNames,
+  modifyMockNames,
   writeUserName,
   writeAddressName,
   writeAssetClassName,
@@ -49,8 +49,8 @@ module Plutus.Model.Blockchain (
   getPrettyAssetClass,
   getPrettyTxId,
   Run (..),
-  runBch,
-  initBch,
+  runMock,
+  initMock,
   Percent(..),
   toPercent,
   StatPercent(..),
@@ -92,10 +92,10 @@ module Plutus.Model.Blockchain (
   waitNSlots,
 
   -- * Blockchain config
-  readBchConfig,
+  readMockConfig,
   defaultAlonzo,
   defaultBabbage,
-  defaultBchConfig,
+  defaultMockConfig,
   skipLimits,
   warnLimits,
   forceLimits,
@@ -112,7 +112,7 @@ module Plutus.Model.Blockchain (
   nullLog,
   fromLog,
   fromGroupLog,
-  BchEvent(..),
+  MockEvent(..),
   silentLog,
   failLog,
   filterSlot,
@@ -177,7 +177,7 @@ import Plutus.Model.Fork.Ledger.Slot
 import Plutus.Model.Fork.Ledger.TimeSlot (SlotConfig (..))
 import Plutus.Model.Fork.TxExtra
 import Plutus.Model.Stake
-import Plutus.Model.Blockchain.ProtocolParameters
+import Plutus.Model.Mock.ProtocolParameters
 
 import Cardano.Ledger.Shelley.API.Wallet qualified as C
 import Cardano.Ledger.SafeHash qualified as C
@@ -193,10 +193,10 @@ import Plutus.Model.Fork.Cardano.Common (fromTxId)
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
 import Plutus.Model.Ada (Ada(..))
-import Plutus.Model.Blockchain.BchConfig
-import Plutus.Model.Blockchain.Log
-import Plutus.Model.Blockchain.Address
-import Plutus.Model.Blockchain.Stat
+import Plutus.Model.Mock.MockConfig
+import Plutus.Model.Mock.Log
+import Plutus.Model.Mock.Address
+import Plutus.Model.Mock.Stat
 import Plutus.Model.Fork.Cardano.Class qualified as Class
 import Cardano.Ledger.Babbage.PParams
 import Plutus.Model.Fork.Cardano.Alonzo qualified as Alonzo
@@ -215,23 +215,23 @@ newtype User = User
  such as TX-size and execution units. All stats are calculated with cardano node functions and TX-size
  is estimated on Cardano version of TX.
 -}
-data Blockchain = Blockchain
-  { bchUsers        :: !(Map PubKeyHash User)
-  , bchAddresses    :: !(Map Address (Set TxOutRef))
-  , bchUtxos        :: !(Map TxOutRef TxOut)
-  , bchRefScripts   :: !(Map TxOutRef TxOut)
-  , bchDatums       :: !(Map DatumHash Datum)
-  , bchStake        :: !Stake
-  , bchTxs          :: !(Log TxStat)
-  , bchConfig       :: !BchConfig
-  , bchCurrentSlot  :: !Slot
-  , bchUserStep     :: !Integer
-  , bchFails        :: !(Log FailReason)
-  , bchInfo         :: !(Log String)
+data Mock = Mock
+  { mockUsers        :: !(Map PubKeyHash User)
+  , mockAddresses    :: !(Map Address (Set TxOutRef))
+  , mockUtxos        :: !(Map TxOutRef TxOut)
+  , mockRefScripts   :: !(Map TxOutRef TxOut)
+  , mockDatums       :: !(Map DatumHash Datum)
+  , mockStake        :: !Stake
+  , mockTxs          :: !(Log TxStat)
+  , mockConfig       :: !MockConfig
+  , mockCurrentSlot  :: !Slot
+  , mockUserStep     :: !Integer
+  , mockFails        :: !(Log FailReason)
+  , mockInfo         :: !(Log String)
   , mustFailLog     :: !(Log MustFailLog)
   , -- | human readable names. Idea is to substitute for them
     -- in pretty printers for error logs, user names, script names.
-    bchNames :: !BchNames
+    mockNames :: !MockNames
   }
 
 -- | Result of the execution.
@@ -245,8 +245,8 @@ isOkResult = \case
   _ -> False
 
 -- | State monad wrapper to run blockchain.
-newtype Run a = Run (State Blockchain a)
-  deriving newtype (Functor, Applicative, Monad, MonadState Blockchain)
+newtype Run a = Run (State Mock a)
+  deriving newtype (Functor, Applicative, Monad, MonadState Mock)
 
 -- | Dummy instance to be able to use partial pattern matching
 -- in do-notation
@@ -254,69 +254,69 @@ instance MonadFail Run where
    fail err = error $ "Failed to recover: " <> err
 
 -- | Human readable names for pretty printing.
-data BchNames = BchNames
-  { bchNameUsers :: !(Map PubKeyHash String)
-  , bchNameAddresses :: !(Map Address String)
-  , bchNameAssetClasses :: !(Map AssetClass String)
-  , bchNameCurrencySymbols :: !(Map CurrencySymbol String)
-  , bchNameTxns :: !(Map TxId String)
+data MockNames = MockNames
+  { mockNameUsers :: !(Map PubKeyHash String)
+  , mockNameAddresses :: !(Map Address String)
+  , mockNameAssetClasses :: !(Map AssetClass String)
+  , mockNameCurrencySymbols :: !(Map CurrencySymbol String)
+  , mockNameTxns :: !(Map TxId String)
   }
 
 -- | Modifies the mappings to human-readable names
-modifyBchNames :: (BchNames -> BchNames) -> Run ()
-modifyBchNames f = modify' $ \s -> s {bchNames = f (bchNames s)}
+modifyMockNames :: (MockNames -> MockNames) -> Run ()
+modifyMockNames f = modify' $ \s -> s {mockNames = f (mockNames s)}
 
 -- | Assigns human-readable name to user
 writeUserName :: PubKeyHash -> String -> Run ()
 writeUserName pkh name = do
-  modifyBchNames $ \ns ->
-    ns {bchNameUsers = M.insert pkh name (bchNameUsers ns)}
+  modifyMockNames $ \ns ->
+    ns {mockNameUsers = M.insert pkh name (mockNameUsers ns)}
   writeAddressName (pubKeyHashAddress pkh) name
 
 -- | Assigns human-readable name to address
 writeAddressName :: Address -> String -> Run ()
-writeAddressName addr name = modifyBchNames $ \ns ->
-   ns {bchNameAddresses = M.insert addr name (bchNameAddresses ns)}
+writeAddressName addr name = modifyMockNames $ \ns ->
+   ns {mockNameAddresses = M.insert addr name (mockNameAddresses ns)}
 
 -- | Assigns human-readable name to asset class
 writeAssetClassName :: AssetClass -> String -> Run ()
-writeAssetClassName ac name = modifyBchNames $ \ns ->
-  ns {bchNameAssetClasses = M.insert ac name (bchNameAssetClasses ns)}
+writeAssetClassName ac name = modifyMockNames $ \ns ->
+  ns {mockNameAssetClasses = M.insert ac name (mockNameAssetClasses ns)}
 
 -- | Assigns human-readable name to currency symbol
 writeCurrencySymbolName :: CurrencySymbol -> String -> Run ()
-writeCurrencySymbolName cs name = modifyBchNames $ \ns ->
-  ns {bchNameCurrencySymbols = M.insert cs name (bchNameCurrencySymbols ns)}
+writeCurrencySymbolName cs name = modifyMockNames $ \ns ->
+  ns {mockNameCurrencySymbols = M.insert cs name (mockNameCurrencySymbols ns)}
 
 -- | Assigns human-readable name to a transaction
 writeTxName :: Tx -> String -> Run ()
-writeTxName (P.txId . tx'plutus -> ident) name = modifyBchNames $ \ns ->
-  ns {bchNameTxns = M.insert ident name (bchNameTxns ns)}
+writeTxName (P.txId . tx'plutus -> ident) name = modifyMockNames $ \ns ->
+  ns {mockNameTxns = M.insert ident name (mockNameTxns ns)}
 
 -- | Gets human-readable name of user
-readUserName :: BchNames -> PubKeyHash -> Maybe String
-readUserName names pkh = M.lookup pkh (bchNameUsers names)
+readUserName :: MockNames -> PubKeyHash -> Maybe String
+readUserName names pkh = M.lookup pkh (mockNameUsers names)
 
 -- | Gets human-readable name of address
-readAddressName :: BchNames -> Address -> Maybe String
-readAddressName names addr = M.lookup addr (bchNameAddresses names)
+readAddressName :: MockNames -> Address -> Maybe String
+readAddressName names addr = M.lookup addr (mockNameAddresses names)
 
 -- | Gets human-readable name of user
-readAssetClassName :: BchNames -> AssetClass -> Maybe String
-readAssetClassName names ac = M.lookup ac (bchNameAssetClasses names)
+readAssetClassName :: MockNames -> AssetClass -> Maybe String
+readAssetClassName names ac = M.lookup ac (mockNameAssetClasses names)
 
 -- | Gets human-readable name of user
-readCurrencySymbolName :: BchNames -> CurrencySymbol -> Maybe String
-readCurrencySymbolName names cs = M.lookup cs (bchNameCurrencySymbols names)
+readCurrencySymbolName :: MockNames -> CurrencySymbol -> Maybe String
+readCurrencySymbolName names cs = M.lookup cs (mockNameCurrencySymbols names)
 
 -- | Gets human-readable name of transaction
-readTxName :: BchNames -> TxId -> Maybe String
-readTxName names cs = M.lookup cs (bchNameTxns names)
+readTxName :: MockNames -> TxId -> Maybe String
+readTxName names cs = M.lookup cs (mockNameTxns names)
 
 -- | Reads pretty name for user or script
 getPrettyAddress :: HasAddress user => user -> Run String
 getPrettyAddress user = do
-  names <- gets bchNames
+  names <- gets mockNames
   pure $ fromMaybe (show addr) $ readAddressName names addr <|> (readUserName names =<< toPubKeyHash addr)
   where
     addr = toAddress user
@@ -324,19 +324,19 @@ getPrettyAddress user = do
 -- | Reads pretty name for currency symbol or just shows the raw one.
 getPrettyCurrencySymbol :: CurrencySymbol -> Run String
 getPrettyCurrencySymbol cs = do
-  names <- gets bchNames
+  names <- gets mockNames
   pure $ fromMaybe (show cs) $ readCurrencySymbolName names cs
 
 -- | Reads pretty name for currency symbol or just shows the raw one.
 getPrettyAssetClass :: AssetClass -> Run String
 getPrettyAssetClass ac = do
-  names <- gets bchNames
+  names <- gets mockNames
   pure $ fromMaybe (show ac) $ readAssetClassName names ac
 
 -- | Reads pretty name for currency symbol or just shows the raw one.
 getPrettyTxId :: TxId -> Run String
 getPrettyTxId tid = do
-  names <- gets bchNames
+  names <- gets mockNames
   pure $ fromMaybe (show tid) $ readTxName names tid
 
 --------------------------------------------------------
@@ -349,27 +349,27 @@ getMainUser :: Run PubKeyHash
 getMainUser = pure $ userPubKeyHash $ intToUser 0
 
 -- | Run blockchain.
-runBch :: Run a -> Blockchain -> (a, Blockchain)
-runBch (Run act) = runState act
+runMock :: Run a -> Mock -> (a, Mock)
+runMock (Run act) = runState act
 
 -- | Init blockchain state.
-initBch :: BchConfig -> Value -> Blockchain
-initBch cfg initVal =
-  Blockchain
-    { bchUsers = M.singleton genesisUserId genesisUser
-    , bchUtxos = M.singleton genesisTxOutRef genesisTxOut
-    , bchDatums = M.empty
-    , bchRefScripts = M.empty
-    , bchAddresses = M.singleton genesisAddress (S.singleton genesisTxOutRef)
-    , bchStake = initStake
-    , bchTxs = mempty
-    , bchConfig = cfg
-    , bchCurrentSlot = Slot 1
-    , bchUserStep = 1
-    , bchFails = mempty
-    , bchInfo = mempty
+initMock :: MockConfig -> Value -> Mock
+initMock cfg initVal =
+  Mock
+    { mockUsers = M.singleton genesisUserId genesisUser
+    , mockUtxos = M.singleton genesisTxOutRef genesisTxOut
+    , mockDatums = M.empty
+    , mockRefScripts = M.empty
+    , mockAddresses = M.singleton genesisAddress (S.singleton genesisTxOutRef)
+    , mockStake = initStake
+    , mockTxs = mempty
+    , mockConfig = cfg
+    , mockCurrentSlot = Slot 1
+    , mockUserStep = 1
+    , mockFails = mempty
+    , mockInfo = mempty
     , mustFailLog = mempty
-    , bchNames = BchNames
+    , mockNames = MockNames
                   (M.singleton genesisUserId "Genesis role")
                   (M.singleton genesisAddress "Genesis role")
                   M.empty
@@ -415,7 +415,7 @@ intToUser n = User $ C.KeyPair vk sk
 
 getUserSignKey :: PubKeyHash -> Run (Maybe (C.KeyPair 'C.Witness C.StandardCrypto))
 getUserSignKey pkh =
-  fmap userSignKey . M.lookup pkh <$> gets bchUsers
+  fmap userSignKey . M.lookup pkh <$> gets mockUsers
 
 -- | Sign TX for the user.
 signTx :: PubKeyHash -> Tx -> Run Tx
@@ -429,7 +429,7 @@ signTx pkh = updatePlutusTx $ \tx -> do
 
 -- | Return list of failures
 getFails :: Run (Log FailReason)
-getFails = gets bchFails
+getFails = gets mockFails
 
 -- | Logs failure and returns it.
 pureFail :: FailReason -> Run Result
@@ -440,8 +440,8 @@ pureFail res = do
 -- | Log failure.
 logFail :: FailReason -> Run ()
 logFail res = do
-  curTime <- gets bchCurrentSlot
-  modify' $ \s -> s {bchFails = appendLog curTime res (bchFails s) }
+  curTime <- gets mockCurrentSlot
+  modify' $ \s -> s {mockFails = appendLog curTime res (mockFails s) }
 
 -- | Log generic error.
 logError :: String -> Run ()
@@ -449,32 +449,32 @@ logError = logFail . GenericFail
 
 logInfo :: String -> Run ()
 logInfo msg = do
-  slot <- gets bchCurrentSlot
-  modify' $ \s -> s { bchInfo = appendLog slot msg (bchInfo s) }
+  slot <- gets mockCurrentSlot
+  modify' $ \s -> s { mockInfo = appendLog slot msg (mockInfo s) }
 
 -- | Igonres log of TXs and info messages during execution (but not errors)
 noLog :: Run a -> Run a
 noLog act = do
-  txLog <- gets bchTxs
-  infoLog <- gets bchInfo
+  txLog <- gets mockTxs
+  infoLog <- gets mockInfo
   res <- act
-  modify' $ \st -> st { bchTxs = txLog, bchInfo = infoLog }
+  modify' $ \st -> st { mockTxs = txLog, mockInfo = infoLog }
   pure res
 
 -- | Igonres log of TXs during execution
 noLogTx :: Run a -> Run a
 noLogTx act = do
-  txLog <- gets bchTxs
+  txLog <- gets mockTxs
   res <- act
-  modify' $ \st -> st { bchTxs = txLog }
+  modify' $ \st -> st { mockTxs = txLog }
   pure res
 
 -- | Igonres log of info level messages during execution
 noLogInfo :: Run a -> Run a
 noLogInfo act = do
-  infoLog <- gets bchInfo
+  infoLog <- gets mockInfo
   res <- act
-  modify' $ \st -> st { bchInfo = infoLog }
+  modify' $ \st -> st { mockInfo = infoLog }
   pure res
 
 -- | Send block of TXs to blockchain.
@@ -496,7 +496,7 @@ sendTx tx = do
 -}
 sendSingleTx :: Tx -> Run (Either FailReason Stat)
 sendSingleTx tx = do
-  genParams <- gets (bchConfigProtocol . bchConfig)
+  genParams <- gets (mockConfigProtocol . mockConfig)
   case genParams of
     AlonzoParams params  -> checkSingleTx @Alonzo.Era  params tx
     BabbageParams params -> checkSingleTx @Babbage.Era params tx
@@ -537,9 +537,9 @@ checkSingleTx params (Tx extra tx) =
     pkhs = M.keys $ P.txSignatures tx
 
     withTxBody cont = do
-      cfg <- gets bchConfig
+      cfg <- gets mockConfig
       let localScriptMap = P.txScripts tx
-      case Class.toCardanoTx localScriptMap (bchConfigNetworkId cfg) params (Tx extra tx) of
+      case Class.toCardanoTx localScriptMap (mockConfigNetworkId cfg) params (Tx extra tx) of
         Right txBody -> cont txBody
         Left err -> leftFail $ GenericFail err
 
@@ -549,13 +549,13 @@ checkSingleTx params (Tx extra tx) =
     withCheckCertificates cont = maybe cont leftFail =<< checkCertificates (extra'certificates extra)
 
     withCheckRange cont = do
-      curSlot <- gets bchCurrentSlot
+      curSlot <- gets mockCurrentSlot
       if Interval.member curSlot $ P.txValidRange tx
         then cont
         else leftFail $ TxInvalidRange curSlot (P.txValidRange tx)
 
     checkWithdraws ws = do
-      st <- gets bchStake
+      st <- gets mockStake
       go st ws
       where
         go st = \case
@@ -566,7 +566,7 @@ checkSingleTx params (Tx extra tx) =
               Just err -> pure $ Just $ TxInvalidWithdraw err
 
     checkCertificates certs = do
-      st <- gets bchStake
+      st <- gets mockStake
       go st (certificate'dcert <$> certs)
       where
         go st = \case
@@ -598,7 +598,7 @@ checkSingleTx params (Tx extra tx) =
       -> (Alonzo.ExUnits -> Run (Either FailReason a))
       -> Run (Either FailReason a)
     withCheckUnits utxo txBody cont = do
-      slotCfg <- gets (bchConfigSlotConfig . bchConfig)
+      slotCfg <- gets (mockConfigSlotConfig . mockConfig)
       let cardanoSystemStart = SystemStart $ posixSecondsToUTCTime $ fromInteger $ (`div` 1000) $ getPOSIXTime $ scSlotZeroTime slotCfg
           epochSize = EpochSize 1
           slotLength = slotLengthFromMillisec $ scSlotLength slotCfg
@@ -635,8 +635,8 @@ checkSingleTx params (Tx extra tx) =
             | (lang, costmodel) <- Map.toList costmodels ]
 
     withCheckTxLimits stat cont = do
-      maxLimits <- gets (bchConfigLimitStats . bchConfig)
-      checkLimits <- gets (bchConfigCheckLimits . bchConfig)
+      maxLimits <- gets (mockConfigLimitStats . mockConfig)
+      checkLimits <- gets (mockConfigCheckLimits . mockConfig)
       let errs = compareLimits maxLimits stat
           statPercent = toStatPercent maxLimits stat
       if null errs
@@ -670,7 +670,7 @@ compareLimits maxLimits stat = catMaybes
 -- | Read UTxO relevant to transaction
 getUTxO :: (Class.IsCardanoTx era) => P.Tx -> Run (Maybe (Either String (Ledger.UTxO era)))
 getUTxO tx = do
-  networkId <- bchConfigNetworkId <$> gets bchConfig
+  networkId <- mockConfigNetworkId <$> gets mockConfig
   mOuts <- sequence <$> mapM (getTxOut . Plutus.txInRef) ins
   pure $ fmap (Class.toUtxo localScriptMap networkId . zip ins) mOuts
   where
@@ -686,17 +686,17 @@ getUTxO tx = do
 -- | Reads TxOut by its reference.
 getTxOut :: TxOutRef -> Run (Maybe TxOut)
 getTxOut ref = do
-  mTout <- M.lookup ref <$> gets bchUtxos
+  mTout <- M.lookup ref <$> gets mockUtxos
   case mTout of
     Just tout -> pure $ Just tout
-    Nothing   -> M.lookup ref <$> gets bchRefScripts
+    Nothing   -> M.lookup ref <$> gets mockRefScripts
 
 bumpSlot :: Run ()
-bumpSlot = modify' $ \s -> s {bchCurrentSlot = bchCurrentSlot s + 1}
+bumpSlot = modify' $ \s -> s {mockCurrentSlot = mockCurrentSlot s + 1}
 
 -- | Makes slot counter of blockchain to move forward on given amount.
 waitNSlots :: Slot -> Run ()
-waitNSlots n = modify' $ \s -> s {bchCurrentSlot = bchCurrentSlot s + n}
+waitNSlots n = modify' $ \s -> s {mockCurrentSlot = mockCurrentSlot s + n}
 
 -- | Applies valid TX to modify blockchain.
 applyTx :: Stat -> TxId -> Tx -> Run ()
@@ -708,15 +708,15 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
   saveTx
   saveDatums
   where
-    saveDatums = modify' $ \s -> s {bchDatums = txData <> bchDatums s}
+    saveDatums = modify' $ \s -> s {mockDatums = txData <> mockDatums s}
 
     saveTx = do
-      t <- gets bchCurrentSlot
+      t <- gets mockCurrentSlot
       statPercent <- getStatPercent
-      modify' $ \s -> s {bchTxs = appendLog t (TxStat etx t stat statPercent) $ bchTxs s}
+      modify' $ \s -> s {mockTxs = appendLog t (TxStat etx t stat statPercent) $ mockTxs s}
 
     getStatPercent = do
-      maxLimits <- gets (bchConfigLimitStats . bchConfig)
+      maxLimits <- gets (mockConfigLimitStats . mockConfig)
       pure $ toStatPercent maxLimits stat
 
     updateUtxos = do
@@ -725,8 +725,8 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
 
     removeIns ins = modify $ \s ->
       s
-        { bchUtxos = rmIns (bchUtxos s)
-        , bchAddresses = fmap (`S.difference` inRefSet) (bchAddresses s)
+        { mockUtxos = rmIns (mockUtxos s)
+        , mockAddresses = fmap (`S.difference` inRefSet) (mockAddresses s)
         }
       where
         inRefSet = S.map Plutus.txInRef ins
@@ -740,10 +740,10 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
         ref = TxOutRef tid ix
         addr = txOutAddress out
 
-        insertAddresses = modify' $ \s -> s {bchAddresses = M.alter (Just . maybe (S.singleton ref) (S.insert ref)) addr $ bchAddresses s}
+        insertAddresses = modify' $ \s -> s {mockAddresses = M.alter (Just . maybe (S.singleton ref) (S.insert ref)) addr $ mockAddresses s}
         insertUtxos
-          | isRefScript = modify' $ \s -> s {bchRefScripts = M.singleton ref out <> bchRefScripts s}
-          | otherwise   = modify' $ \s -> s {bchUtxos = M.singleton ref out <> bchUtxos s}
+          | isRefScript = modify' $ \s -> s {mockRefScripts = M.singleton ref out <> mockRefScripts s}
+          | otherwise   = modify' $ \s -> s {mockUtxos = M.singleton ref out <> mockUtxos s}
 
         isRefScript = isJust (txOutReferenceScript out)
 
@@ -753,27 +753,27 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
 
     updateCertificates = mapM_ (onStake . reactDCert . certificate'dcert) $ extra'certificates extra
 
-    onStake f = modify' $ \st -> st { bchStake = f $ bchStake st }
+    onStake f = modify' $ \st -> st { mockStake = f $ mockStake st }
 
     updateFees = do
-      st <- gets bchStake
-      forM_ (rewardStake (getLovelace txFee) st) $ \nextSt -> modify' $ \bch -> bch { bchStake = nextSt }
+      st <- gets mockStake
+      forM_ (rewardStake (getLovelace txFee) st) $ \nextSt -> modify' $ \mock -> mock { mockStake = nextSt }
 
 -- | Read all TxOutRefs that belong to given address.
 txOutRefAt :: Address -> Run [TxOutRef]
 txOutRefAt addr = txOutRefAtState addr <$> get
 
 -- | Read all TxOutRefs that belong to given address.
-txOutRefAtState :: Address -> Blockchain -> [TxOutRef]
-txOutRefAtState addr st = maybe [] S.toList . M.lookup addr $ bchAddresses st
+txOutRefAtState :: Address -> Mock -> [TxOutRef]
+txOutRefAtState addr st = maybe [] S.toList . M.lookup addr $ mockAddresses st
 
 -- | Get all UTXOs that belong to an address (it does not include reference script UTXOs)
 utxoAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
-utxoAt addr = utxoAtStateBy bchUtxos addr <$> get
+utxoAt addr = utxoAtStateBy mockUtxos addr <$> get
 
 -- | Get all reference script UTXOs that belong to an address
 refScriptAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
-refScriptAt addr = utxoAtStateBy bchRefScripts addr <$> get
+refScriptAt addr = utxoAtStateBy mockRefScripts addr <$> get
 
 -- | Reads the first UTXO by address
 withFirstUtxo :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
@@ -799,7 +799,7 @@ withRefScript isUtxo user cont =
 
 
 -- | Get all UTXOs that belong to an address
-utxoAtStateBy :: HasAddress user => (Blockchain -> Map TxOutRef TxOut) -> user -> Blockchain -> [(TxOutRef, TxOut)]
+utxoAtStateBy :: HasAddress user => (Mock -> Map TxOutRef TxOut) -> user -> Mock -> [(TxOutRef, TxOut)]
 utxoAtStateBy extract (toAddress -> addr) st =
   mapMaybe (\r -> (r,) <$> M.lookup r (extract st)) refs
   where
@@ -837,7 +837,7 @@ withMayBy msg act cont = do
 -- | Reads typed datum from blockchain that belongs to UTXO (by reference) by Hash.
 getHashDatum :: FromData a => TxOutRef -> Run (Maybe a)
 getHashDatum ref = do
-  dhs <- gets bchDatums
+  dhs <- gets mockDatums
   mDh <- (txOutDatumHash =<<) <$> getTxOut ref
   pure $ fromBuiltinData . getDatum =<< (`M.lookup` dhs) =<< mDh
 
@@ -855,37 +855,37 @@ txOutDatumHash tout =
 
 -- | Reads current reward amount for a staking credential
 rewardAt :: HasStakingCredential cred => cred -> Run Integer
-rewardAt cred = gets (maybe 0 id . lookupReward (toStakingCredential cred) . bchStake)
+rewardAt cred = gets (maybe 0 id . lookupReward (toStakingCredential cred) . mockStake)
 
 -- | Returns all stakes delegatged to a pool
 stakesAt :: PoolId -> Run [StakingCredential]
-stakesAt (PoolId poolKey) = gets (lookupStakes (PoolId poolKey) . bchStake)
+stakesAt (PoolId poolKey) = gets (lookupStakes (PoolId poolKey) . mockStake)
 
 -- | Checks that pool is registered
 hasPool :: PoolId -> Run Bool
-hasPool (PoolId pkh) = gets (M.member (PoolId pkh) . stake'pools. bchStake)
+hasPool (PoolId pkh) = gets (M.member (PoolId pkh) . stake'pools. mockStake)
 
 -- | Checks that staking credential is registered
 hasStake :: HasStakingCredential a => a -> Run Bool
-hasStake key = gets (M.member (toStakingCredential key) . stake'stakes. bchStake)
+hasStake key = gets (M.member (toStakingCredential key) . stake'stakes. mockStake)
 
 getPools :: Run [PoolId]
-getPools = gets (V.toList . stake'poolIds . bchStake)
+getPools = gets (V.toList . stake'poolIds . mockStake)
 
 ----------------------------------------------------------------
 -- logs
 
 -- | Reads the log.
-getLog :: Blockchain -> Log BchEvent
-getLog Blockchain{..} =
+getLog :: Mock -> Log MockEvent
+getLog Mock{..} =
   mconcat
-    [ BchInfo <$> bchInfo
-    , BchMustFailLog <$> mustFailLog
-    , uncurry BchTx . (\tx@(txStatId -> ident) -> (txName ident, tx)) <$> bchTxs
-    , BchFail <$> bchFails
+    [ MockInfo <$> mockInfo
+    , MockMustFailLog <$> mustFailLog
+    , uncurry MockTx . (\tx@(txStatId -> ident) -> (txName ident, tx)) <$> mockTxs
+    , MockFail <$> mockFails
     ]
   where
-    txName = readTxName bchNames
+    txName = readTxName mockNames
 
 ----------------------------------------------------------------------
 -- seed utilities
