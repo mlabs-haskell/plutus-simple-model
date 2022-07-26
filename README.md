@@ -1534,3 +1534,14 @@ This can quickly become annoying.
 
 See complete example of usage for reference scripts at `test`: `Suites.Plutus.Model.Script.V2.GameRef`.
 
+### Plutus onchain goodies
+
+Also library defines some handy functions to use with plutus like `datumOf`, `inlinedDatum`, `forwardTo`.
+See the modules `Plutus.Model.Validator.[V1/V2].Plutus`.
+It's exported by default with `Plutus.Model.Vn`.
+
+
+
+
+
+

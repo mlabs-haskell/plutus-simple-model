@@ -130,7 +130,9 @@ library
     Plutus.Model.Stake
     Plutus.Model.Validator
     Plutus.Model.Validator.V1
+    Plutus.Model.Validator.V1.Plutus
     Plutus.Model.Validator.V2
+    Plutus.Model.Validator.V2.Plutus
   other-modules:
     Plutus.Model.Fork.Cardano.Alonzo
     Plutus.Model.Fork.Cardano.Babbage
@@ -164,7 +166,6 @@ test-suite plutus-simple-model-test
     Suites.Plutus.Model.Script.V1.Onchain.Safe
     Suites.Plutus.Model.Script.V1.Onchain.Safe.Script
     Suites.Plutus.Model.Script.V1.Onchain.Staking
-    Suites.Plutus.Model.Script.V1.Onchain.Util
     Suites.Plutus.Model.Script.V1.Test.Counter
     Suites.Plutus.Model.Script.V1.Test.Game
     Suites.Plutus.Model.Script.V1.Test.Nft
@@ -183,7 +184,6 @@ test-suite plutus-simple-model-test
     Suites.Plutus.Model.Script.V2.Test.Lend
     Suites.Plutus.Model.Script.V2.Test.Oracle.Hashed
     Suites.Plutus.Model.Script.V2.Test.Oracle.Inlined
-    Suites.Plutus.Model.Script.V2.Onchain.Util
     Suites.Plutus.Model.User
     Suites.Plutus.Model.Util
   build-depends:    plutus-simple-model

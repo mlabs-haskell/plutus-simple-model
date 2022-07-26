@@ -11,10 +11,9 @@ import Test.Tasty
 import Plutus.V2.Ledger.Api
 import Suites.Plutus.Model.Script.V2.Onchain.Oracle
 import Suites.Plutus.Model.Script.V2.Onchain.Oracle.Inlined
-import Suites.Plutus.Model.Script.V2.Onchain.Util
 import Suites.Plutus.Model.Util
 
-import Plutus.Model
+import Plutus.Model.V2
 
 tests :: MockConfig -> TestTree
 tests cfg =

@@ -1,11 +1,20 @@
 -- | Utility functions for Plutus V1 scripts
-module Suites.Plutus.Model.Script.V1.Onchain.Util(
-  datumOf
+module Plutus.Model.Validator.V1.Plutus(
+  getThrough,
+  datumOf,
 ) where
 
 import PlutusTx.Prelude
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Contexts
+
+{-# inlinable getThrough #-}
+getThrough :: ScriptContext -> (TxOut, TxOut)
+getThrough ctx = (tin, tout)
+  where
+    [tout] = getContinuingOutputs ctx
+    Just tinInfo = findOwnInput ctx
+    tin = txInInfoResolved tinInfo
 
 {-# inlinable datumOf #-}
 datumOf :: FromData a => TxInfo -> TxOut -> Maybe a

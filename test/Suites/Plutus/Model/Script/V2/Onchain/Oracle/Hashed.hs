@@ -7,8 +7,7 @@ module Suites.Plutus.Model.Script.V2.Onchain.Oracle.Hashed (
 import Prelude (($))
 import PlutusTx qualified
 import Suites.Plutus.Model.Script.V2.Onchain.Oracle
-import Plutus.Model.V2 (toBuiltinValidator, TypedValidator, mkTypedValidator)
-import Suites.Plutus.Model.Script.V2.Onchain.Util
+import Plutus.Model.V2 (toBuiltinValidator, TypedValidator, mkTypedValidator, datumOf)
 
 type Bet = TypedValidator BetDatum BetAct
 

@@ -8,8 +8,7 @@ import Prelude (($))
 import PlutusTx.Prelude (const)
 import PlutusTx qualified
 import Suites.Plutus.Model.Script.V2.Onchain.Oracle
-import Plutus.Model.V2 (toBuiltinValidator, TypedValidator, mkTypedValidator)
-import Suites.Plutus.Model.Script.V2.Onchain.Util
+import Plutus.Model.V2 (toBuiltinValidator, TypedValidator, mkTypedValidator, inlinedDatum)
 
 type Bet = TypedValidator BetDatum BetAct
 

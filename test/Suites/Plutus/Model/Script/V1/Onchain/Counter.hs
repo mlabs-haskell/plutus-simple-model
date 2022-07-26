@@ -13,7 +13,7 @@ import PlutusTx.Prelude qualified as Plutus
 import Plutus.V1.Ledger.Api
 import Plutus.V1.Ledger.Contexts
 
-import Suites.Plutus.Model.Script.V1.Onchain.Util (datumOf)
+import Plutus.Model.V1 (datumOf)
 
 ----------------------------------------------------------------------------
 -- types

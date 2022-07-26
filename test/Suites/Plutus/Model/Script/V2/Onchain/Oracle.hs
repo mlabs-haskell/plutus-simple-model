@@ -22,7 +22,7 @@ import Plutus.V1.Ledger.Address (pubKeyHashAddress)
 import Plutus.V2.Ledger.Api
 import Plutus.V2.Ledger.Contexts
 import PlutusTx qualified
-import Suites.Plutus.Model.Script.V2.Onchain.Util
+import Plutus.Model.V2
 
 -- | Answer of the oracle
 newtype AnswerDatum = AnswerDatum Integer

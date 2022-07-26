@@ -5,4 +5,4 @@ module Plutus.Model.V2(
 
 import Plutus.Model as X
 import Plutus.Model.Validator.V2 as X
-
+import Plutus.Model.Validator.V2.Plutus as X

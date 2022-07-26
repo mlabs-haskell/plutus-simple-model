@@ -1,8 +1,7 @@
 -- | Utility functions for Plutus V2 scripts
-module Suites.Plutus.Model.Script.V2.Onchain.Util(
+module Plutus.Model.Validator.V2.Plutus(
   datumOf,
   inlinedDatum,
-  lovelaceValueOf,
   getThrough,
   forwardTo,
 ) where
@@ -10,7 +9,6 @@ module Suites.Plutus.Model.Script.V2.Onchain.Util(
 import PlutusTx.Prelude
 import PlutusTx.AssocMap qualified as Map
 import Plutus.V1.Ledger.Address (scriptHashAddress)
-import Plutus.V1.Ledger.Value (valueOf)
 import Plutus.V2.Ledger.Api
 import Plutus.V2.Ledger.Contexts
 
@@ -21,10 +19,6 @@ getThrough ctx = (tin, tout)
     [tout] = getContinuingOutputs ctx
     Just tinInfo = findOwnInput ctx
     tin = txInInfoResolved tinInfo
-
-{-# inlinable lovelaceValueOf #-}
-lovelaceValueOf :: Value -> Integer
-lovelaceValueOf v = valueOf v adaSymbol adaToken
 
 {-# inlinable datumOf #-}
 datumOf :: FromData a => TxInfo -> TxOut -> Maybe a

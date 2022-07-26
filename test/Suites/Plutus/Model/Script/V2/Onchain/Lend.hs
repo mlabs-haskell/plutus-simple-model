@@ -16,7 +16,7 @@ import PlutusTx.Prelude
 import Plutus.V1.Ledger.Value
 import Plutus.V2.Ledger.Api
 import PlutusTx qualified
-import Suites.Plutus.Model.Script.V2.Onchain.Util
+import Plutus.Model.V2
 
 data LendDatum = LendDatum
   { lendDatum'symbol :: CurrencySymbol
@@ -29,7 +29,7 @@ data LendAct = Exchange
 lendContract :: LendDatum -> LendAct -> ScriptContext -> Bool
 lendContract (LendDatum sym tok) Exchange ctx =
   traceIfFalse "Value exhange preserved"
-    (lovelaceValueOf outVal - lovelaceValueOf inVal == mintedAmount) &&
+    (getLovelace (adaOf outVal) - getLovelace (adaOf inVal) == mintedAmount) &&
   traceIfFalse "Same datum"
     (txOutDatum tin == txOutDatum tout)
   where
