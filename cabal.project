@@ -9,4 +9,7 @@ write-ghc-environment-files: never
 tests: true
 benchmarks: true
 
+package plutus-simple-model
+  haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
+
 allow-newer: size-based:template-haskell

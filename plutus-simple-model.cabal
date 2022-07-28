@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-simple-model
-version:            0.1.0.0
+version:            0.2.0.0
 synopsis:           Unit test library for plutus
 description:        Unit test library for plutus with resource estimation
 homepage:           https://github.com/mlabs-haskell/plutus-simple-model
@@ -13,9 +13,10 @@ copyright:          TODO
 category:           TODO
 build-type:         Simple
 tested-with:        GHC ==8.10.4
-extra-source-files: README.md
-data-files:
+extra-source-files:
+  README.md
   data/protocol-params.json
+  data/alonzo-params.json
 
 common lang
   default-language: Haskell2010
@@ -27,6 +28,7 @@ common lang
     DeriveFunctor
     DeriveGeneric
     DeriveTraversable
+    DeriveAnyClass
     DerivingStrategies
     DerivingVia
     DuplicateRecordFields
@@ -67,29 +69,38 @@ common deps
   build-depends:
     , base                     ^>=4.14
     , aeson
-    , basement
+    , array
+    , base16-bytestring
+    , base58-bytestring
     , bytestring
-    , cardano-api
+    , data-default
+    , hashable
+    , http-api-data
     , cardano-binary
+    , cardano-crypto
     , cardano-crypto-class
     , cardano-ledger-alonzo
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
+    , cardano-ledger-babbage
     , cardano-slotting
+    , cborg
+    , cryptonite
     , containers
+    , memory
     , mtl
     , serialise
-    , ouroboros-consensus
-    , ouroboros-consensus-shelley
     , prettyprinter
-    , plutus-ledger
+    , plutus-core
     , plutus-ledger-api
     , plutus-tx
     , plutus-tx-plugin
     , strict-containers
     , vector
+    , tagged
     , time
+    , text
     , deepseq
 
 common test-deps
@@ -103,15 +114,35 @@ library
   import:           lang
   import:           deps
   exposed-modules:
-    Plutus.Test.Model
-    Plutus.Test.Model.Blockchain
-    Plutus.Test.Model.Contract
-    Plutus.Test.Model.Mint
-    Plutus.Test.Model.Pretty
-    Plutus.Test.Model.Stake
-    Plutus.Test.Model.Fork.CardanoAPI
-    Plutus.Test.Model.Fork.CardanoAPITemp
-    Plutus.Test.Model.Fork.TxExtra
+    Plutus.Model
+    Plutus.Model.Ada
+    Plutus.Model.V1
+    Plutus.Model.V2
+    Plutus.Model.Mock
+    Plutus.Model.Mock.Address
+    Plutus.Model.Mock.MockConfig
+    Plutus.Model.Mock.Log
+    Plutus.Model.Mock.ProtocolParameters
+    Plutus.Model.Mock.Stat
+    Plutus.Model.Contract
+    Plutus.Model.Mint
+    Plutus.Model.Pretty
+    Plutus.Model.Stake
+    Plutus.Model.Validator
+    Plutus.Model.Validator.V1
+    Plutus.Model.Validator.V1.Plutus
+    Plutus.Model.Validator.V2
+    Plutus.Model.Validator.V2.Plutus
+  other-modules:
+    Plutus.Model.Fork.Cardano.Alonzo
+    Plutus.Model.Fork.Cardano.Babbage
+    Plutus.Model.Fork.Cardano.Class
+    Plutus.Model.Fork.Cardano.Common
+    Plutus.Model.Fork.Ledger.Scripts
+    Plutus.Model.Fork.Ledger.Slot
+    Plutus.Model.Fork.Ledger.TimeSlot
+    Plutus.Model.Fork.Ledger.Tx
+    Plutus.Model.Fork.TxExtra
   build-depends:    tasty
                   , tasty-hunit
   other-modules:
@@ -126,18 +157,33 @@ test-suite plutus-simple-model-test
   main-is:          Spec.hs
   other-modules:
     Suites.Plutus.Model.FakeCoin
-    Suites.Plutus.Model.Script
-    Suites.Plutus.Model.Script.Onchain.Counter
-    Suites.Plutus.Model.Script.Onchain.Game
-    Suites.Plutus.Model.Script.Onchain.Nft
-    Suites.Plutus.Model.Script.Onchain.Safe
-    Suites.Plutus.Model.Script.Onchain.Staking
-    Suites.Plutus.Model.Script.Onchain.Util
-    Suites.Plutus.Model.Script.Test.Counter
-    Suites.Plutus.Model.Script.Test.Game
-    Suites.Plutus.Model.Script.Test.Nft
-    Suites.Plutus.Model.Script.Test.Safe
-    Suites.Plutus.Model.Script.Test.Staking
+    Suites.Plutus.Model.Script.V1
+    Suites.Plutus.Model.Script.V1.Onchain.Counter
+    Suites.Plutus.Model.Script.V1.Onchain.Counter.Script
+    Suites.Plutus.Model.Script.V1.Onchain.Game
+    Suites.Plutus.Model.Script.V1.Onchain.Game.Script
+    Suites.Plutus.Model.Script.V1.Onchain.Nft
+    Suites.Plutus.Model.Script.V1.Onchain.Safe
+    Suites.Plutus.Model.Script.V1.Onchain.Safe.Script
+    Suites.Plutus.Model.Script.V1.Onchain.Staking
+    Suites.Plutus.Model.Script.V1.Test.Counter
+    Suites.Plutus.Model.Script.V1.Test.Game
+    Suites.Plutus.Model.Script.V1.Test.Nft
+    Suites.Plutus.Model.Script.V1.Test.Safe
+    Suites.Plutus.Model.Script.V1.Test.Staking
+    Suites.Plutus.Model.Script.V2
+    Suites.Plutus.Model.Script.V2.Onchain.Game.Script
+    Suites.Plutus.Model.Script.V2.Onchain.Game
+    Suites.Plutus.Model.Script.V2.Onchain.Lend.Script
+    Suites.Plutus.Model.Script.V2.Onchain.Lend
+    Suites.Plutus.Model.Script.V2.Onchain.Oracle
+    Suites.Plutus.Model.Script.V2.Onchain.Oracle.Hashed
+    Suites.Plutus.Model.Script.V2.Onchain.Oracle.Inlined
+    Suites.Plutus.Model.Script.V2.Test.Game
+    Suites.Plutus.Model.Script.V2.Test.GameRef
+    Suites.Plutus.Model.Script.V2.Test.Lend
+    Suites.Plutus.Model.Script.V2.Test.Oracle.Hashed
+    Suites.Plutus.Model.Script.V2.Test.Oracle.Inlined
     Suites.Plutus.Model.User
     Suites.Plutus.Model.Util
   build-depends:    plutus-simple-model

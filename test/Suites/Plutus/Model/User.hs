@@ -9,11 +9,11 @@ import Test.Tasty.HUnit
 import Prelude
 
 import Data.Functor (void)
-import Plutus.Test.Model
+import Plutus.Model
 import Suites.Plutus.Model.Util
 import qualified Suites.Plutus.Model.FakeCoin as FakeCoin
 
-tests :: BchConfig -> TestTree
+tests :: MockConfig -> TestTree
 tests cfg = do
   testGroup
     "Test simple user scripts"
@@ -24,7 +24,7 @@ tests cfg = do
   where
     good = check True
     bad = check False
-    check res msg act = testCase msg $ fst (runBch act (initBch cfg $ adaValue 10_000_000)) @?= res
+    check res msg act = testCase msg $ fst (runMock act (initMock cfg $ adaValue 10_000_000)) @?= res
 
 simpleSpend :: Run Bool
 simpleSpend = do
