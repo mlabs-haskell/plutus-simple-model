@@ -133,7 +133,6 @@ library
     Plutus.Model.Validator.V1.Plutus
     Plutus.Model.Validator.V2
     Plutus.Model.Validator.V2.Plutus
-  other-modules:
     Plutus.Model.Fork.Cardano.Alonzo
     Plutus.Model.Fork.Cardano.Babbage
     Plutus.Model.Fork.Cardano.Class
