@@ -247,7 +247,7 @@ isOkResult = \case
 
 -- | State monad wrapper to run blockchain.
 newtype RunT m a = RunT (StateT Mock m a)
-  deriving newtype (Functor, Applicative, Monad, MonadState Mock)
+  deriving newtype (Functor, Applicative, Monad, MonadState Mock, MonadTrans)
 
 -- | Dummy instance to be able to use partial pattern matching
 -- in do-notation
