@@ -64,7 +64,7 @@ import Cardano.Ledger.Shelley.API.Types qualified as Shelley (Hash)
 import Cardano.Ledger.TxIn qualified as C
 import Cardano.Ledger.ShelleyMA.Timelocks qualified as C
 import Cardano.Ledger.Keys qualified as C
-import Cardano.Ledger.Keys.WitVKey
+import Cardano.Ledger.Shelley.API.Types (WitVKey, Delegation (Delegation))
 import Cardano.Ledger.Shelley.UTxO qualified as C
 import qualified Cardano.Crypto.Hash.Class as Crypto
 import Cardano.Ledger.Mary.Value qualified as C
@@ -167,7 +167,7 @@ toDCert :: Network -> C.Coin -> C.Coin -> P.DCert -> Either ToCardanoError (C.DC
 toDCert network poolDeposit minPoolCost = \case
   P.DCertDelegRegKey (P.StakingHash stakingCredential) -> C.DCertDeleg . C.RegKey <$> toCredential stakingCredential
   P.DCertDelegDeRegKey (P.StakingHash stakingCredential) -> C.DCertDeleg . C.DeRegKey <$> toCredential stakingCredential
-  P.DCertDelegDelegate (P.StakingHash stakingCredential) pubKeyHash -> C.DCertDeleg . C.Delegate <$> (C.Delegation <$> toCredential stakingCredential <*> toPubKeyHash pubKeyHash)
+  P.DCertDelegDelegate (P.StakingHash stakingCredential) pubKeyHash -> C.DCertDeleg . C.Delegate <$> (Delegation <$> toCredential stakingCredential <*> toPubKeyHash pubKeyHash)
   P.DCertPoolRegister poolKeyHash poolVfr -> C.DCertPool . C.RegPool <$> toPoolParams poolKeyHash poolVfr
   P.DCertPoolRetire pkh n -> C.DCertPool . (\key -> C.RetirePool key (C.EpochNo (fromIntegral n)) ) <$> toPubKeyHash pkh
   P.DCertGenesis -> Left "DCertGenesis is not supported"

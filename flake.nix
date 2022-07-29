@@ -2,20 +2,20 @@
   description = "plutus-simple-model";
 
   inputs = {
-    haskell-nix.url = "github:input-output-hk/haskell.nix";
+    haskell-nix.url = "github:input-output-hk/haskell.nix/220f8a9cd166e726aea62843bdafa7ecded3375c"; # TODO
     nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
-    iohk-nix.url = "github:input-output-hk/iohk-nix";
-    haskell-nix-extra-hackage.url = "github:mlabs-haskell/haskell-nix-extra-hackage/separate-hackages";
+    iohk-nix.url = "github:input-output-hk/iohk-nix/9a604d01bd4420ab7f396f14d1947fbe2ce7db8b";
+    haskell-nix-extra-hackage.url = "github:mlabs-haskell/haskell-nix-extra-hackage/ee50d7eb739819efdb27bda9f444e007c12e9833";
     haskell-nix-extra-hackage.inputs.haskell-nix.follows = "haskell-nix";
     haskell-nix-extra-hackage.inputs.nixpkgs.follows = "nixpkgs";
 
-    cardano-base.url = "github:input-output-hk/cardano-base/631cb6cf1fa01ab346233b610a38b3b4cba6e6ab";
+    cardano-base.url = "github:input-output-hk/cardano-base/0f3a867493059e650cda69e20a5cbf1ace289a57";
     cardano-base.flake = false;
     cardano-crypto.url = "github:input-output-hk/cardano-crypto/f73079303f663e028288f9f4a9e08bcca39a923e";
     cardano-crypto.flake = false;
-    cardano-ledger.url = "github:input-output-hk/cardano-ledger/389b266d6226dedf3d2aec7af640b3ca4984c5ea";
+    cardano-ledger.url = "github:input-output-hk/cardano-ledger/3be8a19083fc13d9261b1640e27dd389b51bb08e";
     cardano-ledger.flake = false;
-    cardano-prelude.url = "github:input-output-hk/cardano-prelude/533aec85c1ca05c7d171da44b89341fb736ecfe5";
+    cardano-prelude.url = "github:input-output-hk/cardano-prelude/bb4ed71ba8e587f672d06edf9d2e376f4b055555";
     cardano-prelude.flake = false;
     flat.url = "github:Quid2/flat/ee59880f47ab835dbd73bea0847dab7869fc20d8";
     flat.flake = false;
@@ -23,7 +23,7 @@
     goblins.flake = false;
     weigh.url = "github:fpco/weigh/bfcf4415144d7d2817dfcb91b6f9a6dfd7236de7";
     weigh.flake = false;
-    plutus.url = "github:input-output-hk/plutus/8ab4c3355c5fdf67dcf6acc1f5a14668d5e6f0a9";
+    plutus.url = "github:input-output-hk/plutus/69ab98c384703172f898eb5bcad1078ded521426";
     plutus.flake = false;
     Win32-network.url = "github:input-output-hk/Win32-network/3825d3abf75f83f406c1f7161883c438dac7277d";
     Win32-network.flake = false;
