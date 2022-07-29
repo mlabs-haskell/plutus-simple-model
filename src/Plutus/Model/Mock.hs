@@ -48,7 +48,8 @@ module Plutus.Model.Mock (
   getPrettyCurrencySymbol,
   getPrettyAssetClass,
   getPrettyTxId,
-  Run (..),
+  RunT (..),
+  Run,
   runMock,
   initMock,
   Percent(..),
@@ -245,13 +246,15 @@ isOkResult = \case
   _ -> False
 
 -- | State monad wrapper to run blockchain.
-newtype Run a = Run (State Mock a)
+newtype RunT m a = RunT (StateT Mock m a)
   deriving newtype (Functor, Applicative, Monad, MonadState Mock)
 
 -- | Dummy instance to be able to use partial pattern matching
 -- in do-notation
-instance MonadFail Run where
+instance Monad m => MonadFail (RunT m) where
    fail err = error $ "Failed to recover: " <> err
+
+type Run a = RunT Identity a
 
 -- | Human readable names for pretty printing.
 data MockNames = MockNames
@@ -263,33 +266,33 @@ data MockNames = MockNames
   }
 
 -- | Modifies the mappings to human-readable names
-modifyMockNames :: (MockNames -> MockNames) -> Run ()
+modifyMockNames :: Monad m => (MockNames -> MockNames) -> RunT m ()
 modifyMockNames f = modify' $ \s -> s {mockNames = f (mockNames s)}
 
 -- | Assigns human-readable name to user
-writeUserName :: PubKeyHash -> String -> Run ()
+writeUserName :: Monad m => PubKeyHash -> String -> RunT m ()
 writeUserName pkh name = do
   modifyMockNames $ \ns ->
     ns {mockNameUsers = M.insert pkh name (mockNameUsers ns)}
   writeAddressName (pubKeyHashAddress pkh) name
 
 -- | Assigns human-readable name to address
-writeAddressName :: Address -> String -> Run ()
+writeAddressName :: Monad m => Address -> String -> RunT m ()
 writeAddressName addr name = modifyMockNames $ \ns ->
    ns {mockNameAddresses = M.insert addr name (mockNameAddresses ns)}
 
 -- | Assigns human-readable name to asset class
-writeAssetClassName :: AssetClass -> String -> Run ()
+writeAssetClassName :: Monad m => AssetClass -> String -> RunT m ()
 writeAssetClassName ac name = modifyMockNames $ \ns ->
   ns {mockNameAssetClasses = M.insert ac name (mockNameAssetClasses ns)}
 
 -- | Assigns human-readable name to currency symbol
-writeCurrencySymbolName :: CurrencySymbol -> String -> Run ()
+writeCurrencySymbolName :: Monad m => CurrencySymbol -> String -> RunT m ()
 writeCurrencySymbolName cs name = modifyMockNames $ \ns ->
   ns {mockNameCurrencySymbols = M.insert cs name (mockNameCurrencySymbols ns)}
 
 -- | Assigns human-readable name to a transaction
-writeTxName :: Tx -> String -> Run ()
+writeTxName :: Monad m => Tx -> String -> RunT m ()
 writeTxName (P.txId . tx'plutus -> ident) name = modifyMockNames $ \ns ->
   ns {mockNameTxns = M.insert ident name (mockNameTxns ns)}
 
@@ -314,7 +317,7 @@ readTxName :: MockNames -> TxId -> Maybe String
 readTxName names cs = M.lookup cs (mockNameTxns names)
 
 -- | Reads pretty name for user or script
-getPrettyAddress :: HasAddress user => user -> Run String
+getPrettyAddress :: (Monad m, HasAddress user) => user -> RunT m String
 getPrettyAddress user = do
   names <- gets mockNames
   pure $ fromMaybe (show addr) $ readAddressName names addr <|> (readUserName names =<< toPubKeyHash addr)
@@ -322,19 +325,19 @@ getPrettyAddress user = do
     addr = toAddress user
 
 -- | Reads pretty name for currency symbol or just shows the raw one.
-getPrettyCurrencySymbol :: CurrencySymbol -> Run String
+getPrettyCurrencySymbol :: Monad m => CurrencySymbol -> RunT m String
 getPrettyCurrencySymbol cs = do
   names <- gets mockNames
   pure $ fromMaybe (show cs) $ readCurrencySymbolName names cs
 
 -- | Reads pretty name for currency symbol or just shows the raw one.
-getPrettyAssetClass :: AssetClass -> Run String
+getPrettyAssetClass :: Monad m => AssetClass -> RunT m String
 getPrettyAssetClass ac = do
   names <- gets mockNames
   pure $ fromMaybe (show ac) $ readAssetClassName names ac
 
 -- | Reads pretty name for currency symbol or just shows the raw one.
-getPrettyTxId :: TxId -> Run String
+getPrettyTxId :: Monad m => TxId -> RunT m String
 getPrettyTxId tid = do
   names <- gets mockNames
   pure $ fromMaybe (show tid) $ readTxName names tid
@@ -345,12 +348,12 @@ getPrettyTxId tid = do
 {- | Get pub key hash of the admin user.
  It can be useful to distribute funds to the users.
 -}
-getMainUser :: Run PubKeyHash
+getMainUser :: Monad m => RunT m PubKeyHash
 getMainUser = pure $ userPubKeyHash $ intToUser 0
 
 -- | Run blockchain.
 runMock :: Run a -> Mock -> (a, Mock)
-runMock (Run act) = runState act
+runMock (RunT act) = runIdentity . runStateT act
 
 -- | Init blockchain state.
 initMock :: MockConfig -> Value -> Mock
@@ -415,12 +418,12 @@ intToUser n = User $ C.KeyPair vk sk
     sk = C.genKeyDSIGN $ mkSeedFromInteger $ RawSeed n
     vk = C.VKey $ C.deriveVerKeyDSIGN sk
 
-getUserSignKey :: PubKeyHash -> Run (Maybe (C.KeyPair 'C.Witness C.StandardCrypto))
+getUserSignKey ::Monad m => PubKeyHash -> RunT m (Maybe (C.KeyPair 'C.Witness C.StandardCrypto))
 getUserSignKey pkh =
   fmap userSignKey . M.lookup pkh <$> gets mockUsers
 
 -- | Sign TX for the user.
-signTx :: PubKeyHash -> Tx -> Run Tx
+signTx ::Monad m => PubKeyHash -> Tx -> RunT m Tx
 signTx pkh = updatePlutusTx $ \tx -> do
   mKeys <- getUserSignKey pkh
   case mKeys of
@@ -430,32 +433,32 @@ signTx pkh = updatePlutusTx $ \tx -> do
       pure tx
 
 -- | Return list of failures
-getFails :: Run (Log FailReason)
+getFails ::Monad m => RunT m (Log FailReason)
 getFails = gets mockFails
 
 -- | Logs failure and returns it.
-pureFail :: FailReason -> Run Result
+pureFail ::Monad m => FailReason -> RunT m Result
 pureFail res = do
   logFail res
   pure $ Fail res
 
 -- | Log failure.
-logFail :: FailReason -> Run ()
+logFail ::Monad m => FailReason -> RunT m ()
 logFail res = do
   curTime <- gets mockCurrentSlot
   modify' $ \s -> s {mockFails = appendLog curTime res (mockFails s) }
 
 -- | Log generic error.
-logError :: String -> Run ()
+logError :: Monad m => String -> RunT m ()
 logError = logFail . GenericFail
 
-logInfo :: String -> Run ()
+logInfo ::Monad m => String -> RunT m ()
 logInfo msg = do
   slot <- gets mockCurrentSlot
   modify' $ \s -> s { mockInfo = appendLog slot msg (mockInfo s) }
 
 -- | Igonres log of TXs and info messages during execution (but not errors)
-noLog :: Run a -> Run a
+noLog ::Monad m => RunT m a -> RunT m a
 noLog act = do
   txLog <- gets mockTxs
   infoLog <- gets mockInfo
@@ -464,7 +467,7 @@ noLog act = do
   pure res
 
 -- | Igonres log of TXs during execution
-noLogTx :: Run a -> Run a
+noLogTx ::Monad m => RunT m a -> RunT m a
 noLogTx act = do
   txLog <- gets mockTxs
   res <- act
@@ -472,7 +475,7 @@ noLogTx act = do
   pure res
 
 -- | Igonres log of info level messages during execution
-noLogInfo :: Run a -> Run a
+noLogInfo ::Monad m => RunT m a -> RunT m a
 noLogInfo act = do
   infoLog <- gets mockInfo
   res <- act
@@ -480,14 +483,14 @@ noLogInfo act = do
   pure res
 
 -- | Send block of TXs to blockchain.
-sendBlock :: [Tx] -> Run (Either FailReason [Stat])
+sendBlock ::Monad m => [Tx] -> RunT m (Either FailReason [Stat])
 sendBlock txs = do
   res <- sequence <$> mapM (sendSingleTx . processMints) txs
   when (isRight res) bumpSlot
   pure res
 
 -- | Sends block with single TX to blockchai
-sendTx :: Tx -> Run (Either FailReason Stat)
+sendTx ::Monad m => Tx -> RunT m (Either FailReason Stat)
 sendTx tx = do
   res <- sendSingleTx (processMints tx)
   when (isRight res) bumpSlot
@@ -496,7 +499,7 @@ sendTx tx = do
 {- | Send single TX to blockchain. It logs failure if TX is invalid
  and produces performance stats if TX was ok.
 -}
-sendSingleTx :: Tx -> Run (Either FailReason Stat)
+sendSingleTx ::Monad m => Tx -> RunT m (Either FailReason Stat)
 sendSingleTx tx = do
   genParams <- gets (mockConfigProtocol . mockConfig)
   case genParams of
@@ -505,8 +508,9 @@ sendSingleTx tx = do
 
 -- | Confirms that single TX is valid. Works across several Eras (see @Plutus.Model.Fork.Cardano.Class@)
 checkSingleTx ::
-  forall era .
-  ( Era era,
+  forall era m .
+  ( Monad m,
+    Era era,
     ExtendedUTxO era,
     CBOR.ToCBOR (Core.Tx era),
     HasField "inputs" (Core.TxBody era) (Set (C.TxIn (Crypto era))),
@@ -522,7 +526,7 @@ checkSingleTx ::
     C.HashAnnotated (Core.TxBody era) C.EraIndependentTxBody C.StandardCrypto,
     Class.IsCardanoTx era
   )
-  => Core.PParams era -> Tx -> Run (Either FailReason Stat)
+  => Core.PParams era -> Tx -> RunT m (Either FailReason Stat)
 checkSingleTx params (Tx extra tx) =
   withCheckStaking $
     withCheckRange $
@@ -598,8 +602,8 @@ checkSingleTx params (Tx extra tx) =
     withCheckUnits ::
          Ledger.UTxO era
       -> Core.Tx era
-      -> (Alonzo.ExUnits -> Run (Either FailReason a))
-      -> Run (Either FailReason a)
+      -> (Alonzo.ExUnits -> RunT m (Either FailReason a))
+      -> RunT m (Either FailReason a)
     withCheckUnits utxo txBody cont = do
       slotCfg <- gets (mockConfigSlotConfig . mockConfig)
       let cardanoSystemStart = SystemStart $ posixSecondsToUTCTime $ fromInteger $ (`div` 1000) $ getPOSIXTime $ scSlotZeroTime slotCfg
@@ -669,7 +673,7 @@ compareLimits maxLimits stat = catMaybes
 
 
 -- | Read UTxO relevant to transaction
-getUTxO :: (Class.IsCardanoTx era) => P.Tx -> Run (Maybe (Either String (Ledger.UTxO era)))
+getUTxO :: Monad m => (Class.IsCardanoTx era) => P.Tx -> RunT m (Maybe (Either String (Ledger.UTxO era)))
 getUTxO tx = do
   networkId <- mockConfigNetworkId <$> gets mockConfig
   mOuts <- sequence <$> mapM (getTxOut . Plutus.txInRef) ins
@@ -685,7 +689,7 @@ getUTxO tx = do
     localScriptMap = P.txScripts tx
 
 -- | Reads TxOut by its reference.
-getTxOut :: TxOutRef -> Run (Maybe TxOut)
+getTxOut :: Monad m => TxOutRef -> RunT m (Maybe TxOut)
 getTxOut ref = do
   mTout <- M.lookup ref <$> gets mockUtxos
   case mTout of
@@ -693,15 +697,15 @@ getTxOut ref = do
     Nothing   -> M.lookup ref <$> gets mockRefScripts
 
 -- | Update slot counter by one.
-bumpSlot :: Run ()
+bumpSlot :: Monad m => RunT m ()
 bumpSlot = modify' $ \s -> s {mockCurrentSlot = mockCurrentSlot s + 1}
 
 -- | Makes slot counter of blockchain to move forward on given amount.
-waitNSlots :: Slot -> Run ()
+waitNSlots :: Monad m => Slot -> RunT m ()
 waitNSlots n = modify' $ \s -> s {mockCurrentSlot = mockCurrentSlot s + n}
 
 -- | Applies valid TX to modify blockchain.
-applyTx :: Stat -> TxId -> Tx -> Run ()
+applyTx :: Monad m => Stat -> TxId -> Tx -> RunT m ()
 applyTx stat tid etx@(Tx extra P.Tx {..}) = do
   updateUtxos
   updateRewards
@@ -762,7 +766,7 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
       forM_ (rewardStake (getLovelace txFee) st) $ \nextSt -> modify' $ \mock -> mock { mockStake = nextSt }
 
 -- | Read all TxOutRefs that belong to given address.
-txOutRefAt :: Address -> Run [TxOutRef]
+txOutRefAt :: Monad m => Address -> RunT m [TxOutRef]
 txOutRefAt addr = txOutRefAtState addr <$> get
 
 -- | Read all TxOutRefs that belong to given address.
@@ -770,15 +774,15 @@ txOutRefAtState :: Address -> Mock -> [TxOutRef]
 txOutRefAtState addr st = maybe [] S.toList . M.lookup addr $ mockAddresses st
 
 -- | Get all UTXOs that belong to an address (it does not include reference script UTXOs)
-utxoAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
+utxoAt :: Monad m => HasAddress user => user -> RunT m [(TxOutRef, TxOut)]
 utxoAt addr = utxoAtStateBy mockUtxos addr <$> get
 
 -- | Get all reference script UTXOs that belong to an address
-refScriptAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
+refScriptAt :: Monad m => HasAddress user => user -> RunT m [(TxOutRef, TxOut)]
 refScriptAt addr = utxoAtStateBy mockRefScripts addr <$> get
 
 -- | Reads the first UTXO by address
-withFirstUtxo :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
+withFirstUtxo :: (Monad m, HasAddress user) => user -> ((TxOutRef, TxOut) -> RunT m ()) -> RunT m ()
 withFirstUtxo = withUtxo (const True)
 
 -- | Reads list of UTXOs that belong to address and applies predicate to search for
@@ -787,7 +791,7 @@ withFirstUtxo = withUtxo (const True)
 --
 -- Note that it does not search among UTXOs that store scripts (used for reference scripts).
 -- It's done for convenience.
-withUtxo :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
+withUtxo :: (Monad m, HasAddress user) => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> RunT m ()) -> RunT m ()
 withUtxo isUtxo user cont =
   withMayBy readMsg (L.find isUtxo <$> utxoAt user) cont
   where
@@ -795,7 +799,7 @@ withUtxo isUtxo user cont =
       fmap (\name -> "No UTxO for: " <> name) $ getPrettyAddress user
 
 -- | Reads the first reference script UTXO by address
-withFirstRefScript :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
+withFirstRefScript :: (Monad m, HasAddress user) => user -> ((TxOutRef, TxOut) -> RunT m ()) -> RunT m ()
 withFirstRefScript = withRefScript (const True)
 
 -- | Reads list of reference script UTXOs that belong to address and applies predicate to search for
@@ -804,7 +808,7 @@ withFirstRefScript = withRefScript (const True)
 --
 -- Note that it searches only among UTXOs that store scripts (used for reference scripts).
 -- It's done for convenience.
-withRefScript :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
+withRefScript :: (Monad m, HasAddress user) => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> RunT m ()) -> RunT m ()
 withRefScript isUtxo user cont =
   withMayBy readMsg (L.find isUtxo <$> refScriptAt user) cont
   where
@@ -819,7 +823,7 @@ utxoAtStateBy extract (toAddress -> addr) st =
     refs = txOutRefAtState addr st
 
 -- | Reads both hash and inline datums
-datumAt :: FromData a => TxOutRef -> Run (Maybe a)
+datumAt :: (Monad m, FromData a) => TxOutRef -> RunT m (Maybe a)
 datumAt ref = do
   mdat <- getHashDatum ref
   case mdat of
@@ -827,13 +831,13 @@ datumAt ref = do
     Nothing  -> fmap (getInlineDatum =<< ) $ getTxOut ref
 
 -- | Reads datum with continuation
-withDatum :: FromData a => TxOutRef -> (a -> Run ()) -> Run ()
+withDatum :: (Monad m, FromData a) => TxOutRef -> (a -> RunT m ()) -> RunT m ()
 withDatum ref cont = withMay err (datumAt ref) cont
   where
     err = "No datum for TxOutRef: "<> show ref
 
 -- | Continuation based queries.
-withMay :: String -> Run (Maybe a) -> (a -> Run ()) -> Run ()
+withMay :: Monad m => String -> RunT m (Maybe a) -> (a -> RunT m ()) -> RunT m ()
 withMay msg act cont = do
   mRes <- act
   case mRes of
@@ -842,7 +846,7 @@ withMay msg act cont = do
 
 -- | Continuation based queries with effectful error messages.
 -- It can be useful to read human readable names for addresses, TXs, currency symbols etc.
-withMayBy :: Run String -> Run (Maybe a) -> (a -> Run ()) -> Run ()
+withMayBy :: Monad m => RunT m String -> RunT m (Maybe a) -> (a -> RunT m ()) -> RunT m ()
 withMayBy msg act cont = do
   mRes <- act
   case mRes of
@@ -850,7 +854,7 @@ withMayBy msg act cont = do
     Nothing  -> logError =<< msg
 
 -- | Reads typed datum from blockchain that belongs to UTXO (by reference) by Hash.
-getHashDatum :: FromData a => TxOutRef -> Run (Maybe a)
+getHashDatum :: (Monad m, FromData a) => TxOutRef -> RunT m (Maybe a)
 getHashDatum ref = do
   dhs <- gets mockDatums
   mDh <- (txOutDatumHash =<<) <$> getTxOut ref
@@ -871,23 +875,23 @@ txOutDatumHash tout =
     _                  -> Nothing
 
 -- | Reads current reward amount for a staking credential
-rewardAt :: HasStakingCredential cred => cred -> Run Integer
+rewardAt :: (Monad m, HasStakingCredential cred) => cred -> RunT m Integer
 rewardAt cred = gets (maybe 0 id . lookupReward (toStakingCredential cred) . mockStake)
 
 -- | Returns all stakes delegatged to a pool
-stakesAt :: PoolId -> Run [StakingCredential]
+stakesAt :: Monad m => PoolId -> RunT m [StakingCredential]
 stakesAt (PoolId poolKey) = gets (lookupStakes (PoolId poolKey) . mockStake)
 
 -- | Checks that pool is registered
-hasPool :: PoolId -> Run Bool
+hasPool :: Monad m => PoolId -> RunT m Bool
 hasPool (PoolId pkh) = gets (M.member (PoolId pkh) . stake'pools. mockStake)
 
 -- | Checks that staking credential is registered
-hasStake :: HasStakingCredential a => a -> Run Bool
+hasStake :: (Monad m, HasStakingCredential a) => a -> RunT m Bool
 hasStake key = gets (M.member (toStakingCredential key) . stake'stakes. mockStake)
 
 -- | Read pool ids registered on ledger.
-getPools :: Run [PoolId]
+getPools :: Monad m => RunT m [PoolId]
 getPools = gets (V.toList . stake'poolIds . mockStake)
 
 ----------------------------------------------------------------

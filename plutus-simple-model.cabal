@@ -102,6 +102,7 @@ common deps
     , time
     , text
     , deepseq
+    , transformers
 
 common test-deps
   import:        deps

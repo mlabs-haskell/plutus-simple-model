@@ -45,7 +45,7 @@ initCounterTest = do
   counterVal <- valueAt counterScript
   counterUtxos <- utxoAt counterScript
   let [(counterRef, counterOut)] = counterUtxos
-  mDat <- datumAt @CounterDatum counterRef
+  mDat <- datumAt @_ @CounterDatum counterRef
   pure $
     and
       [ isOk
@@ -91,7 +91,7 @@ increment :: PubKeyHash -> Integer -> Run Bool
 increment pkh inc = checkBalance (pkh `owns` mempty <> counterScript `owns` mempty) $ do
   utxos <- utxoAt counterScript
   let [(counterRef, counterOut)] = utxos
-  mDat <- datumAt @CounterDatum counterRef
+  mDat <- datumAt @_ @CounterDatum counterRef
   case mDat of
     Just dat -> do
       tx <- signTx pkh $ incrementTx counterRef (txOutValue counterOut) dat inc

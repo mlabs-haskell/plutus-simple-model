@@ -41,7 +41,7 @@ initGuessGame = do
   initGame u1 prize answer
   gameUtxos <- utxoAt gameScript
   let [(gameRef, _gameOut)] = gameUtxos
-  mDat <- datumAt @GameDatum gameRef
+  mDat <- datumAt @_ @GameDatum gameRef
   unless (mDat == Just (GuessHash $ Plutus.sha2_256 answer)) $
     logError "Constraints violated"
 
@@ -85,7 +85,7 @@ guess :: PubKeyHash -> BuiltinByteString -> Run Bool
 guess pkh answer = do
   utxos <- utxoAt gameScript
   let [(gameRef, gameOut)] = utxos
-  mDat <- datumAt @GameDatum gameRef
+  mDat <- datumAt @_ @GameDatum gameRef
   case mDat of
     Just dat -> checkBalance (gives gameScript (txOutValue gameOut) pkh) $ do
       tx <- signTx pkh $ guessTx pkh gameRef (txOutValue gameOut) dat answer

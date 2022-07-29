@@ -154,7 +154,7 @@ import Plutus.Model.Ada (Ada(..))
  should have those funds otherwise it will fail. Allocation of the funds
  for admin happens at the function @initMock@.
 -}
-newUser :: Value -> Run PubKeyHash
+newUser ::Monad m => Value -> RunT m PubKeyHash
 newUser val = do
   pkh <- emptyUser
   when (val /= mempty) $ do
@@ -173,7 +173,7 @@ newUser val = do
       pure pkh
 
 -- | Sends value from one user to another.
-sendValue :: PubKeyHash -> Value -> PubKeyHash -> Run ()
+sendValue ::Monad m => PubKeyHash -> Value -> PubKeyHash -> RunT m ()
 sendValue fromPkh amt toPkh = do
   mVal <- spend' fromPkh amt
   case mVal of
@@ -183,7 +183,7 @@ sendValue fromPkh amt toPkh = do
     toTx sp = userSpend sp <> payToKey toPkh amt
 
 -- | Spend or fail if there are no funds
-withSpend :: PubKeyHash -> Value -> (UserSpend -> Run ()) -> Run ()
+withSpend ::Monad m => PubKeyHash -> Value -> (UserSpend -> RunT m ()) -> RunT m ()
 withSpend pkh val cont = do
   mUsp <- spend' pkh val
   case mUsp of
@@ -191,18 +191,18 @@ withSpend pkh val cont = do
     Nothing  -> logError "No funds for user to spend"
 
 -- | Signs transaction and sends it ignoring the result stats.
-submitTx :: PubKeyHash -> Tx -> Run ()
+submitTx ::Monad m => PubKeyHash -> Tx -> RunT m ()
 submitTx pkh tx = void $ sendTx =<< signTx pkh tx
 
 ------------------------------------------------------------------------
 -- query blockchain
 
 -- | Current slot of blockchain.
-currentSlot :: Run Slot
+currentSlot :: Monad m => RunT m Slot
 currentSlot = gets mockCurrentSlot
 
 -- | Current time of blockchain
-currentTime :: Run POSIXTime
+currentTime :: Monad m => RunT m POSIXTime
 currentTime = do
   slotCfg <- gets (mockConfigSlotConfig . mockConfig)
   slotToEndPOSIXTime slotCfg <$> currentSlot
@@ -210,7 +210,7 @@ currentTime = do
 {- | Waits for specified amount of time.
  It makes blockchain to progress corresponding number of slots.
 -}
-wait :: POSIXTime -> Run ()
+wait :: Monad m => POSIXTime -> RunT m ()
 wait time = do
   slotCfg <- gets (mockConfigSlotConfig . mockConfig)
   waitNSlots $ posixTimeToEnclosingSlot slotCfg time
@@ -218,22 +218,22 @@ wait time = do
 {- | Waits until the specified time.
  It makes blockchain to progress corresponding number of slots.
 -}
-waitUntil :: POSIXTime -> Run ()
+waitUntil :: Monad m => POSIXTime -> RunT m ()
 waitUntil time = do
   slot <- currentSlot
   slotCfg <- gets (mockConfigSlotConfig . mockConfig)
   waitNSlots $ posixTimeToEnclosingSlot slotCfg time - slot
 
 -- | blockhain runs without errors, all submited transactions were accepted.
-noErrors :: Run Bool
+noErrors :: Monad m => RunT m Bool
 noErrors = nullLog <$> gets mockFails
 
 -- | Get total value on the address or user by @PubKeyHash@ (but not on reference script UTXOs).
-valueAt :: HasAddress user => user -> Run Value
+valueAt :: (Monad m, HasAddress user) => user -> RunT m Value
 valueAt user = foldMap (txOutValue . snd) <$> utxoAt user
 
 -- | Get total value on the address or user by address on reference script UTXOs.
-refValueAt :: HasAddress user => user -> Run Value
+refValueAt :: (Monad m, HasAddress user) => user -> RunT m Value
 refValueAt user = foldMap (txOutValue . snd) <$> refScriptAt user
 
 valueAtState :: HasAddress user => user -> Mock -> Value
@@ -260,7 +260,7 @@ getHeadRef :: UserSpend -> TxOutRef
 getHeadRef UserSpend{..} = Fork.txInRef $ S.elemAt 0 userSpend'inputs
 
 -- | Variant of spend' that fails in run-time if there are not enough funds to spend.
-spend :: PubKeyHash -> Value -> Run UserSpend
+spend :: Monad m => PubKeyHash -> Value -> RunT m UserSpend
 spend pkh val = do
   mSp <- spend' pkh val
   pure $ fromJust mSp
@@ -271,7 +271,7 @@ spend pkh val = do
  We can only spend by submitting TXs, so if you run it twice
  it will choose from the same set of UTXOs.
 -}
-spend' :: PubKeyHash -> Value -> Run (Maybe UserSpend)
+spend' :: Monad m => PubKeyHash -> Value -> RunT m (Maybe UserSpend)
 spend' pkh expected = do
   refs <- txOutRefAt (pubKeyHashAddress pkh)
   mUtxos <- fmap (\m -> mapM (\r -> (r,) <$> M.lookup r m) refs) $ gets mockUtxos
@@ -524,7 +524,7 @@ mintValue (TypedPolicy policy) redeemer val =
   mintTx (Mint val (Redeemer $ toBuiltinData redeemer) policy)
 
 -- | Set validation time
-validateIn :: POSIXTimeRange -> Tx -> Run Tx
+validateIn :: Monad m => POSIXTimeRange -> Tx -> RunT m Tx
 validateIn times = updatePlutusTx $ \tx -> do
   slotCfg <- gets (mockConfigSlotConfig . mockConfig)
   pure $
@@ -561,25 +561,25 @@ txBoxValue :: TxBox a -> Value
 txBoxValue = txOutValue . txBoxOut
 
 -- | Read UTXOs with datums.
-boxAt :: (IsValidator script) => script -> Run [TxBox script]
+boxAt :: (Monad m, IsValidator script) => script -> RunT m [TxBox script]
 boxAt addr = do
   utxos <- utxoAt (toAddress addr)
   fmap catMaybes $ mapM (\(ref, tout) -> fmap (\dat -> TxBox ref tout dat) <$> datumAt ref) utxos
 
 -- | It expects that Typed validator can have only one UTXO
 -- which is NFT.
-nftAt :: IsValidator script => script -> Run (TxBox script)
+nftAt :: (Monad m, IsValidator script) => script -> RunT m (TxBox script)
 nftAt tv = head <$> boxAt tv
 
 -- | Safe query for single Box
-withBox :: IsValidator script => (TxBox script -> Bool) -> script -> (TxBox script -> Run ()) -> Run ()
+withBox ::(Monad m , IsValidator script) => (TxBox script -> Bool) -> script -> (TxBox script -> RunT m ()) -> RunT m ()
 withBox isBox script cont =
   withMayBy readMsg (L.find isBox <$> boxAt script) cont
   where
     readMsg = ("No UTxO box for: " <> ) <$> getPrettyAddress (toAddress script)
 
 -- | Reads single box from the list. we expect NFT to be a single UTXO for a given script.
-withNft :: IsValidator script => script -> (TxBox script -> Run ()) -> Run ()
+withNft :: (Monad m, IsValidator script) => script -> (TxBox script -> RunT m ()) -> RunT m ()
 withNft = withBox (const True)
 
 ----------------------------------------------------------------------
@@ -616,15 +616,15 @@ weeks n = days (7 * n)
 -- while preserving logs. If the action succeeds, logs an error as we expect
 -- it to fail. Use 'mustFailWith' and 'mustFailWithBlock' to provide custom
 -- error message or/and failure action name.
-mustFail :: Run a -> Run ()
+mustFail :: Monad m=> RunT m a -> RunT m ()
 mustFail = mustFailWith  "Expected action to fail but it succeeds"
 
 -- | The same as 'mustFail', but takes custom error message.
-mustFailWith :: String -> Run a -> Run ()
+mustFailWith :: Monad m => String -> RunT m a -> RunT m ()
 mustFailWith = mustFailWithName "Unnamed failure action"
 
 -- | The same as 'mustFail', but takes action name and custom error message.
-mustFailWithName :: String -> String -> Run a -> Run ()
+mustFailWithName :: Monad m => String -> String -> RunT m a -> RunT m ()
 mustFailWithName name msg act = do
   st <- get
   preFails <- getFails
@@ -644,7 +644,7 @@ mustFailWithName name msg act = do
 
 -- | Checks that script runs without errors and returns pretty printed failure
 -- if something bad happens.
-checkErrors :: Run (Maybe String)
+checkErrors :: Monad m => RunT m (Maybe String)
 checkErrors = do
   failures <- fromLog <$> getFails
   names <- gets mockNames
@@ -667,22 +667,22 @@ testNoErrorsTrace funds cfg msg act =
     mockLog = "\nBlockchain log :\n----------------\n" <> ppMockEvent (mockNames mock) (getLog mock)
 
 -- | Logs the blockchain state, i.e. balance sheet in the log
-logBalanceSheet :: Run ()
+logBalanceSheet :: Monad m => RunT m ()
 logBalanceSheet =
   modify' $ \s -> s { mockInfo = appendLog (mockCurrentSlot s) (ppBalanceSheet s) (mockInfo s) }
 
 testNoErrors :: Value -> MockConfig -> String -> Run a -> TestTree
-testNoErrors funds cfg msg act =
-   testCase msg $ maybe (pure ()) assertFailure $
-    fst (runMock (act >> checkErrors) (initMock cfg funds))
+testNoErrors funds cfg msg act = 
+    testCase msg $ maybe (pure ()) assertFailure $
+      fst (runMock (act >> checkErrors) (initMock cfg funds))
 
 -- | check transaction limits
 testLimits :: Value -> MockConfig -> String -> (Log TxStat -> Log TxStat) -> Run a -> TestTree
-testLimits initFunds cfg msg tfmLog act =
-  testCase msg $ assertBool limitLog isOk
-  where
-    (isOk, mock) = runMock (act >> noErrors) (initMock (warnLimits cfg) initFunds)
-    limitLog = ppLimitInfo (mockNames mock) $ tfmLog $ mockTxs mock
+testLimits initFunds cfg msg tfmLog act = 
+    testCase msg $ assertBool limitLog isOk
+    where
+      (isOk, mock) = runMock (act >> noErrors) (initMock (warnLimits cfg) initFunds)
+      limitLog = ppLimitInfo (mockNames mock) $ tfmLog $ mockTxs mock
 
 ----------------------------------------------------------------------
 -- balance diff
@@ -697,11 +697,11 @@ instance Monoid BalanceDiff where
   mempty = BalanceDiff mempty
 
 -- | Checks that after execution of an action balances changed in certain way
-checkBalance :: BalanceDiff -> Run a -> Run a
+checkBalance :: Monad m => BalanceDiff -> RunT m a -> RunT m a
 checkBalance diff = checkBalanceBy (const diff)
 
 -- | Checks that after execution of an action balances changed in certain way
-checkBalanceBy :: (a -> BalanceDiff) -> Run a -> Run a
+checkBalanceBy :: Monad m => (a -> BalanceDiff) -> RunT m a -> RunT m a
 checkBalanceBy getDiffs act = do
   beforeSt <- get
   res <- act
@@ -712,7 +712,7 @@ checkBalanceBy getDiffs act = do
   mapM_ (logError . show . vcat <=< mapM ppError) (check addrs diffs before after)
   pure res
   where
-    ppError :: (Address, Value, Value) -> Run (Doc ann)
+    ppError ::Monad m => (Address, Value, Value) -> RunT m (Doc ann)
     ppError (addr, expected, got) = do
       names <- gets mockNames
       let addrName = maybe (pretty addr) pretty $ readAddressName names addr
@@ -817,12 +817,12 @@ registerPool (PoolId pkh) = certTx $
   Certificate (DCertPoolRegister pkh pkh) Nothing
 
 -- | Insert pool id to the list of stake pools
-insertPool :: PoolId -> Run ()
+insertPool :: Monad m => PoolId -> RunT m ()
 insertPool pid = modify' $ \st ->
   st { mockStake = Stake.regPool pid $ mockStake st }
 
 -- | delete pool from the list of stake pools
-deletePool :: PoolId -> Run ()
+deletePool :: Monad m => PoolId -> RunT m ()
 deletePool pid = modify' $ \st ->
   st { mockStake = Stake.retirePool pid $ mockStake st }
 

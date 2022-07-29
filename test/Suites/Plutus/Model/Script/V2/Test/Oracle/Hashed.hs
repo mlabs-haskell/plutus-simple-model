@@ -139,7 +139,7 @@ victoryBy :: Fraud -> App -> PubKeyHash -> PubKeyHash -> Run ()
 victoryBy Fraud{..} app@App{..} user oracle =
   withUtxo (hasOracleDatum . snd) oracle $ \(oracleRef, _) -> do
     betBox <- getBet app
-    withDatum @AnswerDatum oracleRef $ \oracleDatum ->
+    withDatum @_ @AnswerDatum oracleRef $ \oracleDatum ->
       submitTx user $ victoryTx oracleRef betBox oracleDatum
   where
     victoryTx oracleRef betBox oracleDatum =
