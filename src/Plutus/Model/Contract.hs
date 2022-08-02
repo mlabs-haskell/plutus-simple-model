@@ -678,7 +678,10 @@ testNoErrorsTrace :: Value -> MockConfig -> String -> Run a -> TestTree
 testNoErrorsTrace funds cfg msg act = testCaseInfo msg $ fmap snd . runIdentity $ testNoErrorsTraceHelper funds cfg act
 
 -- | This is a low level function that helps to prevent code repetition in client's code.
--- It is the core of the `testNoErrorsTrace` function.
+-- It is the core of the `testNoErrorsTrace` function and should be passed into the `testCaseInfo` function or any other
+-- test function that works with asserts.
+-- The return value has an additional String that should be concatenated to the log resulting from the `m` monad effect 
+-- and passed to the `testCaseInfo` function.
 testNoErrorsTraceHelper :: Monad m => Value -> MockConfig -> RunT m a -> m (IO (a, String))
 testNoErrorsTraceHelper funds cfg act = result
   where
@@ -695,7 +698,8 @@ testNoErrors :: Value -> MockConfig -> String -> Run a -> TestTree
 testNoErrors funds cfg msg act = testCase msg $ void . runIdentity $ testNoErrorsHelper funds cfg act
 
 -- | This is a low level function that helps to prevent code repetition in client's code.
--- It is the core of the `testNoErrors` function.
+-- It is the core of the `testNoErrors` function and should be passed into the `testCase` function or any other
+-- test function that works with asserts.
 testNoErrorsHelper :: Monad m => Value -> MockConfig -> RunT m a -> m (IO a)
 testNoErrorsHelper funds cfg act = result
   where
@@ -707,7 +711,8 @@ testLimits :: Value -> MockConfig -> String -> (Log TxStat -> Log TxStat) -> Run
 testLimits initFunds cfg msg tfmLog act = testCase msg $ void . runIdentity $ testLimitsHelper initFunds cfg tfmLog act
 
 -- | This is a low level function that helps to prevent code repetition in client's code.
--- It is the core of the `testLimits` function.
+-- It is the core of the `testLimits` function and should be passed into the `testCase` function or any other
+-- test function that works with asserts.
 testLimitsHelper :: Monad m => Value -> MockConfig -> (Log TxStat -> Log TxStat) -> RunT m a -> m (IO a)
 testLimitsHelper initFunds cfg tfmLog act = result >>= (\((res, isOk), limitLog) -> pure $ assertBool limitLog isOk >> pure res)
   where
