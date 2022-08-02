@@ -93,6 +93,8 @@ module Plutus.Model.Contract (
   minutes,
   seconds,
   millis,
+  currentTimeInterval,
+  currentTimeRad,
 
   -- * testing helpers
   mustFail,
@@ -131,6 +133,7 @@ import Test.Tasty.HUnit
 
 import Plutus.Model.Fork.Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
 import Plutus.V1.Ledger.Address
+import Plutus.V1.Ledger.Interval (interval)
 import Plutus.V2.Ledger.Api hiding (Map)
 import Plutus.V1.Ledger.Value
 import PlutusTx.Prelude qualified as Plutus
@@ -608,6 +611,16 @@ days n = hours (24 * n)
 -- | Convert amount of weeks to POSIXTime
 weeks :: Integer -> POSIXTime
 weeks n = days (7 * n)
+
+-- | places interval around current time
+currentTimeInterval :: POSIXTime -> POSIXTime -> Run POSIXTimeRange
+currentTimeInterval minTime maxTime = do
+  time <- currentTime
+  pure $ interval (time + minTime) (time + maxTime)
+
+-- | Valid time range with given radius around current time
+currentTimeRad :: POSIXTime -> Run POSIXTimeRange
+currentTimeRad timeRad = currentTimeInterval (negate timeRad) timeRad
 
 ----------------------------------------------------------------------
 -- testing helpers

@@ -4,7 +4,12 @@ module Plutus.Model.Validator(
   TypedPolicy(..),
   TypedStake(..),
   IsValidator(..),
+  -- * Versioned
   Versioned(..),
+  toV1,
+  toV2,
+  isV1,
+  isV2,
   toVersionedScript,
 
   -- * Hashes
@@ -31,7 +36,7 @@ import Plutus.Model.Mock (
   HasStakingCredential(..),
   )
 import Plutus.Model.Fork.TxExtra qualified as Fork
-import Plutus.Model.Fork.Ledger.Scripts (Versioned(..), dataHash, datumHash, redeemerHash)
+import Plutus.Model.Fork.Ledger.Scripts (Versioned(..), dataHash, datumHash, redeemerHash, toV1, toV2, isV1, isV2)
 import Plutus.Model.Fork.Ledger.Scripts qualified as Fork
 
 -- | Class for typed vlaidators with versioning by Plutus language
