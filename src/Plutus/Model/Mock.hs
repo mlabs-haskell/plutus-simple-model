@@ -51,6 +51,7 @@ module Plutus.Model.Mock (
   RunT (..),
   Run,
   runMock,
+  runMock',
   initMock,
   Percent(..),
   toPercent,
@@ -353,7 +354,10 @@ getMainUser = pure $ userPubKeyHash $ intToUser 0
 
 -- | Run blockchain.
 runMock :: Run a -> Mock -> (a, Mock)
-runMock (RunT act) = runIdentity . runStateT act
+runMock act = runIdentity . runMock' act
+
+runMock' :: RunT m a -> Mock -> m (a, Mock) 
+runMock' (RunT act) = runStateT act 
 
 -- | Init blockchain state.
 initMock :: MockConfig -> Value -> Mock
