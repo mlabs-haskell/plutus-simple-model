@@ -4,6 +4,7 @@ module Plutus.Model.Mock.Address(
   HasStakingCredential(..),
   AppendStaking(..),
   appendStakingCredential,
+  appendCredential,
   appendStakingPubKey,
   appendStakingScript,
 ) where
@@ -46,15 +47,27 @@ instance HasAddress a => HasAddress (AppendStaking a) where
     where
       appendStake addr = addr { addressStakingCredential = Just stakeCred }
 
+-- | Appends staking credential to a script
+appendStakingCredential :: StakingCredential -> script -> AppendStaking script
+appendStakingCredential sCred script =
+  case sCred of
+    StakingHash cred ->
+      case cred of
+        PubKeyCredential pkh ->
+          appendStakingPubKey pkh script
+        ScriptCredential (ValidatorHash hash) ->
+          appendStakingScript (StakeValidatorHash hash) script
+    StakingPtr {} -> error "StakingPtr is not supported"
+
 -- | Append staking credential info
-appendStakingCredential :: Credential -> a -> AppendStaking a
-appendStakingCredential cred = AppendStaking (StakingHash cred)
+appendCredential :: Credential -> a -> AppendStaking a
+appendCredential cred = AppendStaking (StakingHash cred)
 
 -- | Append staking public key info
 appendStakingPubKey :: PubKeyHash -> a -> AppendStaking a
-appendStakingPubKey pkh = appendStakingCredential (PubKeyCredential pkh)
+appendStakingPubKey pkh = appendCredential (PubKeyCredential pkh)
 
 -- | Append staking script info
 appendStakingScript :: StakeValidatorHash -> a -> AppendStaking a
-appendStakingScript sh = appendStakingCredential (ScriptCredential $ coerce sh)
+appendStakingScript sh = appendCredential (ScriptCredential $ coerce sh)
 
