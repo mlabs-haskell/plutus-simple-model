@@ -177,8 +177,8 @@ The following code snippet shows the use case closer:
 ```haskell
 type MyRun a = RunT IO a
 
-checkMyRun :: MockConfig -> Value -> String -> MyRun () -> TestTree
-checkMyRun cfg initialFunds = testNoErrors' join initialFunds cfg
+checkMyRun :: Value -> MockConfig -> String -> MyRun () -> TestTree
+checkMyRun = testNoErrors' join
 
 test1 :: MyRun ()
 test1 = do
@@ -197,7 +197,7 @@ test1 = do
   lift $ val @=? Ada.lovelaceValueOf minLovelacesPerUtxo
 
 tests :: MockConfig -> TestTree
-tests = checkMyRun cfg (Ada.lovelaceValueOf 10_000_000) "Test 1" test1
+tests = checkMyRun (Ada.lovelaceValueOf 10_000_000) cfg "Test 1" test1
 ```
 
 ### Testing with tasty
