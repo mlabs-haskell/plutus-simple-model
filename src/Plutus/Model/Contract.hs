@@ -102,11 +102,11 @@ module Plutus.Model.Contract (
   mustFailWithName,
   checkErrors,
   testNoErrors,
-  testNoErrors',
+  testNoErrorsHelper,
   testNoErrorsTrace,
-  testNoErrorsTrace',
+  testNoErrorsTraceHelper,
   testLimits,
-  testLimits',
+  testLimitsHelper,
   logBalanceSheet,
 
   -- * balance checks
@@ -675,11 +675,12 @@ checkErrors = do
 -- between those two is using @tasty@ 'askOption'. To pull in
 -- parameters use an 'Ingredient' built with 'includingOptions'.
 testNoErrorsTrace :: Value -> MockConfig -> String -> Run a -> TestTree
-testNoErrorsTrace = testNoErrorsTrace' (fmap snd . runIdentity)
+testNoErrorsTrace funds cfg msg act = testCaseInfo msg $ fmap snd . runIdentity $ testNoErrorsTraceHelper funds cfg act
 
-testNoErrorsTrace' :: Monad m => (m (IO (a, String)) -> IO String) -> Value -> MockConfig -> String -> RunT m a -> TestTree
-testNoErrorsTrace' f funds cfg msg act =
-  testCaseInfo msg $ f result
+-- | This is a low level function that helps to prevent code repetition in client's code.
+-- It is the core of the `testNoErrorsTrace` function.
+testNoErrorsTraceHelper :: Monad m => Value -> MockConfig -> RunT m a -> m (IO (a, String))
+testNoErrorsTraceHelper funds cfg act = result
   where
     result = runMock' (act >>= (\a -> (a,) <$> checkErrors)) (initMock cfg funds)
         >>= (\((res, errors), mock) -> pure (res, errors, "\nBlockchain log :\n----------------\n" <> ppMockEvent (mockNames mock) (getLog mock)))
@@ -691,26 +692,27 @@ logBalanceSheet =
   modify' $ \s -> s { mockInfo = appendLog (mockCurrentSlot s) (ppBalanceSheet s) (mockInfo s) }
 
 testNoErrors :: Value -> MockConfig -> String -> Run a -> TestTree
-testNoErrors = testNoErrors' (void . runIdentity)
+testNoErrors funds cfg msg act = testCase msg $ void . runIdentity $ testNoErrorsHelper funds cfg act
 
-testNoErrors' :: Monad m => (m (IO a) -> IO ()) -> Value -> MockConfig -> String -> RunT m a -> TestTree
-testNoErrors' f funds cfg msg act =
-  testCase msg $ f result
+-- | This is a low level function that helps to prevent code repetition in client's code.
+-- It is the core of the `testNoErrors` function.
+testNoErrorsHelper :: Monad m => Value -> MockConfig -> RunT m a -> m (IO a)
+testNoErrorsHelper funds cfg act = result
   where
     result = runMock' (act >>= (\a -> (a,) <$> checkErrors)) (initMock cfg funds)
         >>= (\((res, err), _) -> pure $ maybe (pure res) assertFailure err)
 
 -- | check transaction limits
 testLimits :: Value -> MockConfig -> String -> (Log TxStat -> Log TxStat) -> Run a -> TestTree
-testLimits = testLimits' (void . runIdentity)
+testLimits initFunds cfg msg tfmLog act = testCase msg $ void . runIdentity $ testLimitsHelper initFunds cfg tfmLog act
 
-testLimits' :: Monad m => (m (IO a) -> IO ()) -> Value -> MockConfig -> String -> (Log TxStat -> Log TxStat) -> RunT m a -> TestTree
-testLimits' f initFunds cfg msg tfmLog act =
-  testCase msg $ f result
+-- | This is a low level function that helps to prevent code repetition in client's code.
+-- It is the core of the `testLimits` function.
+testLimitsHelper :: Monad m => Value -> MockConfig -> (Log TxStat -> Log TxStat) -> RunT m a -> m (IO a)
+testLimitsHelper initFunds cfg tfmLog act = result >>= (\((res, isOk), limitLog) -> pure $ assertBool limitLog isOk >> pure res)
   where
     result = runMock' (act >>= (\a -> (a,) <$> noErrors)) (initMock (warnLimits cfg) initFunds)
         >>= (\(res, mock) -> pure (res, ppLimitInfo (mockNames mock) $ tfmLog $ mockTxs mock))
-        >>= (\((res, isOk), limitLog) -> pure $ assertBool limitLog isOk >> pure res)
 
 ----------------------------------------------------------------------
 -- balance diff

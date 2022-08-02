@@ -177,8 +177,8 @@ The following code snippet shows the use case closer:
 ```haskell
 type MyRun a = RunT IO a
 
-checkMyRun :: Value -> MockConfig -> String -> MyRun () -> TestTree
-checkMyRun = testNoErrors' join
+checkMyRun :: Value -> MockConfig -> String -> RunT IO () -> TestTree
+checkMyRun initialFunds cfg msg run = testCase msg $ join $ testNoErrorsHelper initialFunds cfg run
 
 test1 :: MyRun ()
 test1 = do
