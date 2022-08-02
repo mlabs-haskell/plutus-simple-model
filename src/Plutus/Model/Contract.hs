@@ -618,13 +618,13 @@ weeks :: Integer -> POSIXTime
 weeks n = days (7 * n)
 
 -- | places interval around current time
-currentTimeInterval :: POSIXTime -> POSIXTime -> Run POSIXTimeRange
+currentTimeInterval :: Monad m => POSIXTime -> POSIXTime -> RunT m POSIXTimeRange
 currentTimeInterval minTime maxTime = do
   time <- currentTime
   pure $ interval (time + minTime) (time + maxTime)
 
 -- | Valid time range with given radius around current time
-currentTimeRad :: POSIXTime -> Run POSIXTimeRange
+currentTimeRad :: Monad m => POSIXTime -> RunT m POSIXTimeRange
 currentTimeRad timeRad = currentTimeInterval (negate timeRad) timeRad
 
 ----------------------------------------------------------------------
