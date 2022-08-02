@@ -153,6 +153,59 @@ valueAt :: HasAddress addr => addr -> Run Value
 
 Complete working example of user exchange can be found at test suites (see `Suites.Plutus.Model.User`)
 
+### `Run` and `RunT` monad
+
+`Run` is a `RunT Identity` under the hood. 
+The definition of `RunT` is the following:
+
+```haskell
+newtype RunT m a = RunT (StateT Mock m a)
+```
+
+`RunT` is also exported from the library. 
+Most of the core API functions use the `RunT` monad transformer.
+
+This adds the possibility for the end user to add capabilities by introducing a custom `RunT` transformer stack.
+Example for such use cases are the following:
+
+- Using `type MyRun a = RunT Reader a` as the custom `RunT` monad to add the capability to distribute configuration in the `RunT`.
+- Using `type MyRun a = RunT IO a` for the capability to do `IO` stuff in `RunT`.
+
+A possible reason to introduce `IO` to the transformer stack is to have the possibility to do `HUnit` asserts.
+The following code snippet shows the use case closer:
+
+```haskell
+type MyRun a = RunT IO a
+
+checkMyRun :: MockConfig -> V2.Value -> String -> MyRun () -> TestTree
+checkMyRun cfg initialFunds msg run =
+  testCase msg $
+    runMyRun (run >>= (\a -> (a,) <$> checkErrors)) (initMock cfg initialFunds)
+      >>= (\((assertion, errs), _) -> maybe (pure assertion) assertFailure errs)
+
+runMyRun :: MyRun a -> Mock -> IO (a, Mock)
+runMyRun (RunT act) = runStateT act
+
+test1 :: MyRun ()
+test1 = do
+  user <- getMainUser
+  sp <- spend user (Ada.lovelaceValueOf minLovelacesPerUtxo)
+  void $
+    signTx
+      user
+      ( mconcat
+          [ userSpend sp,
+            payToScript myScript (HashDatum ()) (Ada.lovelaceValueOf minLovelacesPerUtxo)
+          ]
+      )
+      >>= sendTx
+  val <- valueAt myScript
+  lift $ val @=? Ada.lovelaceValueOf minLovelacesPerUtxo
+
+tests :: MockConfig -> TestTree
+tests = checkMyRun cfg (Ada.lovelaceValueOf 10_000_000) "Test 1" test1
+```
+
 ### Testing with tasty
 
 In real unit test suite we are likely to use `tasty` to create tests. Fo that we have
