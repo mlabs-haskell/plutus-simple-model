@@ -177,14 +177,8 @@ The following code snippet shows the use case closer:
 ```haskell
 type MyRun a = RunT IO a
 
-checkMyRun :: MockConfig -> V2.Value -> String -> MyRun () -> TestTree
-checkMyRun cfg initialFunds msg run =
-  testCase msg $
-    runMyRun (run >>= (\a -> (a,) <$> checkErrors)) (initMock cfg initialFunds)
-      >>= (\((assertion, errs), _) -> maybe (pure assertion) assertFailure errs)
-
-runMyRun :: MyRun a -> Mock -> IO (a, Mock)
-runMyRun (RunT act) = runStateT act
+checkMyRun :: MockConfig -> Value -> String -> MyRun () -> TestTree
+checkMyRun cfg initialFunds = testNoErrors' join initialFunds cfg
 
 test1 :: MyRun ()
 test1 = do

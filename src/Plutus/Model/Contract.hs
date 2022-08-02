@@ -1,5 +1,4 @@
 {-# LANGUAGE UndecidableInstances #-}
-{-# LANGUAGE RankNTypes #-}
 -- | Functions to create TXs and query blockchain model.
 module Plutus.Model.Contract (
   -- * Modify blockchain
@@ -676,17 +675,15 @@ checkErrors = do
 -- between those two is using @tasty@ 'askOption'. To pull in
 -- parameters use an 'Ingredient' built with 'includingOptions'.
 testNoErrorsTrace :: Value -> MockConfig -> String -> Run a -> TestTree
-testNoErrorsTrace = testNoErrorsTrace' (pure . runIdentity)
+testNoErrorsTrace = testNoErrorsTrace' (fmap snd . runIdentity)
 
-testNoErrorsTrace' :: Monad m => (forall b. (m b -> IO b)) -> Value -> MockConfig -> String -> RunT m a -> TestTree
+testNoErrorsTrace' :: Monad m => (m (IO (a, String)) -> IO String) -> Value -> MockConfig -> String -> RunT m a -> TestTree
 testNoErrorsTrace' f funds cfg msg act =
-  testCaseInfo msg $ f res 
-    >>= (\(errors, mockLog) -> 
-      maybe (pure mockLog) 
-        assertFailure $ errors >>= \errs -> pure $ errs <> mockLog)
+  testCaseInfo msg $ f result
   where
-    res = runMock' (act >> checkErrors) (initMock cfg funds) 
-        >>= (\(errors, mock) -> pure (errors, "\nBlockchain log :\n----------------\n" <> ppMockEvent (mockNames mock) (getLog mock)))
+    result = runMock' (act >>= (\a -> (a,) <$> checkErrors)) (initMock cfg funds)
+        >>= (\((res, errors), mock) -> pure (res, errors, "\nBlockchain log :\n----------------\n" <> ppMockEvent (mockNames mock) (getLog mock)))
+        >>= (\(res, errors, mockLog) -> pure $ maybe (pure (res, mockLog)) assertFailure (errors >>= \errs -> pure $ errs <> mockLog))
 
 -- | Logs the blockchain state, i.e. balance sheet in the log
 logBalanceSheet :: Monad m => RunT m ()
@@ -694,23 +691,26 @@ logBalanceSheet =
   modify' $ \s -> s { mockInfo = appendLog (mockCurrentSlot s) (ppBalanceSheet s) (mockInfo s) }
 
 testNoErrors :: Value -> MockConfig -> String -> Run a -> TestTree
-testNoErrors = testNoErrors' (pure . runIdentity)
+testNoErrors = testNoErrors' (void . runIdentity)
 
-testNoErrors' :: Monad m => (forall b. (m b -> IO b)) -> Value -> MockConfig -> String -> RunT m a -> TestTree
+testNoErrors' :: Monad m => (m (IO a) -> IO ()) -> Value -> MockConfig -> String -> RunT m a -> TestTree
 testNoErrors' f funds cfg msg act =
-  testCase msg $ join . f $ maybe (pure ()) assertFailure <$> 
-    fmap fst (runMock' (act >> checkErrors) (initMock cfg funds))
+  testCase msg $ f result
+  where
+    result = runMock' (act >>= (\a -> (a,) <$> checkErrors)) (initMock cfg funds)
+        >>= (\((res, err), _) -> pure $ maybe (pure res) assertFailure err)
 
 -- | check transaction limits
 testLimits :: Value -> MockConfig -> String -> (Log TxStat -> Log TxStat) -> Run a -> TestTree
-testLimits = testLimits' (pure . runIdentity)
+testLimits = testLimits' (void . runIdentity)
 
-testLimits' :: Monad m => (forall b. (m b -> IO b)) -> Value -> MockConfig -> String -> (Log TxStat -> Log TxStat) -> RunT m a -> TestTree
+testLimits' :: Monad m => (m (IO a) -> IO ()) -> Value -> MockConfig -> String -> (Log TxStat -> Log TxStat) -> RunT m a -> TestTree
 testLimits' f initFunds cfg msg tfmLog act =
-  testCase msg $ f res >>= (\(isOk, limitLog) -> assertBool limitLog isOk)
+  testCase msg $ f result
   where
-    res = runMock' (act >> noErrors) (initMock (warnLimits cfg) initFunds)
-        >>= (\(isOk, mock) -> pure (isOk, ppLimitInfo (mockNames mock) $ tfmLog $ mockTxs mock))
+    result = runMock' (act >>= (\a -> (a,) <$> noErrors)) (initMock (warnLimits cfg) initFunds)
+        >>= (\(res, mock) -> pure (res, ppLimitInfo (mockNames mock) $ tfmLog $ mockTxs mock))
+        >>= (\((res, isOk), limitLog) -> pure $ assertBool limitLog isOk >> pure res)
 
 ----------------------------------------------------------------------
 -- balance diff
