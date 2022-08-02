@@ -154,7 +154,7 @@ import Plutus.Model.Ada (Ada(..))
  should have those funds otherwise it will fail. Allocation of the funds
  for admin happens at the function @initMock@.
 -}
-newUser ::Monad m => Value -> RunT m PubKeyHash
+newUser :: Monad m => Value -> RunT m PubKeyHash
 newUser val = do
   pkh <- emptyUser
   when (val /= mempty) $ do
@@ -173,7 +173,7 @@ newUser val = do
       pure pkh
 
 -- | Sends value from one user to another.
-sendValue ::Monad m => PubKeyHash -> Value -> PubKeyHash -> RunT m ()
+sendValue :: Monad m => PubKeyHash -> Value -> PubKeyHash -> RunT m ()
 sendValue fromPkh amt toPkh = do
   mVal <- spend' fromPkh amt
   case mVal of
@@ -183,7 +183,7 @@ sendValue fromPkh amt toPkh = do
     toTx sp = userSpend sp <> payToKey toPkh amt
 
 -- | Spend or fail if there are no funds
-withSpend ::Monad m => PubKeyHash -> Value -> (UserSpend -> RunT m ()) -> RunT m ()
+withSpend :: Monad m => PubKeyHash -> Value -> (UserSpend -> RunT m ()) -> RunT m ()
 withSpend pkh val cont = do
   mUsp <- spend' pkh val
   case mUsp of
@@ -191,7 +191,7 @@ withSpend pkh val cont = do
     Nothing  -> logError "No funds for user to spend"
 
 -- | Signs transaction and sends it ignoring the result stats.
-submitTx ::Monad m => PubKeyHash -> Tx -> RunT m ()
+submitTx :: Monad m => PubKeyHash -> Tx -> RunT m ()
 submitTx pkh tx = void $ sendTx =<< signTx pkh tx
 
 ------------------------------------------------------------------------
@@ -229,11 +229,11 @@ noErrors :: Monad m => RunT m Bool
 noErrors = nullLog <$> gets mockFails
 
 -- | Get total value on the address or user by @PubKeyHash@ (but not on reference script UTXOs).
-valueAt :: (Monad m, HasAddress user) => user -> RunT m Value
+valueAt :: (HasAddress user, Monad m) => user -> RunT m Value
 valueAt user = foldMap (txOutValue . snd) <$> utxoAt user
 
 -- | Get total value on the address or user by address on reference script UTXOs.
-refValueAt :: (Monad m, HasAddress user) => user -> RunT m Value
+refValueAt :: (HasAddress user, Monad m) => user -> RunT m Value
 refValueAt user = foldMap (txOutValue . snd) <$> refScriptAt user
 
 valueAtState :: HasAddress user => user -> Mock -> Value
@@ -561,25 +561,25 @@ txBoxValue :: TxBox a -> Value
 txBoxValue = txOutValue . txBoxOut
 
 -- | Read UTXOs with datums.
-boxAt :: (Monad m, IsValidator script) => script -> RunT m [TxBox script]
+boxAt :: (IsValidator script, Monad m) => script -> RunT m [TxBox script]
 boxAt addr = do
   utxos <- utxoAt (toAddress addr)
   fmap catMaybes $ mapM (\(ref, tout) -> fmap (\dat -> TxBox ref tout dat) <$> datumAt ref) utxos
 
 -- | It expects that Typed validator can have only one UTXO
 -- which is NFT.
-nftAt :: (Monad m, IsValidator script) => script -> RunT m (TxBox script)
+nftAt :: (IsValidator script, Monad m) => script -> RunT m (TxBox script)
 nftAt tv = head <$> boxAt tv
 
 -- | Safe query for single Box
-withBox ::(Monad m , IsValidator script) => (TxBox script -> Bool) -> script -> (TxBox script -> RunT m ()) -> RunT m ()
+withBox :: (IsValidator script, Monad m) => (TxBox script -> Bool) -> script -> (TxBox script -> RunT m ()) -> RunT m ()
 withBox isBox script cont =
   withMayBy readMsg (L.find isBox <$> boxAt script) cont
   where
     readMsg = ("No UTxO box for: " <> ) <$> getPrettyAddress (toAddress script)
 
 -- | Reads single box from the list. we expect NFT to be a single UTXO for a given script.
-withNft :: (Monad m, IsValidator script) => script -> (TxBox script -> RunT m ()) -> RunT m ()
+withNft :: (IsValidator script, Monad m) => script -> (TxBox script -> RunT m ()) -> RunT m ()
 withNft = withBox (const True)
 
 ----------------------------------------------------------------------
@@ -616,7 +616,7 @@ weeks n = days (7 * n)
 -- while preserving logs. If the action succeeds, logs an error as we expect
 -- it to fail. Use 'mustFailWith' and 'mustFailWithBlock' to provide custom
 -- error message or/and failure action name.
-mustFail :: Monad m=> RunT m a -> RunT m ()
+mustFail :: Monad m => RunT m a -> RunT m ()
 mustFail = mustFailWith  "Expected action to fail but it succeeds"
 
 -- | The same as 'mustFail', but takes custom error message.
@@ -659,9 +659,9 @@ checkErrors = do
 -- parameters use an 'Ingredient' built with 'includingOptions'.
 testNoErrorsTrace :: Value -> MockConfig -> String -> Run a -> TestTree
 testNoErrorsTrace funds cfg msg act =
-    testCaseInfo msg $
-      maybe (pure mockLog)
-        assertFailure $ errors >>= \errs -> pure $ errs <> mockLog
+  testCaseInfo msg $
+    maybe (pure mockLog)
+      assertFailure $ errors >>= \errs -> pure $ errs <> mockLog
   where
     (errors, mock) = runMock (act >> checkErrors) $ initMock cfg funds
     mockLog = "\nBlockchain log :\n----------------\n" <> ppMockEvent (mockNames mock) (getLog mock)
@@ -672,17 +672,17 @@ logBalanceSheet =
   modify' $ \s -> s { mockInfo = appendLog (mockCurrentSlot s) (ppBalanceSheet s) (mockInfo s) }
 
 testNoErrors :: Value -> MockConfig -> String -> Run a -> TestTree
-testNoErrors funds cfg msg act = 
-    testCase msg $ maybe (pure ()) assertFailure $
-      fst (runMock (act >> checkErrors) (initMock cfg funds))
+testNoErrors funds cfg msg act =
+  testCase msg $ maybe (pure ()) assertFailure $
+    fst (runMock (act >> checkErrors) (initMock cfg funds))
 
 -- | check transaction limits
 testLimits :: Value -> MockConfig -> String -> (Log TxStat -> Log TxStat) -> Run a -> TestTree
-testLimits initFunds cfg msg tfmLog act = 
-    testCase msg $ assertBool limitLog isOk
-    where
-      (isOk, mock) = runMock (act >> noErrors) (initMock (warnLimits cfg) initFunds)
-      limitLog = ppLimitInfo (mockNames mock) $ tfmLog $ mockTxs mock
+testLimits initFunds cfg msg tfmLog act =
+  testCase msg $ assertBool limitLog isOk
+  where
+    (isOk, mock) = runMock (act >> noErrors) (initMock (warnLimits cfg) initFunds)
+    limitLog = ppLimitInfo (mockNames mock) $ tfmLog $ mockTxs mock
 
 ----------------------------------------------------------------------
 -- balance diff
@@ -712,7 +712,7 @@ checkBalanceBy getDiffs act = do
   mapM_ (logError . show . vcat <=< mapM ppError) (check addrs diffs before after)
   pure res
   where
-    ppError ::Monad m => (Address, Value, Value) -> RunT m (Doc ann)
+    ppError :: Monad m => (Address, Value, Value) -> RunT m (Doc ann)
     ppError (addr, expected, got) = do
       names <- gets mockNames
       let addrName = maybe (pretty addr) pretty $ readAddressName names addr

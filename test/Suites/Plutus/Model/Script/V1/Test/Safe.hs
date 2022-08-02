@@ -46,7 +46,7 @@ initSafe = do
   safeVal <- valueAt safe
   safeUtxos <- utxoAt safe
   let [(safeRef, safeOut)] = safeUtxos
-  mDat <- datumAt @_ @SafeDatum safeRef
+  mDat <- datumAt @SafeDatum safeRef
   pure $
     and
       [ isOk
