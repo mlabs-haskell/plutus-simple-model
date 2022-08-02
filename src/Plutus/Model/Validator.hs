@@ -4,7 +4,12 @@ module Plutus.Model.Validator(
   TypedPolicy(..),
   TypedStake(..),
   IsValidator(..),
+  -- * Versioned
   Versioned(..),
+  toV1,
+  toV2,
+  isV1,
+  isV2,
   toVersionedScript,
 
   -- * Hashes
