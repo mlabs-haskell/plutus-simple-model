@@ -167,10 +167,10 @@ with this function we can check the script in simpler way:
 
 ```haskell
 good :: String -> Run a -> TestTree
-good = testNoErrors initFunds defaultAlonzo name
+good = testNoErrors initFunds defaultAlonzo
 
 test :: TestTree
-test = good "User can exchange values" $ userExchange
+test = good "User can exchange values" userExchange
 
 userExchange :: Run ()
 userExchange = do
@@ -198,9 +198,34 @@ owns  :: HasAddress user => user -> Value -> BalanceDiff
 
 -- | User A gives value to user B.
 gives :: (HasAddress userA, HasAddress userB) => userA -> Value -> userB -> BalanceDiff
+gives from val to = ...
 ```
 
 Note that we check balance difference in relative values not in absolute ones. 
+So instead of querying the values and checking the absolute values as in previous example:
+
+```haskell
+  ...
+  vals <- mapM valueAt users         -- read user values
+  pure $ and                         -- check test predicate
+    [ isOk
+     , vals == fmap adaValue [900, 1000, 1100]
+    ]
+```
+
+We can check relative transitions:
+
+```haskell
+  let [u1, u2, u3] = users           -- give names for users
+  checkBalance (gives u1 (adaValue 100) u2 <> gives u2 (adaValue 100) u3) $ do
+      sendValue u1 (adaValue 100) u2     -- send 100 lovelaces from user 1 to user 2
+      sendValue u2 (adaValue 100) u3     -- send 100 lovelaces from user 2 to user 3
+```
+
+This check seems to be obvious but in real test cases we can check 
+transitions of values from users to scripts and beetween scripts.
+Also we can check that user or script has not changed the value by `owns u1 mempty`.
+In this way we enforce that certain actions preserve the value for user `u1`.
 
 ### Creation of transactions
 
@@ -286,6 +311,11 @@ There are three types of typed valdiators:
 
 Where `Versioned` attaches plutus language version to the entity.
 Plutus has several versions of the language (at the moment they are V1 and V2).
+We can tag entities with Language version by functions:
+
+```haskell
+toV1, toV2 :: a -> Versioned a
+```
 
 We use trick with phantom types to attach type info to the underlying script.
 Also we have type class that can extract the type info:
@@ -332,7 +362,6 @@ And we have alias `mkTypedValidator` which combines wrappers:
 ```haskell
 gameScript = mkTypedValidator $$(PlutusTx.compile [|| gameContract ||])
 ```
-
 
 Based on this `gameContract` should have type `BuiltinData -> BuiltinData -> BuiltinData -> ()`.
 But in plutus development we used to write typed valdiators and then wrap them `mkTypedValidator`.
@@ -433,16 +462,6 @@ initGame pkh prize answer = do                 -- arguments: user, value for the
 initGameTx :: UserSpend -> Value -> BuiltinByteString -> Tx
 ```
 
-also we can write it with `submitTx`:
-
-```haskell
-initGame :: PubKeyHash -> Value -> BuiltinByteString -> Run ()
-initGame pkh prize answer = do               -- arguments: user, value for the prize, answer for puzzle
-  sp <- spend pkh prize                      -- read users UTXO that we should spend
-  submitTx pkh $ initGameTx sp prize answer  -- create TX and sign it with user's secret key and post TX to blockchain
-```
-
-
 Let's discuss the function bit by bit. To create TX we need to first determine the inputs.
 Input is set of UTXO's that we'd like to spend. For that we use function
 
@@ -467,8 +486,8 @@ withSpend :: PubKeyHash -> Value -> (UserSpend -> Run ()) -> Run ()
 ```
 
 When we know what inputs to spend we need to make a TX. We do it with function `initGameTx`. We will discuss it soon.
-After that we should sign TX with the key of the sender. We use function `signTx` for that.
-As the last step we post TX and hope that it will execute fine (`sendTx`).
+After that we should sign TX with the key of the sender and send it to
+ledger. We use function `submitTx` for that.
 
 Let's discuss how to create TX:
 
@@ -522,10 +541,9 @@ guess pkh answer = do
   let [(gameRef, gameOut)] = utxos       --   we know there is only one game UTXO
   mDat <- datumAt @GameDatum gameRef     -- read game's datum
   case mDat of                           -- if there is a datum
-    Just dat -> do                       -- let's create TX and sign it
-      tx <- signTx pkh $ guessTx pkh gameRef (txOutValue gameOut) dat answer
-      isRight <$> sendTx tx              -- let's send TX to blockchain and find out weather it's ok.
-    Nothing -> pure False
+    Just dat -> do                       -- let's create TX, sign it and submit
+      submitTx pkh $ guessTx pkh gameRef (txOutValue gameOut) dat answer
+    Nothing -> logError "No datum"
 ```
 
 This function is a bit bigger because now we want to spend not only our funds but also the fund of the script.
@@ -539,6 +557,9 @@ utxoAt  :: HasAddress addr => addr -> Run [(TxOutRef, TxOut)]
 datumAt :: TxOutRef -> Run (Maybe a)
 ```
 Note that `datumAt` reads both hashed and inlined datums with the same interface.
+
+With `logError` we can report custom errors. It will save the error to the log
+end the whole test will fail with `testNoErrors` function or `noErrors` function.
 
 Our `gameScript` has instance of `HasAddress`. It is an address of underlying script.
 We should query the datum separately because `TxOut` contains only hash of it.
@@ -585,6 +606,40 @@ refInputHash   :: ToData datum => TxOutRef -> datum -> Tx
 Note that it's improtant to respect the way datum is stored and use corresponding 
 type of reference input.
 
+### Log custom errors
+
+We can log custom errors with
+
+```haskell
+logError :: String -> Run ()
+```
+
+Errors are saved to log of errors. This way we can report our own errors based on conditions
+using functions `when` and `unless`.
+If values are wrong or certain NFT was not created etc.
+
+Also, we can log information with:
+
+```haskell
+logInfo :: String -> Run ()
+```
+
+It saves information to the log. The log of errors is unaffected.
+We can read log messages with function:
+
+```haskell
+getLog :: Mock -> Log MockEvent
+```
+
+Where MockEvent is one of the events:
+
+```haskell
+data MockEvent
+  = MockTx TxStat           -- ^ Sucessful TXs
+  | MockInfo String         -- ^ Info messages
+  | MockFail FailReason     -- ^ Errors
+```
+
 ### How to work with time
 
 Note that every time we submit block successfully one slot passes.
@@ -621,6 +676,25 @@ Note that if current time of blockchain is not included in the Tx it will be rej
 So we can not submit TX that is going to be valid in the future. We rely on property
 that all TXs are validated right away. It means  that current time should be included in valid range for TX.
 By default, it's `always`, it means "any time" and should work. 
+
+To specify time interval relative to the current time we can use functions:
+
+```haskell
+currentTimeInterval :: POSIXTime -> POSIXTime -> Run POSIXTimeRange
+currentTimeInterval minT maxT
+```
+
+It creates interval of `[currentTime + minT, currentTime + maxT]`
+So to work properly minT should be negative and maxT should be positive.
+
+also we have a function that creates time interval with equal radius around current time:
+
+```haskell
+currentTimeRad :: POSIXTime -> Run POSIXTimeRange
+currentTimeRad rad
+```
+
+it creates interval of `[currentTime - rad, currentTime + rad]`.
 
 Also note that because Plutus uses `POSIXTime` while the Cardano network uses Slots, the inherent
 difference in precision between Slot and `POSIXTime` may cause unexpected validation failures.
@@ -679,38 +753,6 @@ So to send 5 test coins from one user to another add some ada to it:
 sendValue user1 (adaValue 1 <> testValue 5) user2
 ```
 
-### Log custom errors
-
-We can log custom errors with
-
-```haskell
-logError :: String -> Run ()
-```
-
-Errors are saved to log of errors. This way we can report our own errors based on conditions.
-If values are wrong or certain NFT was not created etc.
-
-Also, we can log information with:
-
-```haskell
-logInfo :: String -> Run ()
-```
-
-It saves information to the log. the log of errors is unaffected.
-We can read log messages with function:
-
-```haskell
-getLog :: Mock -> Log MockEvent
-```
-
-Where MockEvent is one of the events:
-
-```haskell
-data MockEvent
-  = MockTx TxStat           -- ^ Sucessful TXs
-  | MockInfo String         -- ^ Info messages
-  | MockFail FailReason     -- ^ Errors
-```
 
 #### How to skip messages from the logs
 
