@@ -6,10 +6,11 @@ module Plutus.Model.Ada(
       adaValue,
       isZero,
       asAda,
-      lovelaceToAda,
+      adaToLovelace,
       adaSymbol,
       adaToken,
       divideAda,
+      onlyAda,
     ) where
 
 import Prelude qualified as Haskell
@@ -73,13 +74,20 @@ isZero (Lovelace i) = i == 0
 {-# INLINABLE asAda #-}
 -- | Counts in Ada's not in lovelaces
 asAda :: Integer -> Ada
-asAda = Lovelace . lovelaceToAda
+asAda = Lovelace . adaToLovelace
 
-{-# INLINABLE lovelaceToAda #-}
-lovelaceToAda :: Integer -> Integer
-lovelaceToAda n = 1_000_000 * n
+{-# INLINABLE adaToLovelace #-}
+adaToLovelace :: Integer -> Integer
+adaToLovelace n = 1_000_000 * n
 
 {-# INLINABLE divideAda #-}
 -- | Divide one 'Ada' value by another.
 divideAda :: Ada -> Ada -> Ada
 divideAda (Lovelace a) (Lovelace b) = Lovelace (divide a b)
+
+{-# INLINABLE onlyAda #-}
+onlyAda :: Value -> Value
+onlyAda v = ada (adaOf v)
+
+
+

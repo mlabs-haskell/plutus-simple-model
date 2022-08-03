@@ -4,11 +4,8 @@ module Suites.Plutus.Model.Script.V1.Test.Game (
   makeGuessGame,
 ) where
 
-import Control.Monad (unless)
-
-import Data.Either
-import Data.Functor (void)
 import Prelude
+import Control.Monad (unless)
 
 import Test.Tasty
 
@@ -36,7 +33,7 @@ initGuessGame :: Run ()
 initGuessGame = do
   users <- setupUsers
   let u1 = head users
-      answer = "secret"
+      answer = gameSecret
       prize = adaValue 100
   initGame u1 prize answer
   gameUtxos <- utxoAt gameScript
@@ -44,7 +41,6 @@ initGuessGame = do
   mDat <- datumAt @GameDatum gameRef
   unless (mDat == Just (GuessHash $ Plutus.sha2_256 answer)) $
     logError "Constraints violated"
-
 
 badGuessGame :: Run ()
 badGuessGame = makeGuessGameBy gameSecret "bad guess"
@@ -60,19 +56,17 @@ makeGuessGameBy secret answer = do
   users <- setupUsers
   let [u1, u2, _] = users
   initGame u1 (adaValue 100) secret
-  postedTx <- guess u2 answer
+  guess u2 answer
   vals <- mapM valueAt users
   let [v1, v2, _] = vals
-  unless (postedTx && v1 == adaValue 900 && v2 == adaValue 1100) $
+  unless (v1 == adaValue 900 && v2 == adaValue 1100) $
     logError "Constraint error"
-
 
 initGame :: PubKeyHash -> Value -> BuiltinByteString -> Run ()
 initGame pkh prize answer =
   checkBalance (gives pkh prize gameScript) $ do
     sp <- spend pkh prize
-    tx <- signTx pkh $ initGameTx sp prize answer
-    void $ sendTx tx
+    submitTx pkh $ initGameTx sp prize answer
 
 initGameTx :: UserSpend -> Value -> BuiltinByteString -> Tx
 initGameTx usp val answer =
@@ -81,16 +75,15 @@ initGameTx usp val answer =
     , payToScript gameScript (HashDatum $ GuessHash $ Plutus.sha2_256 answer) val
     ]
 
-guess :: PubKeyHash -> BuiltinByteString -> Run Bool
+guess :: PubKeyHash -> BuiltinByteString -> Run ()
 guess pkh answer = do
   utxos <- utxoAt gameScript
   let [(gameRef, gameOut)] = utxos
   mDat <- datumAt @GameDatum gameRef
   case mDat of
     Just dat -> checkBalance (gives gameScript (txOutValue gameOut) pkh) $ do
-      tx <- signTx pkh $ guessTx pkh gameRef (txOutValue gameOut) dat answer
-      isRight <$> sendTx tx
-    Nothing -> pure False
+      submitTx pkh $ guessTx pkh gameRef (txOutValue gameOut) dat answer
+    Nothing -> logError "No datum"
 
 guessTx :: PubKeyHash -> TxOutRef -> Value -> GameDatum -> BuiltinByteString -> Tx
 guessTx pkh gameRef gameVal dat answer =
