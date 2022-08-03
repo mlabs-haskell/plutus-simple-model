@@ -70,8 +70,8 @@ data FailReason
   | -- | not enough funds for the user.
     NotEnoughFunds PubKeyHash Value
   | -- | TX is not balanced. Sum of inputs does not equal to sum of outputs.
-    NotBalancedTx
-  | -- | no utxo on the address
+    NotBalancedTx Value
+  | -- | no utxo on the address (argument is the balance difference)
     FailToReadUtxo
   | -- | failed to convert plutus TX to cardano TX. TX is malformed.
     FailToCardano String
