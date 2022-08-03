@@ -298,16 +298,15 @@
         ]
       },
       "locked": {
-        "lastModified": 1655143375,
-        "narHash": "sha256-yU+HPLwGPf5IeLj9IBQ1zrPBTYEwvYbuMnADs4T8RLQ=",
+        "lastModified": 1658790167,
+        "narHash": "sha256-QRZCAz/k5hEvXiHc2aVDDc2jgPTeiRXUtARg0GA9rDU=",
         "owner": "mlabs-haskell",
         "repo": "haskell-nix-extra-hackage",
-        "rev": "03ee7afdc1ad982e059e3941db80f7a5b30a2757",
+        "rev": "ee50d7eb739819efdb27bda9f444e007c12e9833",
         "type": "github"
       },
       "original": {
         "owner": "mlabs-haskell",
-        "ref": "separate-hackages",
         "repo": "haskell-nix-extra-hackage",
         "type": "github"
       }

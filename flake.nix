@@ -5,7 +5,7 @@
     haskell-nix.url = "github:input-output-hk/haskell.nix";
     nixpkgs.follows = "haskell-nix/nixpkgs-unstable";
     iohk-nix.url = "github:input-output-hk/iohk-nix";
-    haskell-nix-extra-hackage.url = "github:mlabs-haskell/haskell-nix-extra-hackage/separate-hackages";
+    haskell-nix-extra-hackage.url = "github:mlabs-haskell/haskell-nix-extra-hackage";
     haskell-nix-extra-hackage.inputs.haskell-nix.follows = "haskell-nix";
     haskell-nix-extra-hackage.inputs.nixpkgs.follows = "nixpkgs";
 
