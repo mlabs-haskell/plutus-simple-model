@@ -9,6 +9,7 @@ module Plutus.Model.Fork.Cardano.Common(
   getSignatories,
   getWdrl,
   toValue,
+  fromCardanoValue,
   toTxIn,
   toAssetName,
   toPolicyId,
@@ -32,7 +33,7 @@ import Control.Monad
 
 import Data.Bifunctor
 import Data.ByteString qualified as BS
-import Data.ByteString.Short (toShort, fromShort)
+import Data.ByteString.Short (toShort)
 import Data.Default (def)
 import Data.List qualified as L
 import Data.Maybe
@@ -72,6 +73,7 @@ import Cardano.Ledger.Hashes qualified as C
 import Cardano.Ledger.Alonzo.TxWitness qualified as C
 import Cardano.Ledger.Alonzo.Data qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as C
+import Cardano.Ledger.Alonzo.TxInfo qualified as C
 import PlutusTx.Builtins.Internal qualified as P
 import Plutus.V2.Ledger.Api qualified as P
 import Plutus.V2.Ledger.Tx qualified as P
@@ -87,9 +89,7 @@ import Plutus.Model.Fork.Ledger.Scripts qualified as C
 type ToCardanoError = String
 
 fromTxId :: C.TxId StandardCrypto -> P.TxId
-fromTxId (C.TxId safeHash) =
-  case extractHash safeHash of
-    Crypto.UnsafeHash shortBs -> P.TxId $ P.BuiltinByteString $ fromShort shortBs
+fromTxId = C.txInfoId
 
 getInputsBy :: (Plutus.Tx -> Set.Set Plutus.TxIn) -> P.Tx -> Either ToCardanoError (Set.Set (C.TxIn StandardCrypto))
 getInputsBy extract =
@@ -147,6 +147,9 @@ toValue val = C.valueFromList totalAda <$> traverse fromValue vs
     fromValue (cs, tok, amount) = (, assetName, amount) <$> toPolicyId cs
       where
         assetName = toAssetName tok
+
+fromCardanoValue :: C.Value StandardCrypto -> P.Value
+fromCardanoValue  = C.transValue
 
 toAssetName :: P.TokenName -> C.AssetName
 toAssetName (P.TokenName bs) = C.AssetName $ toShort $ PlutusTx.fromBuiltin bs

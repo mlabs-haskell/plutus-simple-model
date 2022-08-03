@@ -79,9 +79,14 @@ ppFailureWith names (slot, fReason) =
         NotEnoughFunds pkh val ->
           case mUserName pkh of
             Just name -> vcat [ pretty name <+> "doesn't have enough funds to pay:"
-                              , indent 5 (ppBalanceWith names val)
+                              , indent 4 (ppBalanceWith names val)
                               ]
             Nothing -> pretty fReason
+        NotBalancedTx val ->
+          vcat ["Not balanced TX"
+               , indent 2 "Got balance diff value:"
+               , indent 4 (ppBalanceWith names val)
+               ]
         _ -> pretty fReason
 
 ppTransaction :: Tx -> String
@@ -177,9 +182,9 @@ instance Pretty FailReason where
     NotEnoughFunds pkh val -> vcat
       [ "User with PubKeyHash" <+> pretty (getPubKeyHash pkh)
         <+> "doesn't have enough funds to pay:"
-      , indent 5 (ppBalanceWith (MockNames M.empty M.empty M.empty M.empty M.empty) val)
+      , indent 4 (ppBalanceWith (MockNames M.empty M.empty M.empty M.empty M.empty) val)
       ]
-    NotBalancedTx -> "Not balanced transaction"
+    NotBalancedTx val -> "Not balanced transaction:" <+> pretty val
     FailToReadUtxo -> "UTXO not found"
     FailToCardano err -> "Failed to convert transaction from Plutus to Cardano:" <+> pretty err
     TxInvalidRange _ range -> "Not in valid range" <+> pretty range

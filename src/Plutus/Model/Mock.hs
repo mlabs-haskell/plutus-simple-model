@@ -148,7 +148,7 @@ import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Sequence.Strict (StrictSeq)
 
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
-import Cardano.Ledger.Era (Era, Crypto)
+import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Alonzo.TxWitness qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as C
 import Cardano.Crypto.Seed qualified as C
@@ -179,6 +179,7 @@ import Plutus.Model.Fork.TxExtra
 import Plutus.Model.Stake
 import Plutus.Model.Mock.ProtocolParameters
 
+import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Shelley.API.Wallet qualified as C
 import Cardano.Ledger.SafeHash qualified as C
 import Cardano.Ledger.TxIn qualified as Ledger
@@ -189,7 +190,7 @@ import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
 import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
 import Plutus.Model.Fork.Cardano.Alonzo ()
 import Plutus.Model.Fork.Cardano.Babbage  ()
-import Plutus.Model.Fork.Cardano.Common (fromTxId)
+import Plutus.Model.Fork.Cardano.Common (fromTxId, fromCardanoValue)
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
 import Plutus.Model.Ada (Ada(..))
@@ -506,8 +507,7 @@ sendSingleTx tx = do
 -- | Confirms that single TX is valid. Works across several Eras (see @Plutus.Model.Fork.Cardano.Class@)
 checkSingleTx ::
   forall era .
-  ( Era era,
-    ExtendedUTxO era,
+  ( ExtendedUTxO era,
     CBOR.ToCBOR (Core.Tx era),
     HasField "inputs" (Core.TxBody era) (Set (C.TxIn (Crypto era))),
     HasField "certs" (Core.TxBody era) (StrictSeq (C.DCert (Crypto era))),
@@ -520,7 +520,8 @@ checkSingleTx ::
     Core.Script era ~ Alonzo.Script era,
     C.CLI era,
     C.HashAnnotated (Core.TxBody era) C.EraIndependentTxBody C.StandardCrypto,
-    Class.IsCardanoTx era
+    Class.IsCardanoTx era,
+    Core.Value era ~ Mary.Value C.StandardCrypto
   )
   => Core.PParams era -> Tx -> Run (Either FailReason Stat)
 checkSingleTx params (Tx extra tx) =
@@ -587,7 +588,7 @@ checkSingleTx params (Tx extra tx) =
 
     withCheckBalance utxo txBody cont
       | balance == mempty = cont
-      | otherwise         = leftFail NotBalancedTx
+      | otherwise         = leftFail (NotBalancedTx $ fromCardanoValue balance)
       where
         balance = evaluateTransactionBalance params utxo isNewPool (Class.getTxBody txBody)
 
