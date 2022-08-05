@@ -1,8 +1,7 @@
 # Introduction
 
-Unit test library for Plutus with estimation of resource usage.
-
-Library defines simple mock model of Blockchain to unit test plutus contracts 
+The `plutus-simple-model` is a unit test library for Plutus with estimation of resource usage.
+The library defines simple mock model of Blockchain to unit test plutus contracts 
 and estimate usage of resources. What are the benefits for this framework comparing
 to other test frameworks for Plutus? It's:
 
