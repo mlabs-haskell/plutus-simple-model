@@ -23,3 +23,30 @@ to other test frameworks for Plutus? It's:
 
 See [user guide](https://mlabs-haskell.github.io/plutus-simple-model/) to get started
 
+## How to compile the library
+
+Library is compiled with nix, flakes and cabal. Enter developer nix shell with:
+
+```
+nix develop
+```
+
+Inside the nix shell we can run buil and tests over make:
+
+```
+make build
+make test
+```
+
+It calls cabal under the hood.
+
+## How to update docs
+
+Docs are written in [mdbook](https://github.com/rust-lang/mdBook) and reside in the `docs` directory. 
+They are auto-deployed with Git actions on push to main. To run docs locally use mdbook:
+
+```
+cd docs
+mdbook serve
+```
+
