@@ -17,6 +17,7 @@ to other test frameworks for Plutus? It's:
 * good for unit testing of on-chain code
 * being fast and pure it's also suitable for property based testing
 
+Examples of how to use the library can be found in [test suite](https://github.com/mlabs-haskell/plutus-simple-model/tree/main/test) (test dir in the repo).
 
 
 
