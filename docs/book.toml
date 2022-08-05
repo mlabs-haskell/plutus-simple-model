@@ -2,5 +2,5 @@
 authors = ["anton-k"]
 language = "en"
 multilingual = false
-src = "docs/src"
+src = "src"
 title = "Plutus-simple-model tutorial"
