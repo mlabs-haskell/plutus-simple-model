@@ -2,6 +2,15 @@
 
 So now we know how to send values to users. Let's learn how to work with scripts.
 
+The most useful function is `submitTx`. It signs TX and sends it to blockchain:
+
+```haskell
+submitTx :: PubKeyHash -> Tx -> Run ()
+submitTx pkh tx = void $ sendTx =<< signTx pkh tx
+```
+
+It's combination ow two functions: `signTx` and `sendValue`.
+
 When we use function `sendValue` it creates TX and submits it to blockchain.
 TX defines which UTXOs are used as inputs and what UTXOs we want to produce as outputs.
 As a result (when TX is successful) we destroy input UTXOs and create output UTXOs.
@@ -36,14 +45,6 @@ sendBlock :: [Tx] -> Run (Either FailReason [Stats])
 
 The function `sendTx` just submits a block with single TX in it. It's ok for most of the cases but
 if we need to test acceptance of several TXs in the block we can use `sendBlock`.
-
-There is a common pattern for testing to form single TX, sign it with a key and send to network. 
-If we don't need to look at the stats we can use function. If it fails it logs the error.
-
-```haskell
-submitTx :: PubKeyHash -> Tx -> Run ()
-submitTx pkh tx = void $ sendTx =<< signTx pkh tx
-```
 
 Let's create Tx and submit it. 
 
