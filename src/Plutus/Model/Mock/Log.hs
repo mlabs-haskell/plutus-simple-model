@@ -5,7 +5,6 @@ module Plutus.Model.Mock.Log(
   fromLog,
   fromGroupLog,
   MustFailLog(..),
-  FailReason(..),
   LimitOverflow(..),
   MockEvent(..),
   silentLog,
@@ -19,10 +18,9 @@ import Data.Function (on)
 import Data.List qualified as L
 import Data.Sequence (Seq(..))
 import Data.Sequence qualified as Seq
-import Plutus.V2.Ledger.Api
-import Plutus.Model.Stake
 import Plutus.Model.Mock.Stat
 import Plutus.Model.Fork.Ledger.Slot
+import Plutus.Model.Mock.FailReason
 
 -- | Log of Slot-timestamped events
 newtype Log a = Log { unLog :: Seq (Slot, a) }
@@ -62,36 +60,6 @@ instance Monoid (Log a) where
 -- | Wrapper for error logs, produced in the paths of execution protected by
 -- 'mustFail' combinator.
 data MustFailLog = MustFailLog String FailReason
-
--- | Fail reasons.
-data FailReason
-  = -- | use with given pub key hash is not found. User was not registered with @newUser@ or @newUserWith@.
-    NoUser PubKeyHash
-  | -- | not enough funds for the user.
-    NotEnoughFunds PubKeyHash Value
-  | -- | TX is not balanced. Sum of inputs does not equal to sum of outputs.
-    NotBalancedTx Value
-  | -- | no utxo on the address (argument is the balance difference)
-    FailToReadUtxo
-  | -- | failed to convert plutus TX to cardano TX. TX is malformed.
-    FailToCardano String
-  | -- | invalid range. TX is submitted with current slot not in valid range
-    TxInvalidRange Slot SlotRange
-    -- | invalid reward for staking credential, expected and actual values for stake at the moment of reward
-  | TxInvalidWithdraw WithdrawError
-    -- | Certificate errors
-  | TxInvalidCertificate DCertError
-  | TxLimitError [LimitOverflow] StatPercent
-  -- | Any error (can be useful to report logic errors on testing)
-  | GenericFail String
-  deriving (Show)
-
--- | Encodes overflow of the TX-resources
-data LimitOverflow
-  = TxSizeError !Integer !Percent -- ^ by how many bytes we exceed the limit
-  | ExMemError !Integer !Percent  -- ^ how many mem units exceeded
-  | ExStepError !Integer !Percent -- ^ how many steps executions exceeded
-  deriving (Show, Eq)
 
 -- | Blockchain events to log.
 data MockEvent

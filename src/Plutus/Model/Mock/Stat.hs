@@ -21,6 +21,7 @@ import Plutus.V2.Ledger.Api
 import Plutus.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Model.Fork.Ledger.Slot
 import Plutus.Model.Fork.TxExtra
+import Plutus.Model.Mock.Percent
 
 -- | TX with stats of TX execution onchain.
 data TxStat = TxStat
@@ -39,27 +40,6 @@ txStatId = P.txId . tx'plutus . txStatTx
 data Stat = Stat
   { statSize           :: !Integer    -- ^ TX-size in bytes
   , statExecutionUnits :: !ExUnits    -- ^ execution units of TX
-  }
-  deriving (Show, Eq)
-
--- | Percent values from 0 to 100 %.
-newtype Percent = Percent { getPercent :: Float }
-  deriving (Show, Eq)
-
-data PercentExecutionUnits = PercentExecutionUnits
-  { percentExecutionSteps  :: !Percent
-  , percentExecutionMemory :: !Percent
-  }
-  deriving (Show, Eq)
-
--- | Convert integer to percent based on maximum value (first argument)
-toPercent :: Integer -> Integer -> Percent
-toPercent maxLim n = Percent $ (fromInteger @Float $ 100 * n ) / fromInteger maxLim
-
--- | Stats measured in percents (0 to 100 %)
-data StatPercent = StatPercent
-  { statPercentSize           :: !Percent
-  , statPercentExecutionUnits :: !PercentExecutionUnits
   }
   deriving (Show, Eq)
 

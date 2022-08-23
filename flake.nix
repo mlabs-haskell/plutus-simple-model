@@ -1,5 +1,7 @@
 {
   description = "plutus-simple-model";
+  nixConfig.bash-prompt = "\\[\\e[0m\\][\\[\\e[0;2m\\]nix \\[\\e[0;1m\\]psm \\[\\e[0;93m\\]\\w\\[\\e[0m\\]]\\[\\e[0m\\]$ \\[\\e[0m\\]";
+
 
   inputs = {
     haskell-nix.url = "github:input-output-hk/haskell.nix";
