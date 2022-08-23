@@ -13,7 +13,6 @@ module Plutus.Model.Fork.TxExtra (
   keyToStaking,
   scriptToStaking,
   processMints,
-  getMissingMints,
 ) where
 
 import Data.Monoid
