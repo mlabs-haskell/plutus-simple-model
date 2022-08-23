@@ -162,7 +162,7 @@ import Plutus.V2.Ledger.Api hiding (Map)
 import Plutus.V1.Ledger.Interval qualified as Interval
 import Plutus.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
-import Plutus.V1.Ledger.Value (AssetClass)
+import Plutus.V1.Ledger.Value (AssetClass, assetClass)
 import Plutus.V1.Ledger.Address (pubKeyHashAddress, toPubKeyHash)
 import Cardano.Ledger.Core qualified as Core
 import GHC.Natural
@@ -371,12 +371,14 @@ initMock cfg initVal =
     , mockFails = mempty
     , mockInfo = mempty
     , mustFailLog = mempty
-    , mockNames = MockNames
-                  (M.singleton genesisUserId "Genesis role")
-                  (M.singleton genesisAddress "Genesis role")
-                  M.empty
-                  M.empty
-                  M.empty
+    , mockNames =
+        MockNames
+          { mockNameUsers = M.singleton genesisUserId "Genesis role"
+          , mockNameAddresses = M.singleton genesisAddress "Genesis role"
+          , mockNameAssetClasses = M.singleton (assetClass adaSymbol adaToken) "ADA"
+          , mockNameCurrencySymbols = M.singleton adaSymbol "ADA"
+          , mockNameTxns = M.empty
+          }
     }
   where
     genesisUserId = userPubKeyHash genesisUser
@@ -484,14 +486,14 @@ noLogInfo act = do
 -- | Send block of TXs to blockchain.
 sendBlock :: [Tx] -> Run (Either FailReason [Stat])
 sendBlock txs = do
-  res <- sequence <$> mapM (fmap join . mapM sendSingleTx . processMints) txs
+  res <- sequence <$> mapM sendSingleTx txs
   when (isRight res) bumpSlot
   pure res
 
 -- | Sends block with single TX to blockchai
 sendTx :: Tx -> Run (Either FailReason Stat)
 sendTx tx = do
-  res <- join <$> mapM sendSingleTx (processMints tx)
+  res <- sendSingleTx tx
   when (isRight res) bumpSlot
   pure res
 
@@ -499,11 +501,14 @@ sendTx tx = do
  and produces performance stats if TX was ok.
 -}
 sendSingleTx :: Tx -> Run (Either FailReason Stat)
-sendSingleTx tx = do
-  genParams <- gets (mockConfigProtocol . mockConfig)
-  case genParams of
-    AlonzoParams params  -> checkSingleTx @Alonzo.Era  params tx
-    BabbageParams params -> checkSingleTx @Babbage.Era params tx
+sendSingleTx preTx = do
+  case processMints preTx of
+    Right tx -> do
+      genParams <- gets (mockConfigProtocol . mockConfig)
+      case genParams of
+        AlonzoParams params  -> checkSingleTx @Alonzo.Era  params tx
+        BabbageParams params -> checkSingleTx @Babbage.Era params tx
+    Left err -> leftFail err
 
 -- | Confirms that single TX is valid. Works across several Eras (see @Plutus.Model.Fork.Cardano.Class@)
 checkSingleTx ::
@@ -652,9 +657,10 @@ checkSingleTx params (Tx extra tx) =
             WarnLimits   -> logFail (TxLimitError errs statPercent) >> cont
             ErrorLimits  -> leftFail (TxLimitError errs statPercent)
 
-    leftFail err = do
-      logFail err
-      pure $ Left err
+leftFail :: FailReason -> Run (Either FailReason a)
+leftFail err = do
+  logFail err
+  pure $ Left err
 
 compareLimits :: Stat -> Stat -> [LimitOverflow]
 compareLimits maxLimits stat = catMaybes

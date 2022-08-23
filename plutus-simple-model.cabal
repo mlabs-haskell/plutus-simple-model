@@ -135,6 +135,7 @@ library
     Plutus.Model.Validator.V1.Plutus
     Plutus.Model.Validator.V2
     Plutus.Model.Validator.V2.Plutus
+    Plutus.Model.Fork.TxExtra
   other-modules:
     Plutus.Model.Fork.Cardano.Alonzo
     Plutus.Model.Fork.Cardano.Babbage
@@ -144,7 +145,7 @@ library
     Plutus.Model.Fork.Ledger.Slot
     Plutus.Model.Fork.Ledger.TimeSlot
     Plutus.Model.Fork.Ledger.Tx
-    Plutus.Model.Fork.TxExtra
+    -- Plutus.Model.Fork.TxExtra
   build-depends:    tasty
                   , tasty-hunit
   other-modules:

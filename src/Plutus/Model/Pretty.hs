@@ -89,7 +89,7 @@ ppFailureWith names (slot, fReason) =
                ]
         NoMintingPolicy symbols ->
           vcat
-            [ "No minting policies for scripts"
+            [ "No minting policies script for currency symbols"
             , indent 2 $ vcat $ fmap (ppCurrencySymbolWith names) symbols
             ]
         _ -> pretty fReason
@@ -201,7 +201,7 @@ instance Pretty FailReason where
     TxInvalidWithdraw err -> pretty err
     TxInvalidCertificate cert -> pretty cert
     GenericFail str -> "Generic fail:" <+> pretty str
-    NoMintingPolicy symbols -> "No minting policy script for symbols:" <+> hcat (fmap pretty symbols)
+    NoMintingPolicy symbols -> "No minting policy script for currency symbols:" <+> hcat (fmap pretty symbols)
     where
       ppOverflow (TxSizeError _ pcnt) =
         "Transaction size exceeds the limit by" <+> pretty pcnt
