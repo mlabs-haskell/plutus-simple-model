@@ -87,6 +87,11 @@ ppFailureWith names (slot, fReason) =
                , indent 2 "Got balance diff value:"
                , indent 4 (ppBalanceWith names val)
                ]
+        NoMintingPolicy symbols ->
+          vcat
+            [ "No minting policies for scripts"
+            , indent 2 $ vcat $ fmap (ppCurrencySymbolWith names) symbols
+            ]
         _ -> pretty fReason
 
 ppTransaction :: Tx -> String
@@ -100,13 +105,17 @@ ppBalanceWith names val = vcat $ fmap
      else
        case readAssetClassName names (assetClass cs tn) of
            Just acName -> pretty acName
-           Nothing     -> case readCurrencySymbolName names cs of
-                            Just csName -> pretty csName
-                            Nothing -> pretty cs
-                           <> comma <+> pretty (toString tn)
+           Nothing     -> ppCurrencySymbolWith names cs
+                            <> comma <+> pretty (toString tn)
     ) <> colon <+> pretty amt
     )
     (flattenValue val)
+
+ppCurrencySymbolWith :: MockNames -> CurrencySymbol -> Doc ann
+ppCurrencySymbolWith names cs =
+  case readCurrencySymbolName names cs of
+    Just csName -> pretty csName
+    Nothing     -> pretty cs
 
 instance Pretty StatPercent where
   pretty (StatPercent size units) = vcat
@@ -192,6 +201,7 @@ instance Pretty FailReason where
     TxInvalidWithdraw err -> pretty err
     TxInvalidCertificate cert -> pretty cert
     GenericFail str -> "Generic fail:" <+> pretty str
+    NoMintingPolicy symbols -> "No minting policy script for symbols:" <+> hcat (fmap pretty symbols)
     where
       ppOverflow (TxSizeError _ pcnt) =
         "Transaction size exceeds the limit by" <+> pretty pcnt

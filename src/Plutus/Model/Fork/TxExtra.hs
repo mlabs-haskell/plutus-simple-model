@@ -21,10 +21,12 @@ import Data.Set qualified as S
 import Prelude
 import Plutus.Model.Fork.Ledger.Tx qualified as P
 import Plutus.V2.Ledger.Api
+import Plutus.V1.Ledger.Value qualified as Value
 import qualified Data.Map.Strict as M
 import Plutus.Model.Fork.Ledger.Scripts qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
-import Plutus.Model.Fork.Ledger.Scripts (Versioned(..))
+import Plutus.Model.Mock.FailReason
+import Plutus.Model.Fork.Ledger.Scripts (Versioned(..), scriptCurrencySymbol)
 
 -- | Plutus TX with extra fields for Cardano TX fields that are missing
 -- in native Plutus TX (staking and certificates).
@@ -66,10 +68,19 @@ data Mint = Mint
   deriving (Show, Eq)
 
 -- | Converts mints from TxExtra to Plutus.Tx
-processMints :: Tx -> Tx
-processMints tx = tx { tx'plutus = appendMints mints $ tx'plutus tx }
+processMints :: Tx -> Either FailReason Tx
+processMints tx =
+  case getMissingMints =<< mints of
+    []             -> Right $ tx { tx'plutus = appendMints mints $ tx'plutus tx }
+    missingSymbols -> Left $ NoMintingPolicy missingSymbols
   where
     mints = extra'mints $ tx'extra tx
+
+getMissingMints :: Mint -> [CurrencySymbol]
+getMissingMints Mint{..} = filter (/= policySymbol) symbols
+  where
+    symbols = (\(cs,_,_) -> cs) <$> Value.flattenValue mint'value
+    policySymbol = scriptCurrencySymbol mint'policy
 
 appendMints :: [Mint] -> P.Tx -> P.Tx
 appendMints mints ptx =

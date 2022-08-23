@@ -195,6 +195,7 @@ import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
 import Plutus.Model.Ada (Ada(..))
 import Plutus.Model.Mock.MockConfig
+import Plutus.Model.Mock.FailReason
 import Plutus.Model.Mock.Log
 import Plutus.Model.Mock.Address
 import Plutus.Model.Mock.Stat
@@ -483,14 +484,14 @@ noLogInfo act = do
 -- | Send block of TXs to blockchain.
 sendBlock :: [Tx] -> Run (Either FailReason [Stat])
 sendBlock txs = do
-  res <- sequence <$> mapM (sendSingleTx . processMints) txs
+  res <- sequence <$> mapM (fmap join . mapM sendSingleTx . processMints) txs
   when (isRight res) bumpSlot
   pure res
 
 -- | Sends block with single TX to blockchai
 sendTx :: Tx -> Run (Either FailReason Stat)
 sendTx tx = do
-  res <- sendSingleTx (processMints tx)
+  res <- join <$> mapM sendSingleTx (processMints tx)
   when (isRight res) bumpSlot
   pure res
 

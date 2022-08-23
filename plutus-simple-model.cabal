@@ -120,8 +120,10 @@ library
     Plutus.Model.V2
     Plutus.Model.Mock
     Plutus.Model.Mock.Address
+    Plutus.Model.Mock.FailReason
     Plutus.Model.Mock.MockConfig
     Plutus.Model.Mock.Log
+    Plutus.Model.Mock.Percent
     Plutus.Model.Mock.ProtocolParameters
     Plutus.Model.Mock.Stat
     Plutus.Model.Contract

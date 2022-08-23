@@ -24,6 +24,7 @@ import Data.Vector (Vector)
 import Data.Vector qualified as V
 
 import Plutus.V1.Ledger.Api
+import Plutus.Model.Mock.FailReason
 import Plutus.Model.Fork.TxExtra (keyToStaking)
 
 -- | Internal stake credentials state
@@ -53,22 +54,6 @@ reactDCert = \case
   DCertPoolRetire pkh _n      -> retirePool (PoolId pkh)
   DCertGenesis                -> error "DCertGenesis not supported"
   DCertMir                    -> error "DCertMir not supported"
-
-data DCertError
-  = RegStakeError StakingCredential
-  | DeRegStakeError StakingCredential
-  | DelegateError StakingCredential PubKeyHash
-  | PoolRegError PubKeyHash
-  | PoolRetireError PubKeyHash
-  | CertGenesisNotSupported
-  | CertMirNotSupported
-  deriving (Show, Eq)
-
-data WithdrawError
-  = WithdrawError StakingCredential Integer Integer
-  | WithdrawNotSigned PubKeyHash
-  | StakeNotRegistered StakingCredential
-  deriving (Show, Eq)
 
 checkDCert :: DCert -> Stake -> Maybe DCertError
 checkDCert = \case
