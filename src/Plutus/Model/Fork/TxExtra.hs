@@ -21,10 +21,13 @@ import Data.Set qualified as S
 import Prelude
 import Plutus.Model.Fork.Ledger.Tx qualified as P
 import Plutus.V2.Ledger.Api
+import Plutus.V1.Ledger.Value qualified as Value
 import qualified Data.Map.Strict as M
 import Plutus.Model.Fork.Ledger.Scripts qualified as P
 import Plutus.V1.Ledger.Tx qualified as P
-import Plutus.Model.Fork.Ledger.Scripts (Versioned(..))
+import Plutus.Model.Mock.FailReason
+import Plutus.Model.Fork.Ledger.Scripts (Versioned(..), scriptCurrencySymbol)
+import PlutusTx.Prelude qualified as PlutusTx
 
 -- | Plutus TX with extra fields for Cardano TX fields that are missing
 -- in native Plutus TX (staking and certificates).
@@ -66,25 +69,37 @@ data Mint = Mint
   deriving (Show, Eq)
 
 -- | Converts mints from TxExtra to Plutus.Tx
-processMints :: Tx -> Tx
-processMints tx = tx { tx'plutus = appendMints mints $ tx'plutus tx }
+processMints :: Tx -> Either FailReason Tx
+processMints tx =
+  case getMissingMints =<< mints of
+    []             -> Right $ tx { tx'plutus = appendMints mints $ tx'plutus tx }
+    missingSymbols -> Left $ NoMintingPolicy missingSymbols
   where
     mints = extra'mints $ tx'extra tx
 
+getMissingMints :: Mint -> [CurrencySymbol]
+getMissingMints Mint{..} = filter (PlutusTx./= policySymbol) symbols
+  where
+    symbols = (\(cs,_,_) -> cs) <$> Value.flattenValue mint'value
+    policySymbol = scriptCurrencySymbol mint'policy
+
 appendMints :: [Mint] -> P.Tx -> P.Tx
 appendMints mints ptx =
-  L.foldl' addMintRedeemer (foldMap toMintTx mints <> ptx) mints
+  L.foldl' addMintRedeemer ptxWithMints mints
   where
     toMintTx (Mint value _redeemer policy) =
       mempty { P.txMint = value, P.txMintScripts = S.singleton policy }
 
     addMintRedeemer resTx (Mint _value redeemer policy) =
-      maybe resTx (setRedeemer resTx . fst) $ L.find ((== policy) . snd) $ zip [0 ..] $ S.toList $ P.txMintScripts resTx
+      maybe resTx (setRedeemer resTx . fst) $ L.find ((== policy) . snd) indexedMints
       where
         setRedeemer tx ix =
           tx
             { P.txRedeemers = M.insert (P.RedeemerPtr P.Mint ix) redeemer $ P.txRedeemers tx
             }
+
+    ptxWithMints = foldMap toMintTx mints <> ptx
+    indexedMints = zip [0 ..] $ S.toList $ P.txMintScripts ptxWithMints
 
 data Certificate = Certificate
   { certificate'dcert  :: DCert
