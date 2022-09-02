@@ -22,7 +22,7 @@ So we can use the same functions with scritps that have some staking info attach
 Let's recall the type:
 
 ```haskell
-payToScript :: (IsValidator v) => v -> DatumType v -> Value -> Tx
+payToScript :: (HasAddress v, HasDatum v) => v -> DatumType v -> Value -> Tx
 ```
 
 The same function exists to pay to pub key hash:
