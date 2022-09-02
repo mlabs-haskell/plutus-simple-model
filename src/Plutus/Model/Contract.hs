@@ -355,7 +355,7 @@ payToKey pkh val = toExtra $
 
 -- | Pay to the script.
 -- We can use TypedValidator as argument and it will be checked that the datum is correct.
-payToScript :: (IsValidator script) =>
+payToScript :: (HasDatum script, HasAddress script) =>
   script -> DatumMode (DatumType script) -> Value -> Tx
 payToScript script dat val = toExtra $
   mempty
@@ -388,7 +388,7 @@ loadRefScriptBy script mDat val = toExtra $
     (outDatum, datumMap) = maybe (NoOutputDatum, M.empty) fromDatumMode mDat
 
 -- | Pays to the TxOut that references some script stored on ledger
-payToRef :: (IsValidator script) =>
+payToRef :: (HasAddress script, HasDatum script) =>
   script -> DatumMode (DatumType script) -> Value -> Tx
 payToRef script dat val = toExtra $
   mempty
