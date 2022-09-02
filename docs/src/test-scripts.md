@@ -74,16 +74,17 @@ data DatumMode a
   | InlineDatum a    -- ^ store inlined datum value in TxOut
 
 payToScript :: 
-     IsValidator script 
+     (HasAddress script, HashDatum script)
   => script 
   -> DatumMode (DatumType script) 
   -> Value 
   -> Tx
 ```
 
-So it uses validator, datum for it (of proper type) and value to protect with the contract.
+So it uses address of the validator, datum for it (of proper type) and value to protect with the contract.
 As simple as that. Our type `Game` is `TypedValidator GameDatum GameRedeemer` and
 for typed valdiator first tpye argument corresponds to `DatumType`.
+As input we can use `TypedValidator`, `TypedValidatorHash` and `AppendStaking`-wrappers.
 
 Note that in example we wrap it in `HashDatum`. Starting from Babbage era 
 we can store not only datum hashes in `TxOut` but also we can inline datum values

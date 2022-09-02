@@ -40,13 +40,40 @@ toV1, toV2 :: a -> Versioned a
 ```
 
 We use trick with phantom types to attach type info to the underlying script.
-Also we have type class that can extract the type info:
+Also we have type classes that can extract the type info:
 
 ```haskell
-class IsValidator script where
-  type DatumType    script :: Type
-  type RedeemerType script :: Type
-  toValidator :: script -> Validator
+type IsData a = (ToData a, FromData a)
+
+class IsData (DatumType a) => HasDatum a where
+  type DatumType a :: Type
+
+class IsData (RedeemerType a) => HasRedeemer a where
+  type RedeemerType a :: Type
+```
+
+Also we can extract language and underlying validator or hash:
+
+```haskell
+class HasLanguage a where
+  getLanguage :: a -> C.Language
+  -- ^ Get plutus language version
+
+class HasValidator a where
+  toValidator :: a -> Validator
+  -- ^ Get internal avlidator
+
+class HasValidatorHash a where
+  toValidatorHash :: a -> ValidatorHash
+  -- ^ Get internal avlidator
+```
+
+We have constraints synonyms for validator and validator hash based entities:
+
+```haskell
+type IsValidator a = (HasAddress a, HasDatum a, HasRedeemer a, HasLanguage a, HasValidator a)
+
+type IsValidatorHash a = (HasAddress a, HasDatum a, HasRedeemer a, HasLanguage a, HasValidatorHash a)
 ```
 
 In `plutus-ledger` we created a special tag for example `Game` and we 
@@ -169,4 +196,20 @@ with template haskell.
 
 That's it! This is our contract that we are going to test.
 
+## Pay to script by ValidatorHash
+
+Sometimes we don't have the validator definition but we want to pay to specific script
+by `ValidatorHash`. For that we can use the same function `payToScript`
+but we should use `TypeValidatorHash`-wrapper instead of `TypedValidator`:
+
+```haskell
+newtype TypedValidatorHash datum redeemer = TypedValidatorHash (Versioned ValidatorHash)
+```
+
+In this case our script can be defined like this:
+
+```haskell
+gameScript :: Game
+gameScript = TypedValidatorHash $ toV1 gameValHash
+```
 
