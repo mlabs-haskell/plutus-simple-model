@@ -67,7 +67,7 @@ common lang
     -dsuppress-uniques -dsuppress-module-prefixes
 common deps
   build-depends:
-    , base                     ^>=4.14
+    , base
     , aeson
     , array
     , base16-bytestring
@@ -95,7 +95,6 @@ common deps
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
-    , plutus-tx-plugin
     , strict-containers
     , vector
     , tagged
