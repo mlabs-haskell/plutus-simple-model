@@ -469,11 +469,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1663855466,
-        "narHash": "sha256-hKyOhzc11RwgX4gCkKw7J+GDwPi0lt0BwTlT76dciH4=",
+        "lastModified": 1663873320,
+        "narHash": "sha256-dzCGoaBAjdKapDi1yli8fX+oN+QIxmQrOJ2AazAnel0=",
         "owner": "mlabs-haskell",
         "repo": "mlabs-tooling.nix",
-        "rev": "99bb6ff12936a54becd81194de932a16ac95cc2c",
+        "rev": "0f898e1ce6b1b0b9fc8aee55b95a781e93ed6f9e",
         "type": "github"
       },
       "original": {
