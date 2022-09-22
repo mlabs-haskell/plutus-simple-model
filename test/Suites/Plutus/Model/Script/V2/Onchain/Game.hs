@@ -9,7 +9,7 @@ module Suites.Plutus.Model.Script.V2.Onchain.Game (
   gameContract,
 ) where
 
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V2
 import PlutusTx qualified
 import PlutusTx.Prelude
 

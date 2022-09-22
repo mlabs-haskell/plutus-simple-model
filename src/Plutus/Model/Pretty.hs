@@ -20,8 +20,8 @@ import Prelude
 import Prettyprinter
 import Text.Printf (printf)
 
-import Plutus.V2.Ledger.Api
-import Plutus.V1.Ledger.Value (assetClass, flattenValue, toString)
+import PlutusLedgerApi.V2
+import PlutusLedgerApi.V1.Value (assetClass, flattenValue, toString)
 import Plutus.Model.Fork.Ledger.Slot (Slot (..))
 
 import Plutus.Model.Mock

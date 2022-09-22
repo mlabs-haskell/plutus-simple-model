@@ -13,8 +13,8 @@ module Suites.Plutus.Model.Script.V2.Onchain.Lend (
 ) where
 
 import PlutusTx.Prelude
-import Plutus.V1.Ledger.Value
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V1.Value
+import PlutusLedgerApi.V2
 import PlutusTx qualified
 import Plutus.Model.V2
 

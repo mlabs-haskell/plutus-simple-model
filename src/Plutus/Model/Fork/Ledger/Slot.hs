@@ -37,7 +37,7 @@ import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude
 
 import Data.Data (Data)
-import Plutus.V1.Ledger.Interval
+import PlutusLedgerApi.V1.Interval
 
 {- HLINT ignore "Redundant if" -}
 

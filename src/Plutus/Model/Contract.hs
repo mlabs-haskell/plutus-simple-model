@@ -132,10 +132,10 @@ import Test.Tasty (TestTree)
 import Test.Tasty.HUnit
 
 import Plutus.Model.Fork.Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
-import Plutus.V1.Ledger.Address
-import Plutus.V1.Ledger.Interval (interval)
-import Plutus.V2.Ledger.Api hiding (Map)
-import Plutus.V1.Ledger.Value
+import PlutusLedgerApi.V1.Address
+import PlutusLedgerApi.V1.Interval (interval)
+import PlutusLedgerApi.V2 hiding (Map)
+import PlutusLedgerApi.V1.Value
 import PlutusTx.Prelude qualified as Plutus
 import Plutus.Model.Fork.Ledger.Slot (Slot (..))
 

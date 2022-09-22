@@ -2,8 +2,8 @@ module Suites.Plutus.Model.Script.V1.Onchain.Staking (
   stakeValidator
 ) where
 
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Value
+import PlutusLedgerApi.V2
+import PlutusLedgerApi.V1.Value
 import PlutusTx qualified
 import PlutusTx.Prelude
 import Plutus.Model.V1

@@ -28,8 +28,8 @@ import Data.Coerce (coerce)
 import Data.Kind (Type)
 import Cardano.Ledger.Alonzo.Language qualified as C
 
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Scripts (ScriptHash(..))
+import PlutusLedgerApi.V1
+import PlutusLedgerApi.V1.Scripts (ScriptHash(..))
 import Plutus.Model.Mock (
   HasAddress(..),
   AppendStaking(..),

@@ -28,7 +28,7 @@ import Cardano.Ledger.Shelley.API.Types qualified as C (
   StrictMaybe(..),
   )
 import Cardano.Ledger.Babbage.TxBody qualified as C
-import Plutus.V2.Ledger.Api qualified as P
+import PlutusLedgerApi.V2 qualified as P
 import Plutus.Model.Fork.TxExtra qualified as P
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.Model.Fork.Cardano.Common(

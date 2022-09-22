@@ -6,7 +6,7 @@ module Suites.Plutus.Model.Script.V2.Test.Oracle.Hashed (
 import Prelude
 import Test.Tasty
 
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V2
 import Plutus.Model
 import Suites.Plutus.Model.Script.V2.Onchain.Oracle
 import Suites.Plutus.Model.Script.V2.Onchain.Oracle.Hashed

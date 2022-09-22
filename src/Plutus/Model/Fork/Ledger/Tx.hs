@@ -14,9 +14,9 @@ import Control.DeepSeq (NFData)
 import Data.Map qualified as Map
 import Data.Set qualified as Set
 import GHC.Generics (Generic)
--- import Plutus.V2.Ledger.Scripts
-import Plutus.V2.Ledger.Tx hiding (TxIn(..), TxInType(..))
-import Plutus.V2.Ledger.Api
+-- import PlutusLedgerApi.V2.Scripts
+import PlutusLedgerApi.V2.Tx hiding (TxIn(..), TxInType(..))
+import PlutusLedgerApi.V2
 import PlutusTx.Lattice
 import Cardano.Crypto.Hash (SHA256, digest)
 import Codec.CBOR.Write qualified as Write

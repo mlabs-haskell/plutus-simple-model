@@ -18,9 +18,9 @@ module Suites.Plutus.Model.Script.V2.Onchain.Oracle (
 ) where
 
 import PlutusTx.Prelude
-import Plutus.V1.Ledger.Address (pubKeyHashAddress)
-import Plutus.V2.Ledger.Api
-import Plutus.V2.Ledger.Contexts
+import PlutusLedgerApi.V1.Address (pubKeyHashAddress)
+import PlutusLedgerApi.V2
+import PlutusLedgerApi.V2.Contexts
 import PlutusTx qualified
 import Plutus.Model.V2
 

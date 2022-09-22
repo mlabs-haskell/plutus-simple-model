@@ -10,7 +10,7 @@ module Plutus.Model.Validator.V1(
 
 import PlutusTx.Prelude (Bool, (.))
 import PlutusTx.Prelude qualified as Plutus
-import Plutus.V1.Ledger.Api
+import PlutusLedgerApi.V1
 import PlutusTx.Code (CompiledCode)
 
 import Plutus.Model.Validator (TypedValidator(..), TypedPolicy(..), TypedStake(..))

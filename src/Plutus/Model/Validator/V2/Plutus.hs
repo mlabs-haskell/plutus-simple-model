@@ -8,9 +8,9 @@ module Plutus.Model.Validator.V2.Plutus(
 
 import PlutusTx.Prelude
 import PlutusTx.AssocMap qualified as Map
-import Plutus.V1.Ledger.Address (scriptHashAddress)
-import Plutus.V2.Ledger.Api
-import Plutus.V2.Ledger.Contexts
+import PlutusLedgerApi.V1.Address (scriptHashAddress)
+import PlutusLedgerApi.V2
+import PlutusLedgerApi.V2.Contexts
 
 {-# inlinable getThrough #-}
 getThrough :: ScriptContext -> (TxOut, TxOut)

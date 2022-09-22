@@ -11,8 +11,8 @@ module Plutus.Model.Mock.Address(
 
 import Prelude
 import Data.Coerce
-import Plutus.V1.Ledger.Address
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V1.Address
+import PlutusLedgerApi.V2
 import Plutus.Model.Fork.TxExtra(keyToStaking)
 
 -- | Everything that has address

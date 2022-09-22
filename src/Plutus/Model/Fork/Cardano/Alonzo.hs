@@ -23,8 +23,8 @@ import Cardano.Ledger.Shelley.API.Types qualified as C (
 import Cardano.Ledger.Alonzo.PParams qualified as C
 import Cardano.Ledger.Alonzo.TxWitness qualified as C
 import Plutus.Model.Fork.TxExtra qualified as P
-import Plutus.V2.Ledger.Api qualified as P
-import Plutus.V2.Ledger.Tx qualified as Plutus hiding (TxIn(..))
+import PlutusLedgerApi.V2 qualified as P
+import PlutusLedgerApi.V2.Tx qualified as Plutus hiding (TxIn(..))
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.Model.Fork.Cardano.Common(
   getInputsBy,

@@ -21,8 +21,8 @@ import Codec.Serialise.Class (Serialise)
 import Data.Aeson (FromJSON, ToJSON)
 import Data.Tagged
 import GHC.Generics (Generic)
-import Plutus.V1.Ledger.Value (Value, adaSymbol, adaToken)
-import Plutus.V1.Ledger.Value qualified as Value
+import PlutusLedgerApi.V1.Value (Value, adaSymbol, adaToken)
+import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusTx qualified
 import PlutusTx.Lift (makeLift)
 import PlutusTx.Prelude

@@ -11,15 +11,15 @@ module Suites.Plutus.Model.Script.V1.Onchain.Safe (
 
 import Prelude
 
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Contexts (
+import PlutusLedgerApi.V2
+import PlutusLedgerApi.V1.Contexts (
   findDatum,
   findOwnInput,
   getContinuingOutputs,
   txSignedBy,
  )
-import Plutus.V1.Ledger.Interval (contains)
-import Plutus.V1.Ledger.Value (gt)
+import PlutusLedgerApi.V1.Interval (contains)
+import PlutusLedgerApi.V1.Value (gt)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
 

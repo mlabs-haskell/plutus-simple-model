@@ -158,12 +158,12 @@ import Cardano.Ledger.Crypto qualified as C
 import Cardano.Slotting.EpochInfo.Impl (fixedEpochInfo)
 import Cardano.Slotting.Time (SystemStart (..), slotLengthFromMillisec)
 import Control.Monad.State.Strict
-import Plutus.V2.Ledger.Api hiding (Map)
-import Plutus.V1.Ledger.Interval qualified as Interval
+import PlutusLedgerApi.V2 hiding (Map)
+import PlutusLedgerApi.V1.Interval qualified as Interval
 import Plutus.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
-import Plutus.V1.Ledger.Value (AssetClass, assetClass)
-import Plutus.V1.Ledger.Address (pubKeyHashAddress, toPubKeyHash)
+import PlutusLedgerApi.V1.Value (AssetClass, assetClass)
+import PlutusLedgerApi.V1.Address (pubKeyHashAddress, toPubKeyHash)
 import Cardano.Ledger.Core qualified as Core
 import GHC.Natural
 

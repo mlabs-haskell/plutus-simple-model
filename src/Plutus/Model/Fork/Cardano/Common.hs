@@ -75,10 +75,10 @@ import Cardano.Ledger.Alonzo.Data qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as C
 import Cardano.Ledger.Alonzo.TxInfo qualified as C
 import PlutusTx.Builtins.Internal qualified as P
-import Plutus.V2.Ledger.Api qualified as P
-import Plutus.V2.Ledger.Tx qualified as P
-import Plutus.V2.Ledger.Tx qualified as Plutus hiding (TxIn(..), TxInType(..))
-import Plutus.V1.Ledger.Value qualified as Value
+import PlutusLedgerApi.V2 qualified as P
+import PlutusLedgerApi.V2.Tx qualified as P
+import PlutusLedgerApi.V2.Tx qualified as Plutus hiding (TxIn(..), TxInType(..))
+import PlutusLedgerApi.V1.Value qualified as Value
 import Plutus.Model.Fork.Ledger.Slot qualified as P
 import Plutus.Model.Fork.TxExtra qualified as P
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus

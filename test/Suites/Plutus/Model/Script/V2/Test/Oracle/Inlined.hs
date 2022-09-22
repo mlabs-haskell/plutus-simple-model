@@ -8,7 +8,7 @@ import Data.Maybe (isJust)
 
 import Test.Tasty
 
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V2
 import Suites.Plutus.Model.Script.V2.Onchain.Oracle
 import Suites.Plutus.Model.Script.V2.Onchain.Oracle.Inlined
 import Suites.Plutus.Model.Util

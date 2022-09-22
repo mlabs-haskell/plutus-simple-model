@@ -23,7 +23,7 @@ import Data.Map.Strict qualified as M
 import Data.Vector (Vector)
 import Data.Vector qualified as V
 
-import Plutus.V1.Ledger.Api
+import PlutusLedgerApi.V1
 import Plutus.Model.Mock.FailReason
 import Plutus.Model.Fork.TxExtra (keyToStaking)
 

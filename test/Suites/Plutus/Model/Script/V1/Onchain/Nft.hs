@@ -11,8 +11,8 @@ module Suites.Plutus.Model.Script.V1.Onchain.Nft (
 
 import Prelude
 
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Contexts (ownCurrencySymbol)
+import PlutusLedgerApi.V2
+import PlutusLedgerApi.V1.Contexts (ownCurrencySymbol)
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
 import Plutus.Model.V1

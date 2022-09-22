@@ -7,7 +7,7 @@ module Plutus.Model.Mock.FailReason(
 ) where
 
 import Prelude
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V2
 import Plutus.Model.Fork.Ledger.Slot
 import Plutus.Model.Mock.Percent
 

@@ -9,7 +9,7 @@ import Control.Monad (unless)
 
 import Test.Tasty
 
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V2
 import PlutusTx.Prelude qualified as Plutus
 import Suites.Plutus.Model.Script.V1.Onchain.Game
 import Suites.Plutus.Model.Script.V1.Onchain.Game.Script

@@ -7,8 +7,8 @@ import Test.Tasty
 import Test.Tasty.HUnit
 import Prelude
 
-import Plutus.V1.Ledger.Value
-import Plutus.V1.Ledger.Api
+import PlutusLedgerApi.V1.Value
+import PlutusLedgerApi.V2
 
 import Plutus.Model
 

@@ -10,8 +10,8 @@ import Prelude
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
 
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Contexts
+import PlutusLedgerApi.V2
+import PlutusLedgerApi.V1.Contexts
 
 import Plutus.Model.V1 (datumOf)
 

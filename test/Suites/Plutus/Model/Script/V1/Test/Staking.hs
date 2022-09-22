@@ -6,7 +6,7 @@ import Prelude
 import Test.Tasty
 
 import Plutus.Model
-import Plutus.V1.Ledger.Api
+import PlutusLedgerApi.V2
 import Suites.Plutus.Model.Script.V1.Onchain.Staking
 import Suites.Plutus.Model.Util
 

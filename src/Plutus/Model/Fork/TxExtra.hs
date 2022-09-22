@@ -20,11 +20,11 @@ import Data.List qualified as L
 import Data.Set qualified as S
 import Prelude
 import Plutus.Model.Fork.Ledger.Tx qualified as P
-import Plutus.V2.Ledger.Api
-import Plutus.V1.Ledger.Value qualified as Value
+import PlutusLedgerApi.V2
+import PlutusLedgerApi.V1.Value qualified as Value
 import qualified Data.Map.Strict as M
 import Plutus.Model.Fork.Ledger.Scripts qualified as P
-import Plutus.V1.Ledger.Tx qualified as P
+import PlutusLedgerApi.V1.Tx qualified as P
 import Plutus.Model.Mock.FailReason
 import Plutus.Model.Fork.Ledger.Scripts (Versioned(..), scriptCurrencySymbol)
 import PlutusTx.Prelude qualified as PlutusTx

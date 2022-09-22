@@ -17,7 +17,7 @@ module Plutus.Model.Mock.Stat(
 import Prelude
 import GHC.Natural
 import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V2
 import Plutus.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Model.Fork.Ledger.Slot
 import Plutus.Model.Fork.TxExtra

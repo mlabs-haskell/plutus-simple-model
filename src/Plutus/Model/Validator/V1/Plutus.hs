@@ -5,8 +5,8 @@ module Plutus.Model.Validator.V1.Plutus(
 ) where
 
 import PlutusTx.Prelude
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Contexts
+import PlutusLedgerApi.V1
+import PlutusLedgerApi.V1.Contexts
 
 {-# inlinable getThrough #-}
 getThrough :: ScriptContext -> (TxOut, TxOut)

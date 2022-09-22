@@ -9,9 +9,9 @@ import Cardano.Ledger.Alonzo.Language qualified as C
 import PlutusTx.Prelude qualified as PlutusTx
 import PlutusTx qualified
 import PlutusTx.Prelude
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Value
-import Plutus.V1.Ledger.Contexts
+import PlutusLedgerApi.V1
+import PlutusLedgerApi.V1.Value
+import PlutusLedgerApi.V1.Contexts
 import Plutus.Model.Fork.Ledger.Scripts
 
 newtype FakeCoin = FakeCoin { fakeCoin'tag :: BuiltinByteString }

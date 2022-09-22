@@ -7,7 +7,7 @@ module Suites.Plutus.Model.Script.V2.Test.GameRef (
 import Prelude
 import Test.Tasty
 
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V2
 import PlutusTx.Prelude qualified as Plutus
 import Suites.Plutus.Model.Script.V2.Onchain.Game
 import Suites.Plutus.Model.Script.V2.Onchain.Game.Script
