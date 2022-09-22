@@ -1,5 +1,5 @@
 module Plutus.Model.Fork.Ledger.Scripts (
-  Versioned(..),
+  Versioned (..),
   toV1,
   toV2,
   isV1,
@@ -15,32 +15,32 @@ module Plutus.Model.Fork.Ledger.Scripts (
   toScript,
 ) where
 
-import Prelude
-import Data.Coerce
 import Control.DeepSeq (NFData)
+import Data.Coerce
 import GHC.Generics
+import Prelude
 
 import Codec.Serialise (serialise)
 import Data.ByteString.Lazy qualified as BSL
 import Data.ByteString.Short qualified as SBS
 
-import Cardano.Ledger.Era qualified as C
 import Cardano.Crypto.Hash.Class qualified as C
-import Cardano.Ledger.SafeHash qualified as C
-import Cardano.Ledger.Alonzo.Data qualified as C
-import Cardano.Ledger.Alonzo qualified as C
-import Cardano.Ledger.Alonzo.Scripts qualified as C
-import Cardano.Ledger.Alonzo.Language qualified as C
-import Cardano.Ledger.Alonzo.TxInfo qualified as C
-import Cardano.Ledger.Mary.Value qualified as C
-import PlutusLedgerApi.V2 qualified as P
-import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo qualified as C
+import Cardano.Ledger.Alonzo.Data qualified as C
+import Cardano.Ledger.Alonzo.Language qualified as C
+import Cardano.Ledger.Alonzo.Scripts qualified as C
+import Cardano.Ledger.Alonzo.TxInfo qualified as C
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Era qualified as C
+import Cardano.Ledger.Mary.Value qualified as C
+import Cardano.Ledger.SafeHash qualified as C
+import PlutusLedgerApi.V2 qualified as P
 
 -- | Appends plutus version to the value.
 data Versioned a = Versioned
   { versioned'language :: !C.Language
-  , versioned'content  :: a
+  , versioned'content :: a
   }
   deriving (Show, Eq, Ord, Generic, NFData, Functor)
 
@@ -56,13 +56,13 @@ toV2 = Versioned C.PlutusV2
 isV1 :: Versioned a -> Bool
 isV1 x = case versioned'language x of
   C.PlutusV1 -> True
-  _          -> False
+  _ -> False
 
 -- | Check that version is PlutusV2
 isV2 :: Versioned a -> Bool
 isV2 x = case versioned'language x of
   C.PlutusV2 -> True
-  _          -> False
+  _ -> False
 
 datumHash :: P.Datum -> P.DatumHash
 datumHash (P.Datum (P.BuiltinData dat)) =
@@ -78,9 +78,9 @@ dataHash (P.BuiltinData dat) =
 -- | Hash a 'PV1.Validator' script.
 validatorHash :: Versioned P.Validator -> P.ValidatorHash
 validatorHash val =
-    C.transScriptHash
-  $ C.hashScript @(AlonzoEra StandardCrypto)
-  $ toScript (fmap coerce val)
+  C.transScriptHash $
+    C.hashScript @(AlonzoEra StandardCrypto) $
+      toScript (fmap coerce val)
 
 stakeValidatorHash :: Versioned P.StakeValidator -> P.StakeValidatorHash
 stakeValidatorHash = coerce validatorHash
@@ -91,17 +91,16 @@ scriptHash = coerce validatorHash
 mintingPolicyHash :: Versioned P.MintingPolicy -> P.MintingPolicyHash
 mintingPolicyHash = coerce validatorHash
 
-{-# INLINABLE scriptCurrencySymbol #-}
+{-# INLINEABLE scriptCurrencySymbol #-}
+
 -- | The 'CurrencySymbol' of a 'MintingPolicy'.
 scriptCurrencySymbol :: Versioned P.MintingPolicy -> P.CurrencySymbol
 scriptCurrencySymbol policy =
- C.transPolicyID
- $ C.PolicyID
- $ C.hashScript @(AlonzoEra StandardCrypto)
- $ toScript (fmap coerce policy)
+  C.transPolicyID $
+    C.PolicyID $
+      C.hashScript @(AlonzoEra StandardCrypto) $
+        toScript (fmap coerce policy)
 
 toScript :: Versioned P.Script -> C.Script era
 toScript (Versioned lang script) =
   C.PlutusScript lang $ SBS.toShort $ BSL.toStrict $ serialise script
-
-

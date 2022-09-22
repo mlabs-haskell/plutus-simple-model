@@ -1,11 +1,13 @@
-{-# Language UndecidableInstances #-}
-module Plutus.Model.Validator(
-  TypedValidator(..),
-  TypedPolicy(..),
-  TypedStake(..),
-  IsValidator(..),
+{-# LANGUAGE UndecidableInstances #-}
+
+module Plutus.Model.Validator (
+  TypedValidator (..),
+  TypedPolicy (..),
+  TypedStake (..),
+  IsValidator (..),
+
   -- * Versioned
-  Versioned(..),
+  Versioned (..),
   toV1,
   toV2,
   isV1,
@@ -23,42 +25,50 @@ module Plutus.Model.Validator(
   redeemerHash,
 ) where
 
-import Prelude
+import Cardano.Ledger.Alonzo.Language qualified as C
 import Data.Coerce (coerce)
 import Data.Kind (Type)
-import Cardano.Ledger.Alonzo.Language qualified as C
+import Prelude
 
-import PlutusLedgerApi.V1
-import PlutusLedgerApi.V1.Scripts (ScriptHash(..))
-import Plutus.Model.Mock (
-  HasAddress(..),
-  AppendStaking(..),
-  HasStakingCredential(..),
-  )
-import Plutus.Model.Fork.TxExtra qualified as Fork
-import Plutus.Model.Fork.Ledger.Scripts (Versioned(..), dataHash, datumHash, redeemerHash, toV1, toV2, isV1, isV2)
+import Plutus.Model.Fork.Ledger.Scripts (Versioned (..), dataHash, datumHash, isV1, isV2, redeemerHash, toV1, toV2)
 import Plutus.Model.Fork.Ledger.Scripts qualified as Fork
+import Plutus.Model.Fork.TxExtra qualified as Fork
+import Plutus.Model.Mock (
+  AppendStaking (..),
+  HasAddress (..),
+  HasStakingCredential (..),
+ )
+import PlutusLedgerApi.V1
+import PlutusLedgerApi.V1.Scripts (ScriptHash (..))
 
 -- | Class for typed vlaidators with versioning by Plutus language
-class (HasAddress script, ToData (DatumType script), FromData (DatumType script), ToData (RedeemerType script), FromData (RedeemerType script))
-  => IsValidator script where
-  type DatumType script    :: Type
+class
+  (HasAddress script, ToData (DatumType script), FromData (DatumType script), ToData (RedeemerType script), FromData (RedeemerType script)) =>
+  IsValidator script
+  where
+  type DatumType script :: Type
   type RedeemerType script :: Type
+
   toValidator :: script -> Validator
   -- ^ Get internal alidator
+
   getLanguage :: script -> C.Language
   -- ^ Get plutus language version
 
-instance (ToData datum, FromData datum, ToData redeemer, FromData redeemer)
-  => IsValidator (TypedValidator datum redeemer) where
+instance
+  (ToData datum, FromData datum, ToData redeemer, FromData redeemer) =>
+  IsValidator (TypedValidator datum redeemer)
+  where
   type DatumType (TypedValidator datum redeemer) = datum
   type RedeemerType (TypedValidator datum redeemer) = redeemer
   toValidator (TypedValidator (Versioned _lang validator)) = validator
   getLanguage = versioned'language . unTypedValidator
 
-instance (IsValidator script, ToData (DatumType script), FromData (DatumType script), ToData (RedeemerType script), FromData (RedeemerType script))
-  => IsValidator (AppendStaking script) where
-  type DatumType (AppendStaking script)    = DatumType script
+instance
+  (IsValidator script, ToData (DatumType script), FromData (DatumType script), ToData (RedeemerType script), FromData (RedeemerType script)) =>
+  IsValidator (AppendStaking script)
+  where
+  type DatumType (AppendStaking script) = DatumType script
   type RedeemerType (AppendStaking script) = RedeemerType script
   toValidator (AppendStaking _ script) = toValidator script
   getLanguage (AppendStaking _ script) = getLanguage script
@@ -82,23 +92,22 @@ scriptHash :: IsValidator a => a -> ScriptHash
 scriptHash = coerce . validatorHash
 
 -- | Typed validator. It's phantom type to annotate types for validators
-newtype TypedValidator datum redeemer =
-  TypedValidator { unTypedValidator :: Versioned Validator }
+newtype TypedValidator datum redeemer = TypedValidator {unTypedValidator :: Versioned Validator}
 
-instance (ToData datum, ToData redeemer, FromData datum, FromData redeemer)
-  => HasAddress (TypedValidator datum redeemer) where
+instance
+  (ToData datum, ToData redeemer, FromData datum, FromData redeemer) =>
+  HasAddress (TypedValidator datum redeemer)
+  where
   toAddress = toAddress . validatorHash
 
 -- | Typed minting policy. It's phantom type to annotate types for minting policies
-data TypedPolicy redeemer =
-  TypedPolicy { unTypedPolicy :: Versioned MintingPolicy }
+data TypedPolicy redeemer = TypedPolicy {unTypedPolicy :: Versioned MintingPolicy}
 
 instance (ToData redeemer, FromData redeemer) => HasAddress (TypedPolicy redeemer) where
   toAddress = toAddress . validatorHash
 
 -- | Typed stake valdiators. It's phantom type to annotate types for stake valdiators
-newtype TypedStake redeemer =
-  TypedStake { unTypedStake :: Versioned StakeValidator }
+newtype TypedStake redeemer = TypedStake {unTypedStake :: Versioned StakeValidator}
 
 instance (ToData redeemer, FromData redeemer) => IsValidator (TypedStake redeemer) where
   type DatumType (TypedStake redeemer) = ()
@@ -125,4 +134,3 @@ mintingPolicyHash (TypedPolicy script) = Fork.mintingPolicyHash script
 -- | Get stake vlaidator hash
 stakeValidatorHash :: TypedStake a -> StakeValidatorHash
 stakeValidatorHash (TypedStake script) = Fork.stakeValidatorHash script
-

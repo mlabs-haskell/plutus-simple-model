@@ -4,10 +4,10 @@ module Suites.Plutus.Model.Script.V2.Onchain.Oracle.Hashed (
   betScript,
 ) where
 
-import Prelude (($))
+import Plutus.Model.V2 (TypedValidator, datumOf, mkTypedValidator, toBuiltinValidator)
 import PlutusTx qualified
 import Suites.Plutus.Model.Script.V2.Onchain.Oracle
-import Plutus.Model.V2 (toBuiltinValidator, TypedValidator, mkTypedValidator, datumOf)
+import Prelude (($))
 
 type Bet = TypedValidator BetDatum BetAct
 
@@ -15,5 +15,5 @@ type Bet = TypedValidator BetDatum BetAct
 betScript :: BetParams -> Bet
 betScript betParams =
   mkTypedValidator $
-    $$(PlutusTx.compile [|| \param -> toBuiltinValidator (betContract datumOf param) ||])
+    $$(PlutusTx.compile [||\param -> toBuiltinValidator (betContract datumOf param)||])
       `PlutusTx.applyCode` PlutusTx.liftCode betParams

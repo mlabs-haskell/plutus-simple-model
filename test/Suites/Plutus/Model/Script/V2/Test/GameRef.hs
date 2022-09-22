@@ -1,11 +1,12 @@
--- | Tets for reference scripts. We deploy script for hash game
--- to UTxO and use it as reference input
+{- | Tets for reference scripts. We deploy script for hash game
+ to UTxO and use it as reference input
+-}
 module Suites.Plutus.Model.Script.V2.Test.GameRef (
   tests,
 ) where
 
-import Prelude
 import Test.Tasty
+import Prelude
 
 import PlutusLedgerApi.V2
 import PlutusTx.Prelude qualified as Plutus

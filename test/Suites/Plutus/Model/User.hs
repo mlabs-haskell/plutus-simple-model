@@ -10,8 +10,8 @@ import Prelude
 
 import Data.Functor (void)
 import Plutus.Model
+import Suites.Plutus.Model.FakeCoin qualified as FakeCoin
 import Suites.Plutus.Model.Util
-import qualified Suites.Plutus.Model.FakeCoin as FakeCoin
 
 tests :: MockConfig -> TestTree
 tests cfg = do

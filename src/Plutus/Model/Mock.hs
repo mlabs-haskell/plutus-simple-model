@@ -13,21 +13,22 @@
 -}
 module Plutus.Model.Mock (
   -- * Address helpers
-  HasAddress(..),
-  HasStakingCredential(..),
-  AppendStaking(..),
+  HasAddress (..),
+  HasStakingCredential (..),
+  AppendStaking (..),
   appendStakingCredential,
   appendStakingPubKey,
   appendStakingScript,
+
   -- * Mock blockchain model
   Mock (..),
   MockConfig (..),
-  CheckLimits(..),
+  CheckLimits (..),
   MockNames (..),
   User (..),
   TxStat (..),
   txStatId,
-  PoolId(..),
+  PoolId (..),
   ExUnits (..),
   Result (..),
   isOkResult,
@@ -51,10 +52,10 @@ module Plutus.Model.Mock (
   Run (..),
   runMock,
   initMock,
-  Percent(..),
+  Percent (..),
   toPercent,
-  StatPercent(..),
-  PercentExecutionUnits(..),
+  StatPercent (..),
+  PercentExecutionUnits (..),
   toStatPercent,
 
   -- * core blockchain functions
@@ -108,101 +109,101 @@ module Plutus.Model.Mock (
   testnetTxLimits,
 
   -- * Logs
-  Log(..),
+  Log (..),
   appendLog,
   nullLog,
   fromLog,
   fromGroupLog,
-  MockEvent(..),
+  MockEvent (..),
   silentLog,
   failLog,
   filterSlot,
   getLog,
   getFails,
-  MustFailLog(..),
+  MustFailLog (..),
 
   -- * internal
   intToUser,
   userPubKeyHash,
 ) where
 
-import Prelude
-import Control.Applicative (Alternative(..))
+import Control.Applicative (Alternative (..))
 import GHC.Records
+import Prelude
 
 import Control.Monad.Identity
+import Data.Array qualified as Array
 import Data.ByteString qualified as BS
 import Data.Either
+import Data.Map qualified as Map
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
-import qualified Data.Map as Map
-import qualified Data.Array as Array
 import Data.Text (Text)
 
 import Data.List qualified as L
-import Data.Vector qualified as V
 import Data.Maybe
+import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Set qualified as S
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
-import Data.Sequence.Strict (StrictSeq)
+import Data.Vector qualified as V
 
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
-import Cardano.Ledger.Era (Crypto)
-import Cardano.Ledger.Alonzo.TxWitness qualified as C
-import Cardano.Ledger.Shelley.API.Types qualified as C
-import Cardano.Crypto.Seed qualified as C
 import Cardano.Crypto.DSIGN.Class qualified as C
 import Cardano.Crypto.Hash.Class qualified as C
+import Cardano.Crypto.Seed qualified as C
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
+import Cardano.Ledger.Alonzo.TxWitness qualified as C
+import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Crypto qualified as C
+import Cardano.Ledger.Era (Crypto)
+import Cardano.Ledger.Shelley.API.Types qualified as C
 import Cardano.Slotting.EpochInfo.Impl (fixedEpochInfo)
 import Cardano.Slotting.Time (SystemStart (..), slotLengthFromMillisec)
 import Control.Monad.State.Strict
-import PlutusLedgerApi.V2 hiding (Map)
-import PlutusLedgerApi.V1.Interval qualified as Interval
+import GHC.Natural
 import Plutus.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
-import PlutusLedgerApi.V1.Value (AssetClass, assetClass)
 import PlutusLedgerApi.V1.Address (pubKeyHashAddress, toPubKeyHash)
-import Cardano.Ledger.Core qualified as Core
-import GHC.Natural
+import PlutusLedgerApi.V1.Interval qualified as Interval
+import PlutusLedgerApi.V1.Value (AssetClass, assetClass)
+import PlutusLedgerApi.V2 hiding (Map)
 
-import Cardano.Ledger.Hashes qualified as C
-import Cardano.Ledger.Slot (EpochSize (..))
 import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Ledger.Hashes as Ledger (EraIndependentTxBody)
+import Cardano.Ledger.Hashes qualified as C
 import Cardano.Ledger.SafeHash qualified as Ledger (unsafeMakeSafeHash)
+import Cardano.Ledger.Slot (EpochSize (..))
 import Plutus.Model.Fork.Ledger.Slot
 import Plutus.Model.Fork.Ledger.TimeSlot (SlotConfig (..))
 import Plutus.Model.Fork.TxExtra
-import Plutus.Model.Stake
 import Plutus.Model.Mock.ProtocolParameters
+import Plutus.Model.Stake
 
-import Cardano.Ledger.Mary.Value qualified as Mary
-import Cardano.Ledger.Shelley.API.Wallet qualified as C
-import Cardano.Ledger.SafeHash qualified as C
-import Cardano.Ledger.TxIn qualified as Ledger
+import Cardano.Ledger.Alonzo.Language qualified as Alonzo
+import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
+import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
+import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
+import Cardano.Ledger.Babbage.PParams
+import Cardano.Ledger.Mary.Value qualified as Mary
+import Cardano.Ledger.SafeHash qualified as C
 import Cardano.Ledger.Shelley.API.Wallet (evaluateTransactionBalance)
-import qualified Cardano.Ledger.Alonzo.Language as Alonzo
-import qualified Cardano.Ledger.Alonzo.Scripts as Alonzo
-import qualified Cardano.Ledger.Alonzo.PParams as Alonzo
-import Plutus.Model.Fork.Cardano.Alonzo ()
-import Plutus.Model.Fork.Cardano.Babbage  ()
-import Plutus.Model.Fork.Cardano.Common (fromTxId, fromCardanoValue)
+import Cardano.Ledger.Shelley.API.Wallet qualified as C
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
-import Cardano.Ledger.Alonzo.Scripts (ExUnits(..))
-import Plutus.Model.Ada (Ada(..))
-import Plutus.Model.Mock.MockConfig
+import Cardano.Ledger.TxIn qualified as Ledger
+import Plutus.Model.Ada (Ada (..))
+import Plutus.Model.Fork.Cardano.Alonzo ()
+import Plutus.Model.Fork.Cardano.Alonzo qualified as Alonzo
+import Plutus.Model.Fork.Cardano.Babbage ()
+import Plutus.Model.Fork.Cardano.Babbage qualified as Babbage
+import Plutus.Model.Fork.Cardano.Class qualified as Class
+import Plutus.Model.Fork.Cardano.Common (fromCardanoValue, fromTxId)
+import Plutus.Model.Mock.Address
 import Plutus.Model.Mock.FailReason
 import Plutus.Model.Mock.Log
-import Plutus.Model.Mock.Address
+import Plutus.Model.Mock.MockConfig
 import Plutus.Model.Mock.Stat
-import Plutus.Model.Fork.Cardano.Class qualified as Class
-import Cardano.Ledger.Babbage.PParams
-import Plutus.Model.Fork.Cardano.Alonzo qualified as Alonzo
-import Plutus.Model.Fork.Cardano.Babbage qualified as Babbage
 
 newtype User = User
   { userSignKey :: C.KeyPair 'C.Witness C.StandardCrypto
@@ -218,22 +219,22 @@ newtype User = User
  is estimated on Cardano version of TX.
 -}
 data Mock = Mock
-  { mockUsers        :: !(Map PubKeyHash User)
-  , mockAddresses    :: !(Map Address (Set TxOutRef))
-  , mockUtxos        :: !(Map TxOutRef TxOut)
-  , mockRefScripts   :: !(Map TxOutRef TxOut)
-  , mockDatums       :: !(Map DatumHash Datum)
-  , mockStake        :: !Stake
-  , mockTxs          :: !(Log TxStat)
-  , mockConfig       :: !MockConfig
-  , mockCurrentSlot  :: !Slot
-  , mockUserStep     :: !Integer
-  , mockFails        :: !(Log FailReason)
-  , mockInfo         :: !(Log String)
-  , mustFailLog     :: !(Log MustFailLog)
-  , -- | human readable names. Idea is to substitute for them
-    -- in pretty printers for error logs, user names, script names.
-    mockNames :: !MockNames
+  { mockUsers :: !(Map PubKeyHash User)
+  , mockAddresses :: !(Map Address (Set TxOutRef))
+  , mockUtxos :: !(Map TxOutRef TxOut)
+  , mockRefScripts :: !(Map TxOutRef TxOut)
+  , mockDatums :: !(Map DatumHash Datum)
+  , mockStake :: !Stake
+  , mockTxs :: !(Log TxStat)
+  , mockConfig :: !MockConfig
+  , mockCurrentSlot :: !Slot
+  , mockUserStep :: !Integer
+  , mockFails :: !(Log FailReason)
+  , mockInfo :: !(Log String)
+  , mustFailLog :: !(Log MustFailLog)
+  , mockNames :: !MockNames
+  -- ^ human readable names. Idea is to substitute for them
+  -- in pretty printers for error logs, user names, script names.
   }
 
 -- | Result of the execution.
@@ -250,10 +251,11 @@ isOkResult = \case
 newtype Run a = Run (State Mock a)
   deriving newtype (Functor, Applicative, Monad, MonadState Mock)
 
--- | Dummy instance to be able to use partial pattern matching
--- in do-notation
+{- | Dummy instance to be able to use partial pattern matching
+ in do-notation
+-}
 instance MonadFail Run where
-   fail err = error $ "Failed to recover: " <> err
+  fail err = error $ "Failed to recover: " <> err
 
 -- | Human readable names for pretty printing.
 data MockNames = MockNames
@@ -278,7 +280,7 @@ writeUserName pkh name = do
 -- | Assigns human-readable name to address
 writeAddressName :: Address -> String -> Run ()
 writeAddressName addr name = modifyMockNames $ \ns ->
-   ns {mockNameAddresses = M.insert addr name (mockNameAddresses ns)}
+  ns {mockNameAddresses = M.insert addr name (mockNameAddresses ns)}
 
 -- | Assigns human-readable name to asset class
 writeAssetClassName :: AssetClass -> String -> Run ()
@@ -388,12 +390,13 @@ initMock cfg initVal =
     genesisTxOutRef = TxOutRef genesisTxId 0
     genesisTxOut = TxOut (pubKeyHashAddress genesisUserId) initVal NoOutputDatum Nothing
 
-    initStake = Stake
-      { stake'pools      = M.singleton genesisPoolId (Pool { pool'stakes = [genesisStakingCred]})
-      , stake'poolIds    = V.singleton genesisPoolId
-      , stake'stakes     = M.singleton genesisStakingCred 0
-      , stake'nextReward = 0
-      }
+    initStake =
+      Stake
+        { stake'pools = M.singleton genesisPoolId (Pool {pool'stakes = [genesisStakingCred]})
+        , stake'poolIds = V.singleton genesisPoolId
+        , stake'stakes = M.singleton genesisStakingCred 0
+        , stake'nextReward = 0
+        }
 
     genesisPoolId = PoolId genesisUserId
     genesisStakingCred = keyToStaking genesisUserId
@@ -428,7 +431,7 @@ signTx :: PubKeyHash -> Tx -> Run Tx
 signTx pkh = updatePlutusTx $ \tx -> do
   mKeys <- getUserSignKey pkh
   case mKeys of
-    Just keys -> pure $ tx { P.txSignatures = M.insert pkh keys $ P.txSignatures tx}
+    Just keys -> pure $ tx {P.txSignatures = M.insert pkh keys $ P.txSignatures tx}
     Nothing -> do
       logFail (NoUser pkh)
       pure tx
@@ -447,7 +450,7 @@ pureFail res = do
 logFail :: FailReason -> Run ()
 logFail res = do
   curTime <- gets mockCurrentSlot
-  modify' $ \s -> s {mockFails = appendLog curTime res (mockFails s) }
+  modify' $ \s -> s {mockFails = appendLog curTime res (mockFails s)}
 
 -- | Log generic error.
 logError :: String -> Run ()
@@ -456,7 +459,7 @@ logError = logFail . GenericFail
 logInfo :: String -> Run ()
 logInfo msg = do
   slot <- gets mockCurrentSlot
-  modify' $ \s -> s { mockInfo = appendLog slot msg (mockInfo s) }
+  modify' $ \s -> s {mockInfo = appendLog slot msg (mockInfo s)}
 
 -- | Igonres log of TXs and info messages during execution (but not errors)
 noLog :: Run a -> Run a
@@ -464,7 +467,7 @@ noLog act = do
   txLog <- gets mockTxs
   infoLog <- gets mockInfo
   res <- act
-  modify' $ \st -> st { mockTxs = txLog, mockInfo = infoLog }
+  modify' $ \st -> st {mockTxs = txLog, mockInfo = infoLog}
   pure res
 
 -- | Igonres log of TXs during execution
@@ -472,7 +475,7 @@ noLogTx :: Run a -> Run a
 noLogTx act = do
   txLog <- gets mockTxs
   res <- act
-  modify' $ \st -> st { mockTxs = txLog }
+  modify' $ \st -> st {mockTxs = txLog}
   pure res
 
 -- | Igonres log of info level messages during execution
@@ -480,7 +483,7 @@ noLogInfo :: Run a -> Run a
 noLogInfo act = do
   infoLog <- gets mockInfo
   res <- act
-  modify' $ \st -> st { mockInfo = infoLog }
+  modify' $ \st -> st {mockInfo = infoLog}
   pure res
 
 -- | Send block of TXs to blockchain.
@@ -506,30 +509,32 @@ sendSingleTx preTx = do
     Right tx -> do
       genParams <- gets (mockConfigProtocol . mockConfig)
       case genParams of
-        AlonzoParams params  -> checkSingleTx @Alonzo.Era  params tx
+        AlonzoParams params -> checkSingleTx @Alonzo.Era params tx
         BabbageParams params -> checkSingleTx @Babbage.Era params tx
     Left err -> leftFail err
 
 -- | Confirms that single TX is valid. Works across several Eras (see @Plutus.Model.Fork.Cardano.Class@)
 checkSingleTx ::
-  forall era .
-  ( ExtendedUTxO era,
-    CBOR.ToCBOR (Core.Tx era),
-    HasField "inputs" (Core.TxBody era) (Set (C.TxIn (Crypto era))),
-    HasField "certs" (Core.TxBody era) (StrictSeq (C.DCert (Crypto era))),
-    HasField "wdrls" (Core.TxBody era) (C.Wdrl (Crypto era)),
-    HasField "txdats" (Core.Witnesses era) (C.TxDats era),
-    HasField "txrdmrs" (Core.Witnesses era) (C.Redeemers era),
-    HasField "_costmdls" (Core.PParams era) Alonzo.CostModels,
-    HasField "_maxTxExUnits" (Core.PParams era) Alonzo.ExUnits,
-    HasField "_protocolVersion" (Core.PParams era) C.ProtVer,
-    Core.Script era ~ Alonzo.Script era,
-    C.CLI era,
-    C.HashAnnotated (Core.TxBody era) C.EraIndependentTxBody C.StandardCrypto,
-    Class.IsCardanoTx era,
-    Core.Value era ~ Mary.Value C.StandardCrypto
-  )
-  => Core.PParams era -> Tx -> Run (Either FailReason Stat)
+  forall era.
+  ( ExtendedUTxO era
+  , CBOR.ToCBOR (Core.Tx era)
+  , HasField "inputs" (Core.TxBody era) (Set (C.TxIn (Crypto era)))
+  , HasField "certs" (Core.TxBody era) (StrictSeq (C.DCert (Crypto era)))
+  , HasField "wdrls" (Core.TxBody era) (C.Wdrl (Crypto era))
+  , HasField "txdats" (Core.Witnesses era) (C.TxDats era)
+  , HasField "txrdmrs" (Core.Witnesses era) (C.Redeemers era)
+  , HasField "_costmdls" (Core.PParams era) Alonzo.CostModels
+  , HasField "_maxTxExUnits" (Core.PParams era) Alonzo.ExUnits
+  , HasField "_protocolVersion" (Core.PParams era) C.ProtVer
+  , Core.Script era ~ Alonzo.Script era
+  , C.CLI era
+  , C.HashAnnotated (Core.TxBody era) C.EraIndependentTxBody C.StandardCrypto
+  , Class.IsCardanoTx era
+  , Core.Value era ~ Mary.Value C.StandardCrypto
+  ) =>
+  Core.PParams era ->
+  Tx ->
+  Run (Either FailReason Stat)
 checkSingleTx params (Tx extra tx) =
   withCheckStaking $
     withCheckRange $
@@ -553,9 +558,9 @@ checkSingleTx params (Tx extra tx) =
         Right txBody -> cont txBody
         Left err -> leftFail $ GenericFail err
 
-    withCheckStaking cont = withCheckWithdraw (withCheckCertificates cont )
+    withCheckStaking cont = withCheckWithdraw (withCheckCertificates cont)
 
-    withCheckWithdraw cont = maybe cont leftFail =<< checkWithdraws (extra'withdraws extra )
+    withCheckWithdraw cont = maybe cont leftFail =<< checkWithdraws (extra'withdraws extra)
     withCheckCertificates cont = maybe cont leftFail =<< checkCertificates (extra'certificates extra)
 
     withCheckRange cont = do
@@ -570,9 +575,9 @@ checkSingleTx params (Tx extra tx) =
       where
         go st = \case
           [] -> pure Nothing
-          Withdraw{..} : rest ->
+          Withdraw {..} : rest ->
             case checkWithdrawStake pkhs withdraw'credential withdraw'amount st of
-              Nothing  -> go st rest
+              Nothing -> go st rest
               Just err -> pure $ Just $ TxInvalidWithdraw err
 
     checkCertificates certs = do
@@ -580,9 +585,9 @@ checkSingleTx params (Tx extra tx) =
       go st (certificate'dcert <$> certs)
       where
         go st = \case
-          []   -> pure Nothing
-          c:cs -> case checkDCert c st of
-            Nothing  -> go (reactDCert c st) cs
+          [] -> pure Nothing
+          c : cs -> case checkDCert c st of
+            Nothing -> go (reactDCert c st) cs
             Just err -> pure $ Just $ TxInvalidCertificate err
 
     withUTxO cont = do
@@ -594,19 +599,18 @@ checkSingleTx params (Tx extra tx) =
 
     withCheckBalance utxo txBody cont
       | balance == mempty = cont
-      | otherwise         = leftFail (NotBalancedTx $ fromCardanoValue balance)
+      | otherwise = leftFail (NotBalancedTx $ fromCardanoValue balance)
       where
         balance = evaluateTransactionBalance params utxo isNewPool (Class.getTxBody txBody)
 
-        -- | TODO: use pool ids info
+        -- \| TODO: use pool ids info
         -- isNewPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
         isNewPool _kh = True -- StakePoolKeyHash kh `S.notMember` poolids
-
     withCheckUnits ::
-         Ledger.UTxO era
-      -> Core.Tx era
-      -> (Alonzo.ExUnits -> Run (Either FailReason a))
-      -> Run (Either FailReason a)
+      Ledger.UTxO era ->
+      Core.Tx era ->
+      (Alonzo.ExUnits -> Run (Either FailReason a)) ->
+      Run (Either FailReason a)
     withCheckUnits utxo txBody cont = do
       slotCfg <- gets (mockConfigSlotConfig . mockConfig)
       let cardanoSystemStart = SystemStart $ posixSecondsToUTCTime $ fromInteger $ (`div` 1000) $ getPOSIXTime $ scSlotZeroTime slotCfg
@@ -618,31 +622,31 @@ checkSingleTx params (Tx extra tx) =
         foldErrors = lefts
         foldCost = foldMap snd . rights
 
-        evalAlonzo systemStart history = case
-          evaluateTransactionExecutionUnits
-            params
-            txBody
-            utxo
-            history
-            systemStart
-            (toAlonzoCostModels $ getField @"_costmdls" params)
-          of
-            Left err -> leftFail $ GenericFail $ show err
-            Right res ->
-              let res' = (\(k, v) -> fmap (k,) v) <$> M.toList res
-                  errs = foldErrors res'
-                  cost = foldCost res'
-              in case errs of
-                    [] -> cont cost
-                    _ -> leftFail $ GenericFail $ unlines $ fmap show errs
+        evalAlonzo systemStart history = case evaluateTransactionExecutionUnits
+          params
+          txBody
+          utxo
+          history
+          systemStart
+          (toAlonzoCostModels $ getField @"_costmdls" params) of
+          Left err -> leftFail $ GenericFail $ show err
+          Right res ->
+            let res' = (\(k, v) -> fmap (k,) v) <$> M.toList res
+                errs = foldErrors res'
+                cost = foldCost res'
+             in case errs of
+                  [] -> cont cost
+                  _ -> leftFail $ GenericFail $ unlines $ fmap show errs
 
-        toAlonzoCostModels :: Alonzo.CostModels
-                            -> Array.Array Alonzo.Language Alonzo.CostModel
+        toAlonzoCostModels ::
+          Alonzo.CostModels ->
+          Array.Array Alonzo.Language Alonzo.CostModel
         toAlonzoCostModels (Alonzo.CostModels costmodels) =
           Array.array
             (minBound, maxBound)
             [ (lang, costmodel)
-            | (lang, costmodel) <- Map.toList costmodels ]
+            | (lang, costmodel) <- Map.toList costmodels
+            ]
 
     withCheckTxLimits stat cont = do
       maxLimits <- gets (mockConfigLimitStats . mockConfig)
@@ -651,11 +655,10 @@ checkSingleTx params (Tx extra tx) =
           statPercent = toStatPercent maxLimits stat
       if null errs
         then cont
-        else
-          case checkLimits of
-            IgnoreLimits -> cont
-            WarnLimits   -> logFail (TxLimitError errs statPercent) >> cont
-            ErrorLimits  -> leftFail (TxLimitError errs statPercent)
+        else case checkLimits of
+          IgnoreLimits -> cont
+          WarnLimits -> logFail (TxLimitError errs statPercent) >> cont
+          ErrorLimits -> leftFail (TxLimitError errs statPercent)
 
 leftFail :: FailReason -> Run (Either FailReason a)
 leftFail err = do
@@ -663,18 +666,18 @@ leftFail err = do
   pure $ Left err
 
 compareLimits :: Stat -> Stat -> [LimitOverflow]
-compareLimits maxLimits stat = catMaybes
-  [ cmp TxSizeError statSize
-  , cmp ExMemError (naturalToInteger  . (\(Alonzo.ExUnits mem _)   -> mem)   . statExecutionUnits)
-  , cmp ExStepError (naturalToInteger . (\(Alonzo.ExUnits _ steps) -> steps) . statExecutionUnits)
-  ]
+compareLimits maxLimits stat =
+  catMaybes
+    [ cmp TxSizeError statSize
+    , cmp ExMemError (naturalToInteger . (\(Alonzo.ExUnits mem _) -> mem) . statExecutionUnits)
+    , cmp ExStepError (naturalToInteger . (\(Alonzo.ExUnits _ steps) -> steps) . statExecutionUnits)
+    ]
   where
     cmp cons getter
       | overflow > 0 = Just $ cons overflow (toPercent (getter maxLimits) overflow)
-      | otherwise    = Nothing
+      | otherwise = Nothing
       where
         overflow = getter stat - getter maxLimits
-
 
 -- | Read UTxO relevant to transaction
 getUTxO :: (Class.IsCardanoTx era) => P.Tx -> Run (Maybe (Either String (Ledger.UTxO era)))
@@ -698,7 +701,7 @@ getTxOut ref = do
   mTout <- M.lookup ref <$> gets mockUtxos
   case mTout of
     Just tout -> pure $ Just tout
-    Nothing   -> M.lookup ref <$> gets mockRefScripts
+    Nothing -> M.lookup ref <$> gets mockRefScripts
 
 -- | Update slot counter by one.
 bumpSlot :: Run ()
@@ -753,21 +756,21 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
         insertAddresses = modify' $ \s -> s {mockAddresses = M.alter (Just . maybe (S.singleton ref) (S.insert ref)) addr $ mockAddresses s}
         insertUtxos
           | isRefScript = modify' $ \s -> s {mockRefScripts = M.singleton ref out <> mockRefScripts s}
-          | otherwise   = modify' $ \s -> s {mockUtxos = M.singleton ref out <> mockUtxos s}
+          | otherwise = modify' $ \s -> s {mockUtxos = M.singleton ref out <> mockUtxos s}
 
         isRefScript = isJust (txOutReferenceScript out)
 
     updateRewards = mapM_ modifyWithdraw $ extra'withdraws extra
       where
-        modifyWithdraw Withdraw{..} = onStake (withdrawStake withdraw'credential)
+        modifyWithdraw Withdraw {..} = onStake (withdrawStake withdraw'credential)
 
     updateCertificates = mapM_ (onStake . reactDCert . certificate'dcert) $ extra'certificates extra
 
-    onStake f = modify' $ \st -> st { mockStake = f $ mockStake st }
+    onStake f = modify' $ \st -> st {mockStake = f $ mockStake st}
 
     updateFees = do
       st <- gets mockStake
-      forM_ (rewardStake (getLovelace txFee) st) $ \nextSt -> modify' $ \mock -> mock { mockStake = nextSt }
+      forM_ (rewardStake (getLovelace txFee) st) $ \nextSt -> modify' $ \mock -> mock {mockStake = nextSt}
 
 -- | Read all TxOutRefs that belong to given address.
 txOutRefAt :: Address -> Run [TxOutRef]
@@ -789,12 +792,13 @@ refScriptAt addr = utxoAtStateBy mockRefScripts addr <$> get
 withFirstUtxo :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
 withFirstUtxo = withUtxo (const True)
 
--- | Reads list of UTXOs that belong to address and applies predicate to search for
--- certain UTXO in that list. It proceeds with continuation if UTXO is present
--- and fails with @logError@ if there is no such UTXO.
---
--- Note that it does not search among UTXOs that store scripts (used for reference scripts).
--- It's done for convenience.
+{- | Reads list of UTXOs that belong to address and applies predicate to search for
+ certain UTXO in that list. It proceeds with continuation if UTXO is present
+ and fails with @logError@ if there is no such UTXO.
+
+ Note that it does not search among UTXOs that store scripts (used for reference scripts).
+ It's done for convenience.
+-}
 withUtxo :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
 withUtxo isUtxo user cont =
   withMayBy readMsg (L.find isUtxo <$> utxoAt user) cont
@@ -806,12 +810,13 @@ withUtxo isUtxo user cont =
 withFirstRefScript :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
 withFirstRefScript = withRefScript (const True)
 
--- | Reads list of reference script UTXOs that belong to address and applies predicate to search for
--- certain UTXO in that list. It proceeds with continuation if UTXO is present
--- and fails with @logError@ if there is no such UTXO.
---
--- Note that it searches only among UTXOs that store scripts (used for reference scripts).
--- It's done for convenience.
+{- | Reads list of reference script UTXOs that belong to address and applies predicate to search for
+ certain UTXO in that list. It proceeds with continuation if UTXO is present
+ and fails with @logError@ if there is no such UTXO.
+
+ Note that it searches only among UTXOs that store scripts (used for reference scripts).
+ It's done for convenience.
+-}
 withRefScript :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
 withRefScript isUtxo user cont =
   withMayBy readMsg (L.find isUtxo <$> refScriptAt user) cont
@@ -832,13 +837,13 @@ datumAt ref = do
   mdat <- getHashDatum ref
   case mdat of
     Just dat -> pure (Just dat)
-    Nothing  -> fmap (getInlineDatum =<< ) $ getTxOut ref
+    Nothing -> fmap (getInlineDatum =<<) $ getTxOut ref
 
 -- | Reads datum with continuation
 withDatum :: FromData a => TxOutRef -> (a -> Run ()) -> Run ()
 withDatum ref cont = withMay err (datumAt ref) cont
   where
-    err = "No datum for TxOutRef: "<> show ref
+    err = "No datum for TxOutRef: " <> show ref
 
 -- | Continuation based queries.
 withMay :: String -> Run (Maybe a) -> (a -> Run ()) -> Run ()
@@ -846,16 +851,17 @@ withMay msg act cont = do
   mRes <- act
   case mRes of
     Just res -> cont res
-    Nothing  -> logError msg
+    Nothing -> logError msg
 
--- | Continuation based queries with effectful error messages.
--- It can be useful to read human readable names for addresses, TXs, currency symbols etc.
+{- | Continuation based queries with effectful error messages.
+ It can be useful to read human readable names for addresses, TXs, currency symbols etc.
+-}
 withMayBy :: Run String -> Run (Maybe a) -> (a -> Run ()) -> Run ()
 withMayBy msg act cont = do
   mRes <- act
   case mRes of
     Just res -> cont res
-    Nothing  -> logError =<< msg
+    Nothing -> logError =<< msg
 
 -- | Reads typed datum from blockchain that belongs to UTXO (by reference) by Hash.
 getHashDatum :: FromData a => TxOutRef -> Run (Maybe a)
@@ -869,14 +875,14 @@ getInlineDatum :: FromData dat => TxOut -> Maybe dat
 getInlineDatum tout =
   case txOutDatum tout of
     OutputDatum dat -> fromBuiltinData (getDatum dat)
-    _               -> Nothing
+    _ -> Nothing
 
 -- | Reads datum hash for @TxOut@
 txOutDatumHash :: TxOut -> Maybe DatumHash
 txOutDatumHash tout =
   case txOutDatum tout of
     OutputDatumHash dh -> Just dh
-    _                  -> Nothing
+    _ -> Nothing
 
 -- | Reads current reward amount for a staking credential
 rewardAt :: HasStakingCredential cred => cred -> Run Integer
@@ -888,11 +894,11 @@ stakesAt (PoolId poolKey) = gets (lookupStakes (PoolId poolKey) . mockStake)
 
 -- | Checks that pool is registered
 hasPool :: PoolId -> Run Bool
-hasPool (PoolId pkh) = gets (M.member (PoolId pkh) . stake'pools. mockStake)
+hasPool (PoolId pkh) = gets (M.member (PoolId pkh) . stake'pools . mockStake)
 
 -- | Checks that staking credential is registered
 hasStake :: HasStakingCredential a => a -> Run Bool
-hasStake key = gets (M.member (toStakingCredential key) . stake'stakes. mockStake)
+hasStake key = gets (M.member (toStakingCredential key) . stake'stakes . mockStake)
 
 -- | Read pool ids registered on ledger.
 getPools :: Run [PoolId]
@@ -903,7 +909,7 @@ getPools = gets (V.toList . stake'poolIds . mockStake)
 
 -- | Reads the log.
 getLog :: Mock -> Log MockEvent
-getLog Mock{..} =
+getLog Mock {..} =
   mconcat
     [ MockInfo <$> mockInfo
     , MockMustFailLog <$> mustFailLog
@@ -917,15 +923,15 @@ getLog Mock{..} =
 -- seed utilities
 
 newtype RawSeed = RawSeed Integer
-   deriving newtype (Eq, Show, CBOR.ToCBOR)
+  deriving newtype (Eq, Show, CBOR.ToCBOR)
 
--- | Construct a seed from a bunch of Word64s
---
---   We multiply these words by some extra stuff to make sure they contain
---   enough bits for our seed.
+{- | Construct a seed from a bunch of Word64s
+
+   We multiply these words by some extra stuff to make sure they contain
+   enough bits for our seed.
+-}
 mkSeedFromInteger ::
   RawSeed ->
   C.Seed
 mkSeedFromInteger stuff =
   C.mkSeedFromBytes . Crypto.hashToBytes $ Crypto.hashWithSerialiser @Crypto.Blake2b_256 CBOR.toCBOR stuff
-

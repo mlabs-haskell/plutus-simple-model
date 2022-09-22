@@ -1,19 +1,19 @@
 -- | Classes to get addresses and work with addresses
-module Plutus.Model.Mock.Address(
-  HasAddress(..),
-  HasStakingCredential(..),
-  AppendStaking(..),
+module Plutus.Model.Mock.Address (
+  HasAddress (..),
+  HasStakingCredential (..),
+  AppendStaking (..),
   appendStakingCredential,
   appendCredential,
   appendStakingPubKey,
   appendStakingScript,
 ) where
 
-import Prelude
 import Data.Coerce
+import Plutus.Model.Fork.TxExtra (keyToStaking)
 import PlutusLedgerApi.V1.Address
 import PlutusLedgerApi.V2
-import Plutus.Model.Fork.TxExtra(keyToStaking)
+import Prelude
 
 -- | Everything that has address
 class HasAddress a where
@@ -39,13 +39,13 @@ instance HasStakingCredential PubKeyHash where
   toStakingCredential = keyToStaking
 
 -- | Encodes appening of staking address
-data AppendStaking a =
-  AppendStaking StakingCredential a
+data AppendStaking a
+  = AppendStaking StakingCredential a
 
 instance HasAddress a => HasAddress (AppendStaking a) where
   toAddress (AppendStaking stakeCred a) = appendStake (toAddress a)
     where
-      appendStake addr = addr { addressStakingCredential = Just stakeCred }
+      appendStake addr = addr {addressStakingCredential = Just stakeCred}
 
 -- | Appends staking credential to a script
 appendStakingCredential :: StakingCredential -> script -> AppendStaking script
@@ -70,4 +70,3 @@ appendStakingPubKey pkh = appendCredential (PubKeyCredential pkh)
 -- | Append staking script info
 appendStakingScript :: StakeValidatorHash -> a -> AppendStaking a
 appendStakingScript sh = appendCredential (ScriptCredential $ coerce sh)
-

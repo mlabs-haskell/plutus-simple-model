@@ -1,5 +1,5 @@
 -- | Can use fake coins
-module Suites.Plutus.Model.FakeCoin(
+module Suites.Plutus.Model.FakeCoin (
   tests,
 ) where
 
@@ -20,8 +20,8 @@ tests cfg = good "Simple fake coin exchange" simpleSpend
 
 dollar, euro, lira :: Integer -> Value
 dollar = fakeValue (FakeCoin "dollar")
-euro   = fakeValue (FakeCoin "euro")
-lira   = fakeValue (FakeCoin "lira")
+euro = fakeValue (FakeCoin "euro")
+lira = fakeValue (FakeCoin "lira")
 
 setupFakeCoinUsers :: Run [PubKeyHash]
 setupFakeCoinUsers = do
@@ -43,9 +43,10 @@ simpleSpend = do
   isOk <- noErrors
   vals <- mapM valueAt users
   let [v1, v2, v3] = vals
-  pure $ and
-    [ isOk
-    , v1 == adaValue 1000 <> dollar 50 <> lira 50
-    , v2 == adaValue 1000 <> euro 50 <> dollar 50
-    , v3 == adaValue 1000 <> lira 50 <> euro 50
-    ]
+  pure $
+    and
+      [ isOk
+      , v1 == adaValue 1000 <> dollar 50 <> lira 50
+      , v2 == adaValue 1000 <> euro 50 <> dollar 50
+      , v3 == adaValue 1000 <> lira 50 <> euro 50
+      ]

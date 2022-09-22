@@ -1,20 +1,20 @@
 -- | Fake coins for testing
-module Plutus.Model.Mint(
-  FakeCoin(..),
+module Plutus.Model.Mint (
+  FakeCoin (..),
   fakeCoin,
   fakeValue,
 ) where
 
 import Cardano.Ledger.Alonzo.Language qualified as C
-import PlutusTx.Prelude qualified as PlutusTx
+import Plutus.Model.Fork.Ledger.Scripts
+import PlutusLedgerApi.V1
+import PlutusLedgerApi.V1.Contexts
+import PlutusLedgerApi.V1.Value
 import PlutusTx qualified
 import PlutusTx.Prelude
-import PlutusLedgerApi.V1
-import PlutusLedgerApi.V1.Value
-import PlutusLedgerApi.V1.Contexts
-import Plutus.Model.Fork.Ledger.Scripts
+import PlutusTx.Prelude qualified as PlutusTx
 
-newtype FakeCoin = FakeCoin { fakeCoin'tag :: BuiltinByteString }
+newtype FakeCoin = FakeCoin {fakeCoin'tag :: BuiltinByteString}
 
 fakeValue :: FakeCoin -> Integer -> Value
 fakeValue tag = assetClassValue (fakeCoin tag)
@@ -29,14 +29,15 @@ fakeCoin (FakeCoin tag) = assetClass sym tok
 fakeMintingPolicy :: BuiltinByteString -> MintingPolicy
 fakeMintingPolicy mintParams =
   mkMintingPolicyScript $
-    $$(PlutusTx.compile [||
-      \params redeemer ctx ->
-        PlutusTx.check (fakeMintingPolicyContract params (unsafeFromBuiltinData redeemer) (unsafeFromBuiltinData ctx))
-       ||])
+    $$( PlutusTx.compile
+          [||
+          \params redeemer ctx ->
+            PlutusTx.check (fakeMintingPolicyContract params (unsafeFromBuiltinData redeemer) (unsafeFromBuiltinData ctx))
+          ||]
+      )
       `PlutusTx.applyCode` PlutusTx.liftCode (TokenName mintParams)
 
 -- | Can mint new coins if token name equals to fixed tag.
 fakeMintingPolicyContract :: TokenName -> () -> ScriptContext -> Bool
 fakeMintingPolicyContract tag _ ctx =
   valueOf (txInfoMint (scriptContextTxInfo ctx)) (ownCurrencySymbol ctx) tag > 0
-

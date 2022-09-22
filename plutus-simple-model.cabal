@@ -14,21 +14,22 @@ category:           TODO
 build-type:         Simple
 tested-with:        GHC ==9.2.4
 extra-source-files:
-  README.md
-  data/protocol-params.json
   data/alonzo-params.json
+  data/protocol-params.json
+  README.md
 
 common lang
-  default-language: GHC2021
+  default-language:   GHC2021
   default-extensions:
+    NoImplicitPrelude
     BangPatterns
     BinaryLiterals
     ConstraintKinds
     DataKinds
+    DeriveAnyClass
     DeriveFunctor
     DeriveGeneric
     DeriveTraversable
-    DeriveAnyClass
     DerivingStrategies
     DerivingVia
     DuplicateRecordFields
@@ -38,12 +39,11 @@ common lang
     GADTs
     GeneralizedNewtypeDeriving
     HexFloatLiterals
-    InstanceSigs
     ImportQualifiedPost
+    InstanceSigs
     KindSignatures
     LambdaCase
     MultiParamTypeClasses
-    NoImplicitPrelude
     NumericUnderscores
     OverloadedStrings
     RecordWildCards
@@ -58,77 +58,80 @@ common lang
     ViewPatterns
 
   ghc-options:
-    -Wall -Wcompat -Wredundant-constraints
-    -Wmissing-export-lists -Werror -Wincomplete-record-updates
+    -Wall -Wcompat -Wredundant-constraints -Wmissing-export-lists
+    -Werror -Wincomplete-record-updates
+
 common deps
   build-depends:
-    , base
     , aeson
     , array
+    , base
     , base16-bytestring
     , base58-bytestring
     , bytestring
-    , data-default
-    , hashable
-    , http-api-data
     , cardano-binary
     , cardano-crypto
     , cardano-crypto-class
     , cardano-ledger-alonzo
+    , cardano-ledger-babbage
     , cardano-ledger-core
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
-    , cardano-ledger-babbage
     , cardano-slotting
     , cborg
-    , cryptonite
     , containers
+    , cryptonite
+    , data-default
+    , deepseq
+    , hashable
+    , http-api-data
     , memory
     , mtl
-    , serialise
-    , prettyprinter
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
+    , prettyprinter
+    , serialise
     , strict-containers
-    , vector
     , tagged
-    , time
     , text
-    , deepseq
+    , time
+    , vector
 
 common test-deps
   import:        deps
   build-depends:
     , tasty
     , tasty-hunit
-    -- , tasty-expected-failure
+
+-- , tasty-expected-failure
 
 library
-  import:           lang
-  import:           deps
+  import:          lang
+  import:          deps
   exposed-modules:
     Plutus.Model
     Plutus.Model.Ada
-    Plutus.Model.V1
-    Plutus.Model.V2
+    Plutus.Model.Contract
+    Plutus.Model.Mint
     Plutus.Model.Mock
     Plutus.Model.Mock.Address
     Plutus.Model.Mock.FailReason
-    Plutus.Model.Mock.MockConfig
     Plutus.Model.Mock.Log
+    Plutus.Model.Mock.MockConfig
     Plutus.Model.Mock.Percent
     Plutus.Model.Mock.ProtocolParameters
     Plutus.Model.Mock.Stat
-    Plutus.Model.Contract
-    Plutus.Model.Mint
     Plutus.Model.Pretty
     Plutus.Model.Stake
+    Plutus.Model.V1
+    Plutus.Model.V2
     Plutus.Model.Validator
     Plutus.Model.Validator.V1
     Plutus.Model.Validator.V1.Plutus
     Plutus.Model.Validator.V2
     Plutus.Model.Validator.V2.Plutus
+
   other-modules:
     Plutus.Model.Fork.Cardano.Alonzo
     Plutus.Model.Fork.Cardano.Babbage
@@ -139,18 +142,20 @@ library
     Plutus.Model.Fork.Ledger.TimeSlot
     Plutus.Model.Fork.Ledger.Tx
     Plutus.Model.Fork.TxExtra
-  build-depends:    tasty
-                  , tasty-hunit
-  other-modules:
-    Paths_plutus_simple_model
-  hs-source-dirs:   src
+
+  build-depends:
+    , tasty
+    , tasty-hunit
+
+  other-modules:   Paths_plutus_simple_model
+  hs-source-dirs:  src
 
 test-suite plutus-simple-model-test
-  import:           lang
-  import:           deps
-  import:           test-deps
-  type:             exitcode-stdio-1.0
-  main-is:          Spec.hs
+  import:         lang
+  import:         deps
+  import:         test-deps
+  type:           exitcode-stdio-1.0
+  main-is:        Spec.hs
   other-modules:
     Suites.Plutus.Model.FakeCoin
     Suites.Plutus.Model.Script.V1
@@ -168,10 +173,10 @@ test-suite plutus-simple-model-test
     Suites.Plutus.Model.Script.V1.Test.Safe
     Suites.Plutus.Model.Script.V1.Test.Staking
     Suites.Plutus.Model.Script.V2
-    Suites.Plutus.Model.Script.V2.Onchain.Game.Script
     Suites.Plutus.Model.Script.V2.Onchain.Game
-    Suites.Plutus.Model.Script.V2.Onchain.Lend.Script
+    Suites.Plutus.Model.Script.V2.Onchain.Game.Script
     Suites.Plutus.Model.Script.V2.Onchain.Lend
+    Suites.Plutus.Model.Script.V2.Onchain.Lend.Script
     Suites.Plutus.Model.Script.V2.Onchain.Oracle
     Suites.Plutus.Model.Script.V2.Onchain.Oracle.Hashed
     Suites.Plutus.Model.Script.V2.Onchain.Oracle.Inlined
@@ -182,5 +187,6 @@ test-suite plutus-simple-model-test
     Suites.Plutus.Model.Script.V2.Test.Oracle.Inlined
     Suites.Plutus.Model.User
     Suites.Plutus.Model.Util
-  build-depends:    plutus-simple-model
-  hs-source-dirs:   test
+
+  build-depends:  plutus-simple-model
+  hs-source-dirs: test

@@ -4,8 +4,8 @@ module Suites.Plutus.Model.Script.V1.Test.Game (
   makeGuessGame,
 ) where
 
-import Prelude
 import Control.Monad (unless)
+import Prelude
 
 import Test.Tasty
 

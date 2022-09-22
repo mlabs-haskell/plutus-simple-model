@@ -1,10 +1,10 @@
 -- | Test for reference input with inlined datum
 module Suites.Plutus.Model.Script.V2.Test.Oracle.Inlined (
-  tests
+  tests,
 ) where
 
-import Prelude
 import Data.Maybe (isJust)
+import Prelude
 
 import Test.Tasty
 
@@ -44,8 +44,9 @@ wrongUserBet = do
   postAnswer oracle 5
   mustFail $ victory app u1 oracle
 
--- | Negative path. Two players guess and the right one tries to win but
--- omits the oracle reference input.
+{- | Negative path. Two players guess and the right one tries to win but
+ omits the oracle reference input.
+-}
 betWithoutRefInput :: Run ()
 betWithoutRefInput = do
   (app, oracle : u1 : u2 : _) <- initBetGame
@@ -59,7 +60,7 @@ betWithoutRefInput = do
 
 -- | App holds the scripts of the test suite
 data App = App
-  { app'betScript  :: Bet
+  { app'betScript :: Bet
   }
 
 -- | Init new app with oracle's PKH
@@ -76,11 +77,11 @@ initBetGame = do
 
 -- | Read bet script box from blockchain
 getBet :: App -> Run (TxBox Bet)
-getBet App{..} = head <$> boxAt app'betScript
+getBet App {..} = head <$> boxAt app'betScript
 
 -- | Inits the Bet UTXO with wmpty list of answers.
 initBet :: App -> PubKeyHash -> Run ()
-initBet App{..} pkh = do
+initBet App {..} pkh = do
   usp <- spend pkh (adaValue betStep)
   submitTx pkh $ initBetTx usp
   where
@@ -92,7 +93,7 @@ initBet App{..} pkh = do
 
 -- | User provide san answer as integer and spends @betStep@ of lovelaces.
 bet :: App -> PubKeyHash -> AnswerDatum -> Run ()
-bet app@App{..} pkh (AnswerDatum answer) = do
+bet app@App {..} pkh (AnswerDatum answer) = do
   usp <- spend pkh (adaValue betStep)
   betBox <- getBet app
   submitTx pkh $ betTx usp betBox
@@ -106,8 +107,9 @@ bet app@App{..} pkh (AnswerDatum answer) = do
     updateDat (BetDatum answers) = BetDatum ((pkh, answer) : answers)
     updateVal = (<> adaValue betStep)
 
--- | Oracle posts an answer as PubKeyHash guaeded UTXO with inlined datum
--- of the answer
+{- | Oracle posts an answer as PubKeyHash guaeded UTXO with inlined datum
+ of the answer
+-}
 postAnswer :: PubKeyHash -> Integer -> Run ()
 postAnswer oraclePkh answer = do
   usp <- spend oraclePkh riderAda
@@ -119,7 +121,8 @@ postAnswer oraclePkh answer = do
 
 -- | Parameters of malicious behavior
 data Fraud = Fraud
-  { fraud'refInput :: Tx -> Tx   -- ^ tamper refInput part of TX
+  { fraud'refInput :: Tx -> Tx
+  -- ^ tamper refInput part of TX
   }
 
 -- | No malicious actions
@@ -132,14 +135,15 @@ victory = victoryBy noFraud
 
 -- | User declares a victory but skips the reference input with oracle answer (should fail)
 victorySkipOracle :: App -> PubKeyHash -> PubKeyHash -> Run ()
-victorySkipOracle = victoryBy $
-  Fraud
-    { fraud'refInput = const mempty
-    }
+victorySkipOracle =
+  victoryBy $
+    Fraud
+      { fraud'refInput = const mempty
+      }
 
 -- | generic action to declare a victory with possible malicious actions
 victoryBy :: Fraud -> App -> PubKeyHash -> PubKeyHash -> Run ()
-victoryBy Fraud{..} app@App{..} user oracle =
+victoryBy Fraud {..} app@App {..} user oracle =
   withUtxo (hasOracleDatum . snd) oracle $ \(oracleRef, _) -> do
     betBox <- getBet app
     submitTx user $ victoryTx oracleRef betBox
@@ -154,4 +158,3 @@ victoryBy Fraud{..} app@App{..} user oracle =
 -- | @TxOut@ contains a datum with Oracle answer
 hasOracleDatum :: TxOut -> Bool
 hasOracleDatum = isJust . inlinedDatum @AnswerDatum
-

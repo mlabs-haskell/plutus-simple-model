@@ -17,7 +17,7 @@ newtype GameDatum = GuessHash BuiltinByteString
 
 newtype GameAct = Guess BuiltinByteString
 
-{-# inlinable gameContract #-}
+{-# INLINEABLE gameContract #-}
 gameContract :: GameDatum -> GameAct -> ScriptContext -> Bool
 gameContract (GuessHash h) (Guess answer) _ =
   traceIfFalse "Wrong guess" $ sha2_256 answer == h

@@ -1,29 +1,29 @@
-module Plutus.Model.Mock.Log(
-  Log(..),
+module Plutus.Model.Mock.Log (
+  Log (..),
   appendLog,
   nullLog,
   fromLog,
   fromGroupLog,
-  MustFailLog(..),
-  LimitOverflow(..),
-  MockEvent(..),
+  MustFailLog (..),
+  LimitOverflow (..),
+  MockEvent (..),
   silentLog,
   failLog,
   filterSlot,
 ) where
 
-import Prelude
 import Data.Foldable
 import Data.Function (on)
 import Data.List qualified as L
-import Data.Sequence (Seq(..))
+import Data.Sequence (Seq (..))
 import Data.Sequence qualified as Seq
-import Plutus.Model.Mock.Stat
 import Plutus.Model.Fork.Ledger.Slot
 import Plutus.Model.Mock.FailReason
+import Plutus.Model.Mock.Stat
+import Prelude
 
 -- | Log of Slot-timestamped events
-newtype Log a = Log { unLog :: Seq (Slot, a) }
+newtype Log a = Log {unLog :: Seq (Slot, a)}
   deriving (Functor)
 
 instance Semigroup (Log a) where
@@ -57,20 +57,26 @@ fromGroupLog = fmap toGroup . L.groupBy ((==) `on` fst) . fromLog
 instance Monoid (Log a) where
   mempty = Log Seq.empty
 
--- | Wrapper for error logs, produced in the paths of execution protected by
--- 'mustFail' combinator.
+{- | Wrapper for error logs, produced in the paths of execution protected by
+ 'mustFail' combinator.
+-}
 data MustFailLog = MustFailLog String FailReason
 
 -- | Blockchain events to log.
 data MockEvent
-  -- | Sucessful TXs
-  = MockTx
-    { mockTx'name   :: Maybe String -- ^ Optional tx's name
-    , mockTx'txStat :: TxStat       -- ^ Tx and stat
-    }
-  | MockInfo String             -- ^ Info messages
-  | MockFail FailReason         -- ^ Errors
-  | MockMustFailLog MustFailLog -- ^ Expected errors, see 'mustFail'
+  = -- | Sucessful TXs
+    MockTx
+      { mockTx'name :: Maybe String
+      -- ^ Optional tx's name
+      , mockTx'txStat :: TxStat
+      -- ^ Tx and stat
+      }
+  | -- | Info messages
+    MockInfo String
+  | -- | Errors
+    MockFail FailReason
+  | -- | Expected errors, see 'mustFail'
+    MockMustFailLog MustFailLog
 
 -- | Skip all info messages
 silentLog :: Log MockEvent -> Log MockEvent
@@ -78,7 +84,7 @@ silentLog (Log xs) = Log $ Seq.filter (not . isInfo . snd) xs
   where
     isInfo = \case
       MockInfo _ -> True
-      _         -> False
+      _ -> False
 
 -- | Skip successful TXs
 failLog :: Log MockEvent -> Log MockEvent
@@ -86,10 +92,8 @@ failLog (Log xs) = Log $ Seq.filter (not . isTx . snd) xs
   where
     isTx = \case
       MockTx _ _ -> True
-      _         -> False
+      _ -> False
 
 -- | filter by slot. Can be useful to filter out unnecessary info.
 filterSlot :: (Slot -> Bool) -> Log a -> Log a
 filterSlot f (Log xs) = Log (Seq.filter (f . fst) xs)
-
-

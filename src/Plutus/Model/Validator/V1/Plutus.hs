@@ -1,14 +1,14 @@
 -- | Utility functions for Plutus V1 scripts
-module Plutus.Model.Validator.V1.Plutus(
+module Plutus.Model.Validator.V1.Plutus (
   getThrough,
   datumOf,
 ) where
 
-import PlutusTx.Prelude
 import PlutusLedgerApi.V1
 import PlutusLedgerApi.V1.Contexts
+import PlutusTx.Prelude
 
-{-# inlinable getThrough #-}
+{-# INLINEABLE getThrough #-}
 getThrough :: ScriptContext -> (TxOut, TxOut)
 getThrough ctx = (tin, tout)
   where
@@ -16,10 +16,9 @@ getThrough ctx = (tin, tout)
     Just tinInfo = findOwnInput ctx
     tin = txInInfoResolved tinInfo
 
-{-# inlinable datumOf #-}
+{-# INLINEABLE datumOf #-}
 datumOf :: FromData a => TxInfo -> TxOut -> Maybe a
 datumOf info tout = do
   dh <- txOutDatumHash tout
   dat <- getDatum <$> findDatum dh info
   fromBuiltinData dat
-

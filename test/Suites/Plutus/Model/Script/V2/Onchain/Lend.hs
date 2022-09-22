@@ -6,32 +6,34 @@
 module Suites.Plutus.Model.Script.V2.Onchain.Lend (
   LendDatum (..),
   LendAct (..),
-  LendHash(..),
-  LendMintParams(..),
+  LendHash (..),
+  LendMintParams (..),
   lendContract,
   lendPolicyContract,
 ) where
 
-import PlutusTx.Prelude
+import Plutus.Model.V2
 import PlutusLedgerApi.V1.Value
 import PlutusLedgerApi.V2
 import PlutusTx qualified
-import Plutus.Model.V2
+import PlutusTx.Prelude
 
 data LendDatum = LendDatum
   { lendDatum'symbol :: CurrencySymbol
-  , lendDatum'token  :: TokenName
+  , lendDatum'token :: TokenName
   }
 
 data LendAct = Exchange
 
-{-# inlinable lendContract #-}
+{-# INLINEABLE lendContract #-}
 lendContract :: LendDatum -> LendAct -> ScriptContext -> Bool
 lendContract (LendDatum sym tok) Exchange ctx =
-  traceIfFalse "Value exhange preserved"
-    (getLovelace (adaOf outVal) - getLovelace (adaOf inVal) == mintedAmount) &&
-  traceIfFalse "Same datum"
-    (txOutDatum tin == txOutDatum tout)
+  traceIfFalse
+    "Value exhange preserved"
+    (getLovelace (adaOf outVal) - getLovelace (adaOf inVal) == mintedAmount)
+    && traceIfFalse
+      "Same datum"
+      (txOutDatum tin == txOutDatum tout)
   where
     info = scriptContextTxInfo ctx
     (tin, tout) = getThrough ctx
@@ -42,10 +44,11 @@ lendContract (LendDatum sym tok) Exchange ctx =
 newtype LendHash = LendHash ValidatorHash
 newtype LendMintParams = LendMintParams LendHash
 
-{-# inlinable lendPolicyContract #-}
+{-# INLINEABLE lendPolicyContract #-}
 lendPolicyContract :: LendMintParams -> () -> ScriptContext -> Bool
-lendPolicyContract (LendMintParams(LendHash lendVh)) _ ctx =
-  traceIfFalse "Lend contract is spent with Exchange redeemer"
+lendPolicyContract (LendMintParams (LendHash lendVh)) _ ctx =
+  traceIfFalse
+    "Lend contract is spent with Exchange redeemer"
     (forwardTo lendVh Exchange info)
   where
     info = scriptContextTxInfo ctx

@@ -4,11 +4,11 @@ module Suites.Plutus.Model.Script.V2.Onchain.Oracle.Inlined (
   betScript,
 ) where
 
-import Prelude (($))
-import PlutusTx.Prelude (const)
+import Plutus.Model.V2 (TypedValidator, inlinedDatum, mkTypedValidator, toBuiltinValidator)
 import PlutusTx qualified
+import PlutusTx.Prelude (const)
 import Suites.Plutus.Model.Script.V2.Onchain.Oracle
-import Plutus.Model.V2 (toBuiltinValidator, TypedValidator, mkTypedValidator, inlinedDatum)
+import Prelude (($))
 
 type Bet = TypedValidator BetDatum BetAct
 
@@ -16,5 +16,5 @@ type Bet = TypedValidator BetDatum BetAct
 betScript :: BetParams -> Bet
 betScript betParams =
   mkTypedValidator $
-    $$(PlutusTx.compile [|| \param -> toBuiltinValidator (betContract (const inlinedDatum) param) ||])
+    $$(PlutusTx.compile [||\param -> toBuiltinValidator (betContract (const inlinedDatum) param)||])
       `PlutusTx.applyCode` PlutusTx.liftCode betParams
