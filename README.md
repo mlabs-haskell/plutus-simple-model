@@ -3,7 +3,7 @@ Plutus simple model
 
 Unit test library for Plutus with estimation of resource usage.
 
-Library defines simple mock model of Blockchain to unit test plutus contracts 
+Library defines simple mock model of Blockchain to unit test plutus contracts
 and estimate usage of resources. What are the benefits for this framework comparing
 to other test frameworks for Plutus? It's:
 
@@ -31,7 +31,7 @@ Library is compiled with nix, flakes and cabal. Enter developer nix shell with:
 nix develop
 ```
 
-Inside the nix shell we can run buil and tests over make:
+Inside the nix shell we can run build and tests over make:
 
 ```
 make build
@@ -42,7 +42,7 @@ It calls cabal under the hood.
 
 ## How to update docs
 
-Docs are written in [mdbook](https://github.com/rust-lang/mdBook) and reside in the `docs` directory. 
+Docs are written in [mdbook](https://github.com/rust-lang/mdBook) and reside in the `docs` directory.
 They are auto-deployed with Git actions on push to main. To run docs locally use mdbook:
 
 ```
