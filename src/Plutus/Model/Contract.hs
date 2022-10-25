@@ -150,7 +150,6 @@ import Plutus.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Model.Fork.Ledger.Tx qualified as Fork
 import Plutus.Model.Validator as X
 import Plutus.Model.Ada (Ada(..))
-import Plutus.Model.Validator (UntypedValidator(unUntypedValidator))
 
 ------------------------------------------------------------------------
 -- modify blockchain
