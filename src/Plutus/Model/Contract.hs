@@ -56,6 +56,7 @@ module Plutus.Model.Contract (
   spendPubKey,
   spendScript,
   spendScriptRef,
+  spendScriptRefUntyped,
   spendBox,
   refInputInline,
   refInputHash,
@@ -444,6 +445,23 @@ spendScriptRef refScript script refOut red dat = toExtra $
   where
     sh = scriptHash script
     validator = toVersionedScript script
+
+spendScriptRefUntyped :: 
+  TxOutRef -> 
+  UntypedValidator ->
+  TxOutRef -> 
+  Redeemer -> 
+  Datum -> 
+  Tx
+spendScriptRefUntyped refScript script refOut red dat = toExtra $
+  mempty
+    { P.txInputs = S.singleton $ Fork.TxIn refOut (Just $ Fork.ConsumeScriptAddress Nothing red dat)
+    , P.txReferenceInputs = S.singleton $ Fork.TxIn refScript Nothing
+    , P.txScripts = M.singleton sh validator
+    }
+  where
+    sh = scriptHash script
+    validator = Versioned (getLanguage script) (getValidator $ toValidator script)
 
 -- | Reference input with inlined datum
 refInputInline :: TxOutRef -> Tx

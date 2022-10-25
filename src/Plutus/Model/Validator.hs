@@ -12,6 +12,7 @@ module Plutus.Model.Validator(
   IsValidatorHash,
 
   TypedValidator(..),
+  UntypedValidator(..),
   TypedValidatorHash(..),
   TypedPolicy(..),
   TypedStake(..),
@@ -97,6 +98,18 @@ instance HasValidator (TypedValidator datum redeemer) where
   toValidator (TypedValidator (Versioned _lang validator)) = validator
 
 instance HasAddress (TypedValidator datum redeemer) where
+  toAddress = toAddress . toValidatorHash
+
+---------------------------------------------------------------------
+-- untyped validator
+
+newtype UntypedValidator = UntypedValidator { unUntypedValidator :: Versioned Validator }
+  deriving newtype (HasLanguage)
+
+instance HasValidator UntypedValidator where
+  toValidator (UntypedValidator (Versioned _lang validator)) = validator
+
+instance HasAddress UntypedValidator where
   toAddress = toAddress . toValidatorHash
 
 ---------------------------------------------------------------------
