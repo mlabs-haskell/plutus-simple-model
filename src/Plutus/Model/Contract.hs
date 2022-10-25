@@ -55,6 +55,7 @@ module Plutus.Model.Contract (
   userSpend,
   spendPubKey,
   spendScript,
+  spendScriptUntyped,
   spendScriptRef,
   spendScriptRefUntyped,
   spendBox,
@@ -149,6 +150,7 @@ import Plutus.Model.Fork.Ledger.Tx qualified as P
 import Plutus.Model.Fork.Ledger.Tx qualified as Fork
 import Plutus.Model.Validator as X
 import Plutus.Model.Ada (Ada(..))
+import Plutus.Model.Validator (UntypedValidator(unUntypedValidator))
 
 ------------------------------------------------------------------------
 -- modify blockchain
@@ -427,6 +429,18 @@ spendScript tv ref red dat = toExtra $
     { P.txInputs = S.singleton $ Fork.TxIn ref (Just $ Fork.ConsumeScriptAddress (Just $ Versioned (getLanguage tv) (toValidator tv)) (toRedeemer red) (toDatum dat))
     }
 
+-- | Spend script input untyped.
+spendScriptUntyped ::
+  UntypedValidator ->
+  TxOutRef ->
+  Redeemer ->
+  Datum ->
+  Tx
+spendScriptUntyped v ref red dat = toExtra $
+  mempty
+    { P.txInputs = S.singleton $ Fork.TxIn ref (Just $ Fork.ConsumeScriptAddress (Just $ unUntypedValidator v) red dat)
+    }
+
 -- | Spends script that references other script
 spendScriptRef ::
   (IsValidator script) =>
@@ -446,6 +460,7 @@ spendScriptRef refScript script refOut red dat = toExtra $
     sh = scriptHash script
     validator = toVersionedScript script
 
+-- | Spends script that references other script untyped version
 spendScriptRefUntyped :: 
   TxOutRef -> 
   UntypedValidator ->
