@@ -48,6 +48,7 @@ module Plutus.Model.Contract (
   payToKey,
   payToKeyDatum,
   payToScript,
+  payToScriptUntyped,
   loadRefScript,
   loadRefScriptDatum,
   payToRef,
@@ -366,6 +367,21 @@ payToScript script dat val = toExtra $
     }
   where
     (outDatum, datumMap) = fromDatumMode dat
+
+-- | Pay to the script untyped.
+-- The a type parameter represents the contents of the datum.
+-- Example for datum: `()` and not `Datum $ toBuiltinDatum ()`.
+payToScriptUntyped :: ToData a =>
+  UntypedValidator -> DatumMode a -> Value -> Tx
+payToScriptUntyped script dat val = toExtra $
+  mempty
+    { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
+    , P.txData = datumMap
+    }
+  where
+    (outDatum, datumMap) = fromDatumMode dat
+
+
 
 -- | Uploads the reference script to blockchain
 loadRefScript :: (IsValidator script) => script -> Value -> Tx
