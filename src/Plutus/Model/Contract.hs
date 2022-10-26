@@ -612,25 +612,25 @@ txBoxValue :: TxBox a -> Value
 txBoxValue = txOutValue . txBoxOut
 
 -- | Read UTXOs with datums.
-boxAt :: (IsValidator script) => script -> Run [TxBox script]
+boxAt :: (HasAddress script, HasDatum script) => script -> Run [TxBox script]
 boxAt addr = do
   utxos <- utxoAt (toAddress addr)
   fmap catMaybes $ mapM (\(ref, tout) -> fmap (\dat -> TxBox ref tout dat) <$> datumAt ref) utxos
 
 -- | It expects that Typed validator can have only one UTXO
 -- which is NFT.
-nftAt :: IsValidator script => script -> Run (TxBox script)
+nftAt :: (HasAddress script, HasDatum script) => script -> Run (TxBox script)
 nftAt tv = head <$> boxAt tv
 
 -- | Safe query for single Box
-withBox :: IsValidator script => (TxBox script -> Bool) -> script -> (TxBox script -> Run ()) -> Run ()
+withBox :: (HasAddress script, HasDatum script) => (TxBox script -> Bool) -> script -> (TxBox script -> Run ()) -> Run ()
 withBox isBox script cont =
   withMayBy readMsg (L.find isBox <$> boxAt script) cont
   where
     readMsg = ("No UTxO box for: " <> ) <$> getPrettyAddress (toAddress script)
 
 -- | Reads single box from the list. we expect NFT to be a single UTXO for a given script.
-withNft :: IsValidator script => script -> (TxBox script -> Run ()) -> Run ()
+withNft :: (HasAddress script, HasDatum script) => script -> (TxBox script -> Run ()) -> Run ()
 withNft = withBox (const True)
 
 ----------------------------------------------------------------------
