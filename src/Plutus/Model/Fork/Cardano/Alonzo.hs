@@ -13,7 +13,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra, PParams)
 import Cardano.Ledger.Alonzo.PParams qualified as C
 import Cardano.Ledger.Alonzo.Tx qualified as C
 import Cardano.Ledger.Alonzo.TxBody qualified as C
-import Cardano.Ledger.Alonzo.TxWitness qualified as C
+import Cardano.Ledger.Alonzo.TxWits qualified as C
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CompactAddress qualified as C
 import Cardano.Ledger.Compactible qualified as C

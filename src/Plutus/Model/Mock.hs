@@ -152,7 +152,7 @@ import Cardano.Crypto.DSIGN.Class qualified as C
 import Cardano.Crypto.Hash.Class qualified as C
 import Cardano.Crypto.Seed qualified as C
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
-import Cardano.Ledger.Alonzo.TxWitness qualified as C
+import Cardano.Ledger.Alonzo.TxWits qualified as C
 import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Crypto qualified as C
 import Cardano.Ledger.Era (Crypto)

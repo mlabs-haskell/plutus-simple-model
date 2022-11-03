@@ -48,7 +48,7 @@ import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Ledger.Alonzo.Data qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as C
 import Cardano.Ledger.Alonzo.TxInfo qualified as C
-import Cardano.Ledger.Alonzo.TxWitness qualified as C
+import Cardano.Ledger.Alonzo.TxWits qualified as C
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Era qualified as C

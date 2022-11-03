@@ -31,11 +31,13 @@ import Cardano.Ledger.Alonzo.Data qualified as C
 import Cardano.Ledger.Alonzo.Language qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as C
 import Cardano.Ledger.Alonzo.TxInfo qualified as C
+import Cardano.Ledger.Babbage.TxInfo qualified as C (transScriptHash)
+import Cardano.Ledger.Core qualified as C (hashScript)
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Era qualified as C
 import Cardano.Ledger.Mary.Value qualified as C
 import Cardano.Ledger.SafeHash qualified as C
 import PlutusLedgerApi.V2 qualified as P
+import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts qualified as P
 
 -- | Appends plutus version to the value.
 data Versioned a = Versioned
@@ -76,7 +78,7 @@ dataHash (P.BuiltinData dat) =
   P.toBuiltin . C.hashToBytes . C.extractHash $ C.hashData $ C.Data @(AlonzoEra StandardCrypto) dat
 
 -- | Hash a 'PV1.Validator' script.
-validatorHash :: Versioned P.Validator -> P.ValidatorHash
+validatorHash :: Versioned P.Validator -> P.ScriptHash
 validatorHash val =
   C.transScriptHash $
     C.hashScript @(AlonzoEra StandardCrypto) $
@@ -101,6 +103,6 @@ scriptCurrencySymbol policy =
       C.hashScript @(AlonzoEra StandardCrypto) $
         toScript (fmap coerce policy)
 
-toScript :: Versioned P.Script -> C.Script era
+toScript :: Versioned P.Script -> C.AlonzoScript era
 toScript (Versioned lang script) =
   C.PlutusScript lang $ SBS.toShort $ BSL.toStrict $ serialise script

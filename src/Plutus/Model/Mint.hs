@@ -7,6 +7,8 @@ module Plutus.Model.Mint (
 
 import Cardano.Ledger.Alonzo.Language qualified as C
 import Plutus.Model.Fork.Ledger.Scripts
+import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
+
 import PlutusLedgerApi.V1
 import PlutusLedgerApi.V1.Contexts
 import PlutusLedgerApi.V1.Value

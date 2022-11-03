@@ -24,12 +24,14 @@ import Cardano.Ledger.Keys qualified as C
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise
 import PlutusLedgerApi.V2
-import PlutusLedgerApi.V2.Tx hiding (TxIn (..), TxInType (..))
+import PlutusLedgerApi.V2.Tx
 import PlutusTx.Lattice
 
 import Plutus.Model.Ada (Ada)
 import Plutus.Model.Fork.Ledger.Scripts (Versioned (..))
 import Plutus.Model.Fork.Ledger.Slot
+import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
+
 
 -- | A transaction, including witnesses for its inputs.
 data Tx = Tx

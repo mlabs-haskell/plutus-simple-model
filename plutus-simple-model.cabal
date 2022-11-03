@@ -83,6 +83,7 @@ common deps
     , cryptonite
     , data-default
     , deepseq
+    , flat
     , hashable
     , http-api-data
     , memory
@@ -141,6 +142,7 @@ library
     Plutus.Model.Fork.Ledger.Slot
     Plutus.Model.Fork.Ledger.TimeSlot
     Plutus.Model.Fork.Ledger.Tx
+    Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
     Plutus.Model.Fork.TxExtra
 
   build-depends:

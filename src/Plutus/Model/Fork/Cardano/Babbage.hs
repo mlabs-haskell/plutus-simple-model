@@ -12,7 +12,7 @@ import Data.Sequence.Strict qualified as Seq
 import Prelude
 
 import Cardano.Ledger.Alonzo.Data qualified as C
-import Cardano.Ledger.Alonzo.TxWitness qualified as C
+import Cardano.Ledger.Alonzo.TxWits qualified as C
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams (PParams)
 import Cardano.Ledger.Babbage.PParams qualified as C

@@ -45,7 +45,7 @@ inlinedDatum tout = do
 {-# INLINEABLE forwardTo #-}
 
 -- | check that script is spent with given redeemer
-forwardTo :: ToData redeemer => ValidatorHash -> redeemer -> TxInfo -> Bool
+forwardTo :: ToData redeemer => ScriptHash -> redeemer -> TxInfo -> Bool
 forwardTo vh redeemer info =
   Map.lookup (Spending ref) (txInfoRedeemers info) == Just (Redeemer $ toBuiltinData redeemer)
   where

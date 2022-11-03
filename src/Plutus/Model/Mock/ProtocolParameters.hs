@@ -24,14 +24,14 @@ import Cardano.Ledger.BaseTypes qualified as Alonzo
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Crypto (StandardCrypto)
 
-import PlutusCore (defaultCostModelParams)
+import PlutusCore.Evaluation.Machine.ExBudgetingDefaults (defaultCostModelParams)
 
 -- | Type that unifies protocol parameters across eras.
 data PParams
   = -- | alonzo era protocol parameters
-    AlonzoParams (Alonzo.PParams (AlonzoEra StandardCrypto))
+    AlonzoParams (Alonzo.AlonzoPParams (AlonzoEra StandardCrypto))
   | -- | babbage era protocol parameters
-    BabbageParams (Babbage.PParams (BabbageEra StandardCrypto))
+    BabbageParams (Babbage.BabbagePParams (BabbageEra StandardCrypto))
 
 -- | Reads protocol parameters from file.
 readAlonzoParams :: FilePath -> IO PParams
@@ -52,9 +52,9 @@ rational = fromJust . Alonzo.boundRational
 defaultAlonzoParams :: PParams
 defaultAlonzoParams = AlonzoParams defaultAlonzoParams'
 
-defaultAlonzoParams' :: Alonzo.PParams (AlonzoEra StandardCrypto)
+defaultAlonzoParams' :: Alonzo.AlonzoPParams (AlonzoEra StandardCrypto)
 defaultAlonzoParams' =
-  Alonzo.PParams
+  Alonzo.AlonzoPParams
     { Alonzo._minfeeA = 44
     , Alonzo._minfeeB = 155381
     , Alonzo._maxBBSize = 65536
