@@ -359,21 +359,15 @@ payToKey pkh val =
       { P.txOutputs = [TxOut (toAddress pkh) val NoOutputDatum Nothing]
       }
 
-{- | Pay to the script.
- We can use TypedValidator as argument and it will be checked that the datum is correct.
--}
-payToScript ::
-  (IsValidator script) =>
-  script ->
-  DatumMode (DatumType script) ->
-  Value ->
-  Tx
-payToScript script dat val =
-  toExtra $
-    mempty
-      { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
-      , P.txData = datumMap
-      }
+-- | Pay to the script.
+-- We can use TypedValidator as argument and it will be checked that the datum is correct.
+payToScript :: (HasDatum script, HasAddress script) =>
+  script -> DatumMode (DatumType script) -> Value -> Tx
+payToScript script dat val = toExtra $
+  mempty
+    { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
+    , P.txData = datumMap
+    }
   where
     (outDatum, datumMap) = fromDatumMode dat
 
@@ -405,18 +399,13 @@ loadRefScriptBy script mDat val =
     (outDatum, datumMap) = maybe (NoOutputDatum, M.empty) fromDatumMode mDat
 
 -- | Pays to the TxOut that references some script stored on ledger
-payToRef ::
-  (IsValidator script) =>
-  script ->
-  DatumMode (DatumType script) ->
-  Value ->
-  Tx
-payToRef script dat val =
-  toExtra $
-    mempty
-      { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
-      , P.txData = datumMap
-      }
+payToRef :: (HasAddress script, HasDatum script) =>
+  script -> DatumMode (DatumType script) -> Value -> Tx
+payToRef script dat val = toExtra $
+  mempty
+    { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
+    , P.txData = datumMap
+    }
   where
     (outDatum, datumMap) = fromDatumMode dat
 

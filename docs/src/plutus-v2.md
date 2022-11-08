@@ -17,7 +17,8 @@ data DatumMode a
   = HashDatum a      -- ^ store datum hash in TxOut
   | InlineDatum a    -- ^ store inlined datum value in TxOut
 
-payToScript :: IsValidator script => script -> DatumMode (DatumType script) -> Value -> Tx
+payToScript :: (HasAddress script, HasDatum script) => 
+  script -> DatumMode (DatumType script) -> Value -> Tx
 ```
 
 Example from the code:
