@@ -11,6 +11,7 @@ module Plutus.Model.Mock.Address (
 
 import Data.Coerce
 import Plutus.Model.Fork.TxExtra (keyToStaking)
+import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
 import PlutusLedgerApi.V1.Address
 import PlutusLedgerApi.V2
 import Prelude
@@ -25,7 +26,7 @@ instance HasAddress Address where
 instance HasAddress PubKeyHash where
   toAddress = pubKeyHashAddress
 
-instance HasAddress ValidatorHash where
+instance HasAddress ScriptHash where
   toAddress = scriptHashAddress
 
 -- | Everything that has staking credential
@@ -55,7 +56,7 @@ appendStakingCredential sCred script =
       case cred of
         PubKeyCredential pkh ->
           appendStakingPubKey pkh script
-        ScriptCredential (ValidatorHash hash) ->
+        ScriptCredential (ScriptHash hash) ->
           appendStakingScript (StakeValidatorHash hash) script
     StakingPtr {} -> error "StakingPtr is not supported"
 

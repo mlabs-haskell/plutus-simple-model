@@ -1,6 +1,8 @@
 module Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts (
   fromCompiledCode,
+  mkValidatorScript,
   mkMintingPolicyScript,
+  mkStakeValidatorScript,
   Script (..),
   Validator (..),
   MintingPolicy (..),
@@ -48,8 +50,14 @@ fromCompiledCode = Script . toNameless . getPlc
                  -> UPLC.Program UPLC.DeBruijn PLC.DefaultUni PLC.DefaultFun ()
       toNameless = over UPLC.progTerm $ UPLC.termMapNames UPLC.unNameDeBruijn
 
+mkValidatorScript :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> Validator
+mkValidatorScript = Validator . fromCompiledCode
+
 mkMintingPolicyScript :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> MintingPolicy
 mkMintingPolicyScript = MintingPolicy . fromCompiledCode
+
+mkStakeValidatorScript :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> StakeValidator
+mkStakeValidatorScript = StakeValidator . fromCompiledCode
 
 -- | 'Validator' is a wrapper around 'Script's which are used as validators in transaction outputs.
 newtype Validator = Validator { getValidator :: Script }

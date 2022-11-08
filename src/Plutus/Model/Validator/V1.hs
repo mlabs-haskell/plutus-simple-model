@@ -14,6 +14,7 @@ import PlutusTx.Prelude (Bool, (.))
 import PlutusTx.Prelude qualified as Plutus
 
 import Plutus.Model.Fork.Ledger.Scripts (toV1)
+import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
 import Plutus.Model.Validator (TypedPolicy (..), TypedStake (..), TypedValidator (..))
 
 -- | Create Plutus V1 typed validator

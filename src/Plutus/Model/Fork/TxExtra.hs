@@ -23,6 +23,7 @@ import Data.Set qualified as S
 import Plutus.Model.Fork.Ledger.Scripts (Versioned (..), scriptCurrencySymbol)
 import Plutus.Model.Fork.Ledger.Scripts qualified as P
 import Plutus.Model.Fork.Ledger.Tx qualified as P
+import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
 import Plutus.Model.Mock.FailReason
 import PlutusLedgerApi.V1.Tx qualified as P
 import PlutusLedgerApi.V1.Value qualified as Value

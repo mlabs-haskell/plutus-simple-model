@@ -38,8 +38,8 @@ import Plutus.Model.Mock (
   HasAddress (..),
   HasStakingCredential (..),
  )
+import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
 import PlutusLedgerApi.V1
-import PlutusLedgerApi.V1.Scripts (ScriptHash (..))
 
 -- | Class for typed vlaidators with versioning by Plutus language
 class
@@ -64,10 +64,7 @@ instance
   toValidator (TypedValidator (Versioned _lang validator)) = validator
   getLanguage = versioned'language . unTypedValidator
 
-instance
-  (IsValidator script, ToData (DatumType script), FromData (DatumType script), ToData (RedeemerType script), FromData (RedeemerType script)) =>
-  IsValidator (AppendStaking script)
-  where
+instance (IsValidator script) => IsValidator (AppendStaking script) where
   type DatumType (AppendStaking script) = DatumType script
   type RedeemerType (AppendStaking script) = RedeemerType script
   toValidator (AppendStaking _ script) = toValidator script
@@ -84,7 +81,7 @@ toVersionedScript :: IsValidator a => a -> Versioned Script
 toVersionedScript a = Versioned (getLanguage a) (getValidator $ toValidator a)
 
 -- | Get valdiator hash
-validatorHash :: IsValidator a => a -> ValidatorHash
+validatorHash :: IsValidator a => a -> ScriptHash
 validatorHash v = Fork.validatorHash $ Versioned (getLanguage v) (toValidator v)
 
 -- | Get script hash

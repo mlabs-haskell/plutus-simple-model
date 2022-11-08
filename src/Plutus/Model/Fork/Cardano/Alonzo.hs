@@ -9,7 +9,7 @@ module Plutus.Model.Fork.Cardano.Alonzo (
 
 import Prelude
 
-import Cardano.Ledger.Alonzo (AlonzoEra, PParams)
+import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams qualified as C
 import Cardano.Ledger.Alonzo.Tx qualified as C
 import Cardano.Ledger.Alonzo.TxBody qualified as C
@@ -45,7 +45,7 @@ import Plutus.Model.Fork.Cardano.Common (
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.Model.Fork.TxExtra qualified as P
 import PlutusLedgerApi.V2 qualified as P
-import PlutusLedgerApi.V2.Tx qualified as Plutus hiding (TxIn (..))
+import PlutusLedgerApi.V2.Tx qualified as Plutus
 
 type Era = AlonzoEra StandardCrypto
 type ToCardanoError = String
@@ -102,13 +102,13 @@ instance IsCardanoTx Era where
               Just cval -> Right cval
               Nothing -> Left "Fail to create compact value"
 
-toAlonzoTx :: Network -> PParams Era -> P.Tx -> Either ToCardanoError (C.ValidatedTx Era)
+toAlonzoTx :: Network -> C.AlonzoPParams Era -> P.Tx -> Either ToCardanoError (C.AlonzoTx Era)
 toAlonzoTx network params tx = do
   body <- toBody
   wits <- toWits (C.hashAnnotated body) tx
   let isValid = C.IsValid True -- TODO or maybe False
       auxData = C.SNothing
-  pure $ C.ValidatedTx body wits isValid auxData
+  pure $ C.AlonzoTx body wits isValid auxData
   where
     toBody = do
       inputs <- getInputsBy Plutus.txInputs tx
@@ -125,7 +125,7 @@ toAlonzoTx network params tx = do
           adHash = C.SNothing
           txnetworkid = C.SJust network
       pure $
-        C.TxBody
+        C.AlonzoTxBody
           inputs
           collateral
           outputs
@@ -146,10 +146,10 @@ toAlonzoTx network params tx = do
         . Plutus.txOutputs
         . P.tx'plutus
 
-toWits :: SafeHash StandardCrypto C.EraIndependentTxBody -> P.Tx -> Either ToCardanoError (C.TxWitness Era)
+toWits :: SafeHash StandardCrypto C.EraIndependentTxBody -> P.Tx -> Either ToCardanoError (C.AlonzoTxWits Era)
 toWits txBodyHash tx = do
   let bootstrapWits = mempty
   datumWits <- toDatumWitness tx
   let redeemerWits = toRedeemerWitness tx
   scriptWits <- toScriptWitness tx
-  pure $ C.TxWitness (toKeyWitness txBodyHash tx) bootstrapWits scriptWits datumWits redeemerWits
+  pure $ C.AlonzoTxWits (toKeyWitness txBodyHash tx) bootstrapWits scriptWits datumWits redeemerWits

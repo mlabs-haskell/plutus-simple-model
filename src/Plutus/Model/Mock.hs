@@ -142,7 +142,6 @@ import Data.Text (Text)
 
 import Data.List qualified as L
 import Data.Maybe
-import Data.Sequence.Strict (StrictSeq)
 import Data.Set (Set)
 import Data.Set qualified as S
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
@@ -152,10 +151,10 @@ import Cardano.Crypto.DSIGN.Class qualified as C
 import Cardano.Crypto.Hash.Class qualified as C
 import Cardano.Crypto.Seed qualified as C
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
-import Cardano.Ledger.Alonzo.TxWits qualified as C
+import Cardano.Ledger.Alonzo.Tx qualified as C
+import Cardano.Ledger.Alonzo.UTxO qualified as C
 import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Crypto qualified as C
-import Cardano.Ledger.Era (Crypto)
 import Cardano.Ledger.Shelley.API.Types qualified as C
 import Cardano.Slotting.EpochInfo.Impl (fixedEpochInfo)
 import Cardano.Slotting.Time (SystemStart (..), slotLengthFromMillisec)
@@ -171,7 +170,6 @@ import PlutusLedgerApi.V2 hiding (Map)
 import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Ledger.Hashes as Ledger (EraIndependentTxBody)
-import Cardano.Ledger.Hashes qualified as C
 import Cardano.Ledger.SafeHash qualified as Ledger (unsafeMakeSafeHash)
 import Cardano.Ledger.Slot (EpochSize (..))
 import Plutus.Model.Fork.Ledger.Slot
@@ -187,11 +185,10 @@ import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Mary.Value qualified as Mary
-import Cardano.Ledger.SafeHash qualified as C
 import Cardano.Ledger.Shelley.API.Wallet (evaluateTransactionBalance)
-import Cardano.Ledger.Shelley.API.Wallet qualified as C
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.TxIn qualified as Ledger
+import Cardano.Ledger.Block qualified as Ledger
 import Plutus.Model.Ada (Ada (..))
 import Plutus.Model.Fork.Cardano.Alonzo ()
 import Plutus.Model.Fork.Cardano.Alonzo qualified as Alonzo
@@ -517,20 +514,17 @@ sendSingleTx preTx = do
 checkSingleTx ::
   forall era.
   ( ExtendedUTxO era
-  , CBOR.ToCBOR (Core.Tx era)
-  , HasField "inputs" (Core.TxBody era) (Set (C.TxIn (Crypto era)))
-  , HasField "certs" (Core.TxBody era) (StrictSeq (C.DCert (Crypto era)))
-  , HasField "wdrls" (Core.TxBody era) (C.Wdrl (Crypto era))
-  , HasField "txdats" (Core.Witnesses era) (C.TxDats era)
-  , HasField "txrdmrs" (Core.Witnesses era) (C.Redeemers era)
+  , C.AlonzoEraTx era
   , HasField "_costmdls" (Core.PParams era) Alonzo.CostModels
   , HasField "_maxTxExUnits" (Core.PParams era) Alonzo.ExUnits
   , HasField "_protocolVersion" (Core.PParams era) C.ProtVer
-  , Core.Script era ~ Alonzo.Script era
-  , C.CLI era
-  , C.HashAnnotated (Core.TxBody era) C.EraIndependentTxBody C.StandardCrypto
+  , Core.Script era ~ Alonzo.AlonzoScript era
+  , Ledger.EraUTxO era
+  , Ledger.ScriptsNeeded era ~ C.AlonzoScriptsNeeded era
+  , HasField "_poolDeposit" (Core.PParams era) C.Coin
+  , HasField "_keyDeposit" (Core.PParams era) C.Coin
   , Class.IsCardanoTx era
-  , Core.Value era ~ Mary.Value C.StandardCrypto
+  , Core.Value era ~ Mary.MaryValue C.StandardCrypto
   ) =>
   Core.PParams era ->
   Tx ->

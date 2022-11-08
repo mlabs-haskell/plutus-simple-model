@@ -14,14 +14,13 @@ import Prelude
 import Cardano.Ledger.Alonzo.Data qualified as C
 import Cardano.Ledger.Alonzo.TxWits qualified as C
 import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.PParams (PParams)
 import Cardano.Ledger.Babbage.PParams qualified as C
 import Cardano.Ledger.Babbage.Tx qualified as C
 import Cardano.Ledger.Babbage.TxBody qualified as C
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CompactAddress qualified as C
 import Cardano.Ledger.Compactible qualified as C
-import Cardano.Ledger.Core qualified as C ()
+import Cardano.Ledger.Core qualified as C (TxWits(..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Hashes qualified as C
 import Cardano.Ledger.SafeHash
@@ -52,6 +51,7 @@ import Plutus.Model.Fork.Cardano.Common (
 import Plutus.Model.Fork.Ledger.Scripts qualified as C (Versioned (..), toScript)
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.Model.Fork.TxExtra qualified as P
+import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts qualified as P
 import PlutusLedgerApi.V2 qualified as P
 
 type Era = BabbageEra StandardCrypto
@@ -64,15 +64,15 @@ instance IsCardanoTx Era where
 toBabbageTx ::
   Map P.ScriptHash (C.Versioned P.Script) ->
   Network ->
-  PParams Era ->
+  C.BabbagePParams Era ->
   P.Tx ->
-  Either ToCardanoError (C.ValidatedTx Era)
+  Either ToCardanoError (C.AlonzoTx Era)
 toBabbageTx scriptMap network params tx = do
   body <- getBody
   wits <- toWits (hashAnnotated body) tx
   let isValid = C.IsValid True -- TODO or maybe False
       auxData = C.SNothing
-  pure $ C.ValidatedTx body wits isValid auxData
+  pure $ C.AlonzoTx body wits isValid auxData
   where
     getBody = do
       spendInputs <- getInputsBy Plutus.txInputs tx
@@ -92,7 +92,7 @@ toBabbageTx scriptMap network params tx = do
           adHash = C.SNothing
           txNetworkId = C.SJust network
       pure $
-        C.TxBody
+        C.BabbageTxBody
           spendInputs
           collateralInputs
           referenceInputs
@@ -131,10 +131,10 @@ toSizedTxOut ::
   Map P.ScriptHash (C.Versioned P.Script) ->
   Network ->
   P.TxOut ->
-  Either ToCardanoError (C.Sized (C.TxOut Era))
+  Either ToCardanoError (C.Sized (C.BabbageTxOut Era))
 toSizedTxOut scriptMap network tout = C.mkSized <$> toTxOut scriptMap network tout
 
-toBabbageTxOut :: Map P.ScriptHash (C.Versioned P.Script) -> Network -> P.TxOut -> Either ToCardanoError (C.TxOut Era)
+toBabbageTxOut :: Map P.ScriptHash (C.Versioned P.Script) -> Network -> P.TxOut -> Either ToCardanoError (C.BabbageTxOut Era)
 toBabbageTxOut scriptMap network (P.TxOut addr value mdh mScriptHash) = do
   caddr <- toAddr network addr
   cvalue <- toValue value
@@ -203,10 +203,10 @@ toOutputDatum = \case
 toDatum :: P.Datum -> C.Data Era
 toDatum (P.Datum (P.BuiltinData d)) = C.Data d
 
-toWits :: SafeHash StandardCrypto C.EraIndependentTxBody -> P.Tx -> Either ToCardanoError (C.TxWitness Era)
+toWits :: SafeHash StandardCrypto C.EraIndependentTxBody -> P.Tx -> Either ToCardanoError (C.TxWits Era)
 toWits txBodyHash tx = do
   let bootstrapWits = mempty
   datumWits <- toDatumWitness tx
   let redeemerWits = toRedeemerWitness tx
   scriptWits <- toScriptWitness tx
-  pure $ C.TxWitness (toKeyWitness txBodyHash tx) bootstrapWits scriptWits datumWits redeemerWits
+  pure $ C.AlonzoTxWits (toKeyWitness txBodyHash tx) bootstrapWits scriptWits datumWits redeemerWits

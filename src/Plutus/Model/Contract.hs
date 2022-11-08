@@ -135,6 +135,7 @@ import Test.Tasty.HUnit
 
 import Plutus.Model.Fork.Ledger.Slot (Slot (..))
 import Plutus.Model.Fork.Ledger.TimeSlot (posixTimeToEnclosingSlot, slotToEndPOSIXTime)
+import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
 import PlutusLedgerApi.V1.Address
 import PlutusLedgerApi.V1.Interval (interval)
 import PlutusLedgerApi.V1.Value
