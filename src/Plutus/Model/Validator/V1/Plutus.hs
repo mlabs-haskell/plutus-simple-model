@@ -13,8 +13,8 @@ import PlutusTx.Prelude
 getThrough :: ScriptContext -> (TxOut, TxOut)
 getThrough ctx = (tin, tout)
   where
-    [tout] = getContinuingOutputs ctx
-    Just tinInfo = findOwnInput ctx
+    tout = head (getContinuingOutputs ctx)
+    tinInfo = fromMaybe (error ()) (findOwnInput ctx)
     tin = txInInfoResolved tinInfo
 
 {-# INLINEABLE datumOf #-}

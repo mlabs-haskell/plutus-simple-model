@@ -1,4 +1,3 @@
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 -- | Utility functions for Plutus V2 scripts
 module Plutus.Model.Validator.V2.Plutus (
   datumOf,
@@ -17,8 +16,8 @@ import PlutusTx.Prelude
 getThrough :: ScriptContext -> (TxOut, TxOut)
 getThrough ctx = (tin, tout)
   where
-    [tout] = getContinuingOutputs ctx
-    Just tinInfo = findOwnInput ctx
+    tout = head (getContinuingOutputs ctx)
+    tinInfo = fromMaybe (error ()) (findOwnInput ctx)
     tin = txInInfoResolved tinInfo
 
 {-# INLINEABLE datumOf #-}
@@ -50,6 +49,6 @@ forwardTo :: ToData redeemer => ScriptHash -> redeemer -> TxInfo -> Bool
 forwardTo vh redeemer info =
   Map.lookup (Spending ref) (txInfoRedeemers info) == Just (Redeemer $ toBuiltinData redeemer)
   where
-    Just inInfo = find ((== addr) . txOutAddress . txInInfoResolved) $ txInfoInputs info
+    inInfo = fromMaybe (error ()) . find ((== addr) . txOutAddress . txInInfoResolved) $ txInfoInputs info
     !addr = scriptHashAddress vh
     !ref = txInInfoOutRef inInfo
