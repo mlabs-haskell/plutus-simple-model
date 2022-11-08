@@ -67,7 +67,7 @@ class HasValidator a where
   -- ^ Get internal avlidator
 
 class HasValidatorHash a where
-  toValidatorHash :: a -> ValidatorHash
+  toValidatorHash :: a -> ScriptHash
   -- ^ Get internal avlidator
 
 type IsValidator a = (HasAddress a, HasDatum a, HasRedeemer a, HasLanguage a, HasValidator a)
@@ -104,7 +104,7 @@ instance HasAddress (TypedValidator datum redeemer) where
 
 -- | Typed validator. It's phantom type to annotate types for validators
 newtype TypedValidatorHash datum redeemer =
-  TypedValidatorHash { unTypedValidatorHash :: Versioned ValidatorHash }
+  TypedValidatorHash { unTypedValidatorHash :: Versioned ScriptHash }
   deriving newtype (HasLanguage)
 
 instance IsData datum => HasDatum (TypedValidatorHash datum redeemer) where

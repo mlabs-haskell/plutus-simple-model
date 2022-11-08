@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 module Suites.Plutus.Model.Script.V1.Test.Safe (
   tests,
 ) where

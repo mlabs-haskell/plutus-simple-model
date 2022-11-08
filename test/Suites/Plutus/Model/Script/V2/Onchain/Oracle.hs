@@ -9,6 +9,7 @@
 
  The winner is player with the closest guess to the Oracle's answer.
 -}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 module Suites.Plutus.Model.Script.V2.Onchain.Oracle (
   AnswerDatum (..),
   BetDatum (..),
@@ -29,6 +30,8 @@ import PlutusTx.Prelude
 newtype AnswerDatum = AnswerDatum Integer
 
 newtype BetDatum = BetDatum [(PubKeyHash, Integer)]
+
+PlutusTx.unstableMakeIsData ''BetDatum
 
 {-# INLINEABLE betStep #-}
 betStep :: Integer
@@ -84,6 +87,5 @@ betContract readDatum (BetParams oraclePkh) (BetDatum answers) act ctx =
         getAnswerDiff (_key, n) = abs (oracleAnswer - n)
 
 PlutusTx.unstableMakeIsData ''AnswerDatum
-PlutusTx.unstableMakeIsData ''BetDatum
 PlutusTx.unstableMakeIsData ''BetAct
 PlutusTx.makeLift ''BetParams

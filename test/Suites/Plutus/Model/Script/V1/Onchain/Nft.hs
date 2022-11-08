@@ -12,8 +12,9 @@ module Suites.Plutus.Model.Script.V1.Onchain.Nft (
 import Prelude
 
 import Plutus.Model.V1
-import PlutusLedgerApi.V1.Contexts (ownCurrencySymbol)
 import PlutusLedgerApi.V2
+import PlutusLedgerApi.V2.Contexts (ownCurrencySymbol)
+
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
 
@@ -41,10 +42,10 @@ nftContract (NftParams ref tok) _ ctx =
 -- compiled code
 
 nftMintingPolicy :: NftParams -> TypedPolicy ()
-nftMintingPolicy nftp =
-  mkTypedPolicy $
-    $$(PlutusTx.compile [||\param -> toBuiltinPolicy (nftContract param)||])
-      `PlutusTx.applyCode` PlutusTx.liftCode nftp
+nftMintingPolicy _nftp = undefined
+  -- mkTypedPolicy $
+  --   $$(PlutusTx.compile [||\param -> toBuiltinPolicy (nftContract param)||])
+  --     `PlutusTx.applyCode` PlutusTx.liftCode nftp
 
 nftCurrencySymbol :: NftParams -> CurrencySymbol
 nftCurrencySymbol = scriptCurrencySymbol . nftMintingPolicy

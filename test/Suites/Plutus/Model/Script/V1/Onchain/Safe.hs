@@ -19,7 +19,7 @@ import PlutusLedgerApi.V1.Contexts (
  )
 import PlutusLedgerApi.V1.Interval (contains)
 import PlutusLedgerApi.V1.Value (gt)
-import PlutusLedgerApi.V2
+import PlutusLedgerApi.V1
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
 
@@ -28,6 +28,8 @@ data SafeDatum = Safe PubKeyHash
 
 instance Plutus.Eq SafeDatum where
   Safe pkh1 == Safe pkh2 = pkh1 Plutus.== pkh2
+
+PlutusTx.unstableMakeIsData ''SafeDatum
 
 data SafeAct = Spend | Deposit
 
@@ -78,7 +80,6 @@ safeContract (SafeParams _spendTime) (Safe pkh) act ctx =
       [o] -> o
       _ -> Plutus.error ()
 
-PlutusTx.unstableMakeIsData ''SafeDatum
 PlutusTx.unstableMakeIsData ''SafeAct
 PlutusTx.unstableMakeIsData ''SafeParams
 PlutusTx.makeLift ''SafeParams

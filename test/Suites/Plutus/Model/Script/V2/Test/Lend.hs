@@ -81,7 +81,7 @@ newApp =
     sym = scriptCurrencySymbol policy
     tok = tokenName "ExchangeToken"
     policy = lendPolicy lendMintParams
-    lendMintParams = LendMintParams (LendHash $ validatorHash lendScript)
+    lendMintParams = LendMintParams (LendHash $ scriptHash lendScript)
 
 withLend :: App -> (TxBox Lend -> Run ()) -> Run ()
 withLend App {..} = withNft app'lendScript

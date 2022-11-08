@@ -25,6 +25,9 @@ data LendDatum = LendDatum
 
 data LendAct = Exchange
 
+PlutusTx.unstableMakeIsData ''LendAct
+
+
 {-# INLINEABLE lendContract #-}
 lendContract :: LendDatum -> LendAct -> ScriptContext -> Bool
 lendContract (LendDatum sym tok) Exchange ctx =
@@ -41,7 +44,7 @@ lendContract (LendDatum sym tok) Exchange ctx =
     outVal = txOutValue tout
     mintedAmount = valueOf (txInfoMint info) sym tok
 
-newtype LendHash = LendHash ValidatorHash
+newtype LendHash = LendHash ScriptHash
 newtype LendMintParams = LendMintParams LendHash
 
 {-# INLINEABLE lendPolicyContract #-}
@@ -54,6 +57,5 @@ lendPolicyContract (LendMintParams (LendHash lendVh)) _ ctx =
     info = scriptContextTxInfo ctx
 
 PlutusTx.unstableMakeIsData ''LendDatum
-PlutusTx.unstableMakeIsData ''LendAct
 PlutusTx.makeLift ''LendHash
 PlutusTx.makeLift ''LendMintParams
