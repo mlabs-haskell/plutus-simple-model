@@ -1,15 +1,16 @@
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 module Suites.Plutus.Model.Script.V1.Test.Game (
   tests,
   initGuessGame,
   makeGuessGame,
 ) where
 
-import Prelude
 import Control.Monad (unless)
+import Prelude
 
 import Test.Tasty
 
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V2
 import PlutusTx.Prelude qualified as Plutus
 import Suites.Plutus.Model.Script.V1.Onchain.Game
 import Suites.Plutus.Model.Script.V1.Onchain.Game.Script

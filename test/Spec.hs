@@ -8,8 +8,9 @@ import Prelude
 main :: IO ()
 main = do
   defaultMain $ do
-    testGroup "Test Suites"
-      [ plutusV1 "Alonzo"  defaultAlonzo
+    testGroup
+      "Test Suites"
+      [ plutusV1 "Alonzo" defaultAlonzo
       , plutusV1 "Babbage" defaultBabbage
       , plutusV2 "Babbage" defaultBabbage
       ]

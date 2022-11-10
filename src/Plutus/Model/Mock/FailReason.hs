@@ -1,15 +1,15 @@
 -- | Errors for TX build and submit
-module Plutus.Model.Mock.FailReason(
-  FailReason(..),
-  DCertError(..),
-  WithdrawError(..),
-  LimitOverflow(..),
+module Plutus.Model.Mock.FailReason (
+  FailReason (..),
+  DCertError (..),
+  WithdrawError (..),
+  LimitOverflow (..),
 ) where
 
-import Prelude
-import Plutus.V2.Ledger.Api
 import Plutus.Model.Fork.Ledger.Slot
 import Plutus.Model.Mock.Percent
+import PlutusLedgerApi.V2
+import Prelude
 
 -- | Fail reasons.
 data FailReason
@@ -25,15 +25,15 @@ data FailReason
     FailToCardano String
   | -- | invalid range. TX is submitted with current slot not in valid range
     TxInvalidRange Slot SlotRange
-    -- | invalid reward for staking credential, expected and actual values for stake at the moment of reward
-  | TxInvalidWithdraw WithdrawError
-    -- | Certificate errors
-  | TxInvalidCertificate DCertError
+  | -- | invalid reward for staking credential, expected and actual values for stake at the moment of reward
+    TxInvalidWithdraw WithdrawError
+  | -- | Certificate errors
+    TxInvalidCertificate DCertError
   | TxLimitError [LimitOverflow] StatPercent
-  -- | Any error (can be useful to report logic errors on testing)
-  | GenericFail String
-  -- | Missing minting policy script for the currency symbol
-  | NoMintingPolicy [CurrencySymbol]
+  | -- | Any error (can be useful to report logic errors on testing)
+    GenericFail String
+  | -- | Missing minting policy script for the currency symbol
+    NoMintingPolicy [CurrencySymbol]
   deriving (Show)
 
 data DCertError
@@ -54,8 +54,10 @@ data WithdrawError
 
 -- | Encodes overflow of the TX-resources
 data LimitOverflow
-  = TxSizeError !Integer !Percent -- ^ by how many bytes we exceed the limit
-  | ExMemError !Integer !Percent  -- ^ how many mem units exceeded
-  | ExStepError !Integer !Percent -- ^ how many steps executions exceeded
+  = -- | by how many bytes we exceed the limit
+    TxSizeError !Integer !Percent
+  | -- | how many mem units exceeded
+    ExMemError !Integer !Percent
+  | -- | how many steps executions exceeded
+    ExStepError !Integer !Percent
   deriving (Show, Eq)
-

@@ -1,19 +1,20 @@
 -- | Classes to get addresses and work with addresses
-module Plutus.Model.Mock.Address(
-  HasAddress(..),
-  HasStakingCredential(..),
-  AppendStaking(..),
+module Plutus.Model.Mock.Address (
+  HasAddress (..),
+  HasStakingCredential (..),
+  AppendStaking (..),
   appendStakingCredential,
   appendCredential,
   appendStakingPubKey,
   appendStakingScript,
 ) where
 
-import Prelude
 import Data.Coerce
-import Plutus.V1.Ledger.Address
-import Plutus.V2.Ledger.Api
-import Plutus.Model.Fork.TxExtra(keyToStaking)
+import Plutus.Model.Fork.TxExtra (keyToStaking)
+import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
+import PlutusLedgerApi.V1.Address
+import PlutusLedgerApi.V2
+import Prelude
 
 -- | Everything that has address
 class HasAddress a where
@@ -25,7 +26,7 @@ instance HasAddress Address where
 instance HasAddress PubKeyHash where
   toAddress = pubKeyHashAddress
 
-instance HasAddress ValidatorHash where
+instance HasAddress ScriptHash where
   toAddress = scriptHashAddress
 
 -- | Everything that has staking credential
@@ -39,13 +40,13 @@ instance HasStakingCredential PubKeyHash where
   toStakingCredential = keyToStaking
 
 -- | Encodes appening of staking address
-data AppendStaking a =
-  AppendStaking StakingCredential a
+data AppendStaking a
+  = AppendStaking StakingCredential a
 
 instance HasAddress a => HasAddress (AppendStaking a) where
   toAddress (AppendStaking stakeCred a) = appendStake (toAddress a)
     where
-      appendStake addr = addr { addressStakingCredential = Just stakeCred }
+      appendStake addr = addr {addressStakingCredential = Just stakeCred}
 
 -- | Appends staking credential to a script
 appendStakingCredential :: StakingCredential -> script -> AppendStaking script
@@ -55,7 +56,7 @@ appendStakingCredential sCred script =
       case cred of
         PubKeyCredential pkh ->
           appendStakingPubKey pkh script
-        ScriptCredential (ValidatorHash hash) ->
+        ScriptCredential (ScriptHash hash) ->
           appendStakingScript (StakeValidatorHash hash) script
     StakingPtr {} -> error "StakingPtr is not supported"
 
@@ -70,4 +71,3 @@ appendStakingPubKey pkh = appendCredential (PubKeyCredential pkh)
 -- | Append staking script info
 appendStakingScript :: StakeValidatorHash -> a -> AppendStaking a
 appendStakingScript sh = appendCredential (ScriptCredential $ coerce sh)
-

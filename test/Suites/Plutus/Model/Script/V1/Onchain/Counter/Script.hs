@@ -4,12 +4,14 @@ module Suites.Plutus.Model.Script.V1.Onchain.Counter.Script (
   counterScript,
 ) where
 
-import PlutusTx qualified
+import Plutus.Model.V1 (TypedValidator) --, mkTypedValidator, toBuiltinValidator)
+-- import PlutusTx qualified
 import Suites.Plutus.Model.Script.V1.Onchain.Counter
-import Plutus.Model.V1 (toBuiltinValidator, TypedValidator, mkTypedValidator)
+import PlutusTx.Builtins (error)
 
 type Counter = TypedValidator CounterDatum CounterAct
 
 -- | The TypedValidator for counter contract
 counterScript :: Counter
-counterScript = mkTypedValidator $$(PlutusTx.compile [|| toBuiltinValidator counterContract ||])
+counterScript = error ()
+-- counterScript = mkTypedValidator $$(PlutusTx.compile [||toBuiltinValidator counterContract||])

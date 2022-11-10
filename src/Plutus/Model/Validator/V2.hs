@@ -1,5 +1,5 @@
 -- | Creation of typed validators for Plutus V2
-module Plutus.Model.Validator.V2(
+module Plutus.Model.Validator.V2 (
   mkTypedValidator,
   mkTypedPolicy,
   mkTypedStake,
@@ -8,13 +8,14 @@ module Plutus.Model.Validator.V2(
   toBuiltinStake,
 ) where
 
+import PlutusLedgerApi.V2
+import PlutusTx.Code (CompiledCode)
 import PlutusTx.Prelude (Bool, (.))
 import PlutusTx.Prelude qualified as Plutus
-import Plutus.V2.Ledger.Api
-import PlutusTx.Code (CompiledCode)
 
-import Plutus.Model.Validator (TypedValidator(..), TypedPolicy(..), TypedStake(..))
 import Plutus.Model.Fork.Ledger.Scripts (toV2)
+import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
+import Plutus.Model.Validator (TypedPolicy (..), TypedStake (..), TypedValidator (..))
 
 -- | Create Plutus V2 typed validator
 mkTypedValidator :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> TypedValidator datum redeemer
@@ -29,30 +30,41 @@ mkTypedStake :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedStake re
 mkTypedStake = TypedStake . toV2 . mkStakeValidatorScript
 
 -- | Coverts to low-level validator representation
-{-# INLINABLE toBuiltinValidator #-}
-toBuiltinValidator :: (UnsafeFromData datum, UnsafeFromData redeemer)
-  => (datum -> redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> BuiltinData -> ())
+{-# INLINEABLE toBuiltinValidator #-}
+toBuiltinValidator ::
+  (UnsafeFromData datum, UnsafeFromData redeemer) =>
+  (datum -> redeemer -> ScriptContext -> Bool) ->
+  (BuiltinData -> BuiltinData -> BuiltinData -> ())
 toBuiltinValidator script datum act ctx =
-  Plutus.check (
-    script (unsafeFromBuiltinData datum)
-           (unsafeFromBuiltinData act)
-           (unsafeFromBuiltinData ctx))
+  Plutus.check
+    ( script
+        (unsafeFromBuiltinData datum)
+        (unsafeFromBuiltinData act)
+        (unsafeFromBuiltinData ctx)
+    )
 
 -- | Coverts to low-level validator representation
-{-# INLINABLE toBuiltinPolicy #-}
-toBuiltinPolicy :: (UnsafeFromData redeemer)
-  => (redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> ())
+{-# INLINEABLE toBuiltinPolicy #-}
+toBuiltinPolicy ::
+  (UnsafeFromData redeemer) =>
+  (redeemer -> ScriptContext -> Bool) ->
+  (BuiltinData -> BuiltinData -> ())
 toBuiltinPolicy script act ctx =
-  Plutus.check (
-    script (unsafeFromBuiltinData act)
-            (unsafeFromBuiltinData ctx))
+  Plutus.check
+    ( script
+        (unsafeFromBuiltinData act)
+        (unsafeFromBuiltinData ctx)
+    )
 
 -- | Coverts to low-level validator representation
-{-# INLINABLE toBuiltinStake #-}
-toBuiltinStake :: (UnsafeFromData redeemer)
-  => (redeemer -> ScriptContext -> Bool) -> (BuiltinData -> BuiltinData -> ())
+{-# INLINEABLE toBuiltinStake #-}
+toBuiltinStake ::
+  (UnsafeFromData redeemer) =>
+  (redeemer -> ScriptContext -> Bool) ->
+  (BuiltinData -> BuiltinData -> ())
 toBuiltinStake script act ctx =
-  Plutus.check (
-    script (unsafeFromBuiltinData act)
-            (unsafeFromBuiltinData ctx))
-
+  Plutus.check
+    ( script
+        (unsafeFromBuiltinData act)
+        (unsafeFromBuiltinData ctx)
+    )

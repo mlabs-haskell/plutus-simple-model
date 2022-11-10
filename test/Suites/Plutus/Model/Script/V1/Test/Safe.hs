@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 module Suites.Plutus.Model.Script.V1.Test.Safe (
   tests,
 ) where
@@ -10,7 +11,7 @@ import Test.Tasty
 import Test.Tasty.HUnit
 
 import Plutus.Model
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V2
 import Suites.Plutus.Model.Script.V1.Onchain.Safe
 import Suites.Plutus.Model.Script.V1.Onchain.Safe.Script
 import Suites.Plutus.Model.Util

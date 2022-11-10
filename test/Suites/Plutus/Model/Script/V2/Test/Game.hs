@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 -- | Guess hash Game with inlined datum
 module Suites.Plutus.Model.Script.V2.Test.Game (
   tests,
@@ -11,7 +12,7 @@ import Prelude
 
 import Test.Tasty
 
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V2
 import PlutusTx.Prelude qualified as Plutus
 import Suites.Plutus.Model.Script.V2.Onchain.Game
 import Suites.Plutus.Model.Script.V2.Onchain.Game.Script

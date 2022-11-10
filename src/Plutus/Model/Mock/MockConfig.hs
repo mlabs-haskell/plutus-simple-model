@@ -1,8 +1,8 @@
 -- | Config for Mock ledger
-module Plutus.Model.Mock.MockConfig(
-  Stat(..),
-  MockConfig(..),
-  CheckLimits(..),
+module Plutus.Model.Mock.MockConfig (
+  Stat (..),
+  MockConfig (..),
+  CheckLimits (..),
   defaultSlotConfig,
   defaultMockConfig,
   defaultAlonzo,
@@ -15,25 +15,33 @@ module Plutus.Model.Mock.MockConfig(
   readMockConfig,
 ) where
 
-import Prelude
 import Cardano.Ledger.BaseTypes
 import Plutus.Model.Fork.Ledger.TimeSlot (SlotConfig (..))
 import Plutus.Model.Mock.ProtocolParameters
 import Plutus.Model.Mock.Stat
+import Prelude
 
 -- | Config for the blockchain.
 data MockConfig = MockConfig
-  { mockConfigCheckLimits  :: !CheckLimits       -- ^ limits check mode
-  , mockConfigLimitStats   :: !Stat              -- ^ TX execution resources limits
-  , mockConfigProtocol     :: !PParams           -- ^ Protocol parameters
-  , mockConfigNetworkId    :: !Network           -- ^ Network id (mainnet / testnet)
-  , mockConfigSlotConfig   :: !SlotConfig        -- ^ Slot config
+  { mockConfigCheckLimits :: !CheckLimits
+  -- ^ limits check mode
+  , mockConfigLimitStats :: !Stat
+  -- ^ TX execution resources limits
+  , mockConfigProtocol :: !PParams
+  -- ^ Protocol parameters
+  , mockConfigNetworkId :: !Network
+  -- ^ Network id (mainnet / testnet)
+  , mockConfigSlotConfig :: !SlotConfig
+  -- ^ Slot config
   }
 
 data CheckLimits
-  = IgnoreLimits   -- ^ ignore TX-limits
-  | WarnLimits     -- ^ log TX to error log if it exceeds limits but accept TX
-  | ErrorLimits    -- ^ reject TX if it exceeds the limits
+  = -- | ignore TX-limits
+    IgnoreLimits
+  | -- | log TX to error log if it exceeds limits but accept TX
+    WarnLimits
+  | -- | reject TX if it exceeds the limits
+    ErrorLimits
   deriving (Show)
 
 -- | Default slot config
@@ -44,13 +52,15 @@ defaultSlotConfig =
     , scSlotZeroTime = 0 -- starts at unix epoch start
     }
 
--- | Default Babbage era config. If we use this parameter
--- then Alonzo era TXs will be used for testing
+{- | Default Babbage era config. If we use this parameter
+ then Alonzo era TXs will be used for testing
+-}
 defaultAlonzo :: MockConfig
 defaultAlonzo = defaultMockConfig defaultAlonzoParams
 
--- | Default Babbage era config. If we use this parameter
--- then Babbage era TXs will be used for testing
+{- | Default Babbage era config. If we use this parameter
+ then Babbage era TXs will be used for testing
+-}
 defaultBabbage :: MockConfig
 defaultBabbage = defaultMockConfig defaultBabbageParams
 
@@ -67,15 +77,15 @@ defaultMockConfig params =
 
 -- | Do not check for limits
 skipLimits :: MockConfig -> MockConfig
-skipLimits cfg = cfg { mockConfigCheckLimits = IgnoreLimits }
+skipLimits cfg = cfg {mockConfigCheckLimits = IgnoreLimits}
 
 -- | Warn on limits
 warnLimits :: MockConfig -> MockConfig
-warnLimits cfg = cfg { mockConfigCheckLimits = WarnLimits }
+warnLimits cfg = cfg {mockConfigCheckLimits = WarnLimits}
 
 -- | Error on limits
 forceLimits :: MockConfig -> MockConfig
-forceLimits cfg = cfg { mockConfigCheckLimits = ErrorLimits }
+forceLimits cfg = cfg {mockConfigCheckLimits = ErrorLimits}
 
 {- | Read config for protocol parameters and form blockchain config.
 
@@ -84,5 +94,3 @@ forceLimits cfg = cfg { mockConfigCheckLimits = ErrorLimits }
 readMockConfig :: FilePath -> IO MockConfig
 readMockConfig paramsFile =
   defaultMockConfig {- TODO . setDefaultCostModel -} <$> readAlonzoParams paramsFile
-
-

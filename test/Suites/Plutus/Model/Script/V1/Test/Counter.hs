@@ -1,4 +1,5 @@
-module Suites.Plutus.Model.Script.V1.Test.Counter(
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+module Suites.Plutus.Model.Script.V1.Test.Counter (
   tests,
   initCounter,
   goodCounter,
@@ -12,7 +13,7 @@ import Prelude
 import Test.Tasty
 import Test.Tasty.HUnit
 
-import Plutus.V2.Ledger.Api
+import PlutusLedgerApi.V2
 import Suites.Plutus.Model.Script.V1.Onchain.Counter
 import Suites.Plutus.Model.Script.V1.Onchain.Counter.Script
 import Suites.Plutus.Model.Util
@@ -31,8 +32,8 @@ tests cfg =
     check :: String -> Run a -> (a -> Assertion) -> TestTree
     check msg act f = testCase msg $ f $ fst (runMock act (initMock cfg $ adaValue 10_000_000))
 
-    good msg act = check msg (act >> checkErrors) ( @?= Nothing)
-    bad msg act = check msg (fmap isJust $ act >> checkErrors) ( @?= True)
+    good msg act = check msg (act >> checkErrors) (@?= Nothing)
+    bad msg act = check msg (fmap isJust $ act >> checkErrors) (@?= True)
 
 initCounterTest :: Run Bool
 initCounterTest = do

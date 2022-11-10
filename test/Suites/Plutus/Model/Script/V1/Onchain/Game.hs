@@ -9,10 +9,10 @@ module Suites.Plutus.Model.Script.V1.Onchain.Game (
   gameContract,
 ) where
 
-import Prelude
-import Plutus.V1.Ledger.Api
+import PlutusLedgerApi.V2
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
+import Prelude
 
 newtype GameDatum = GuessHash Plutus.BuiltinByteString
   deriving (Eq)

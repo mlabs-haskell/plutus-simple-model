@@ -1,5 +1,6 @@
--- | Test for forward to redeemer. We delegate minting to the spending
--- of script with certain redeemer.
+{- | Test for forward to redeemer. We delegate minting to the spending
+ of script with certain redeemer.
+-}
 module Suites.Plutus.Model.Script.V2.Test.Lend (
   tests,
 ) where
@@ -8,13 +9,13 @@ import Prelude
 
 import Test.Tasty
 
-import Plutus.V1.Ledger.Value (tokenName)
-import Plutus.V2.Ledger.Api
+import Plutus.Model.Ada
+import PlutusLedgerApi.V1.Value (tokenName)
+import PlutusLedgerApi.V2
 import PlutusTx.Prelude qualified as Plutus
 import Suites.Plutus.Model.Script.V2.Onchain.Lend
 import Suites.Plutus.Model.Script.V2.Onchain.Lend.Script
 import Suites.Plutus.Model.Util
-import Plutus.Model.Ada
 
 import Plutus.Model
 
@@ -61,28 +62,29 @@ buyMoreThanSell = do
 
 data App = App
   { app'lendScript :: Lend
-  , app'lendMint   :: LendMint
+  , app'lendMint :: LendMint
   , app'lendSymbol :: CurrencySymbol
-  , app'lendToken  :: TokenName
-  , app'lendValue  :: Integer -> Value
+  , app'lendToken :: TokenName
+  , app'lendValue :: Integer -> Value
   }
 
 newApp :: App
-newApp = App
-  { app'lendScript = lendScript
-  , app'lendMint   = policy
-  , app'lendSymbol = sym
-  , app'lendToken  = tok
-  , app'lendValue  = singleton sym tok
-  }
+newApp =
+  App
+    { app'lendScript = lendScript
+    , app'lendMint = policy
+    , app'lendSymbol = sym
+    , app'lendToken = tok
+    , app'lendValue = singleton sym tok
+    }
   where
     sym = scriptCurrencySymbol policy
     tok = tokenName "ExchangeToken"
     policy = lendPolicy lendMintParams
-    lendMintParams = LendMintParams (LendHash $ validatorHash lendScript)
+    lendMintParams = LendMintParams (LendHash $ scriptHash lendScript)
 
 withLend :: App -> (TxBox Lend -> Run ()) -> Run ()
-withLend App{..} = withNft app'lendScript
+withLend App {..} = withNft app'lendScript
 
 initApp :: Run (App, [PubKeyHash])
 initApp = do
@@ -91,15 +93,16 @@ initApp = do
   pure (app, users)
 
 initLend :: App -> PubKeyHash -> Run ()
-initLend App{..} pkh = do
+initLend App {..} pkh = do
   usp <- spend pkh riderAda
-  submitTx pkh $ mconcat
-    [ userSpend usp
-    , payToScript app'lendScript (HashDatum $ LendDatum app'lendSymbol app'lendToken) riderAda
-    ]
+  submitTx pkh $
+    mconcat
+      [ userSpend usp
+      , payToScript app'lendScript (HashDatum $ LendDatum app'lendSymbol app'lendToken) riderAda
+      ]
 
 sell :: App -> PubKeyHash -> Ada -> Run ()
-sell app@App{..} user amount = do
+sell app@App {..} user amount = do
   withLend app $ \lendBox ->
     withSpend user (ada amount <> riderAda) $ \usp ->
       submitTx user $ sellTx usp lendBox
@@ -108,14 +111,14 @@ sell app@App{..} user amount = do
       mconcat
         [ userSpend usp
         , mintValue app'lendMint () mintVal
-        , modifyBox app'lendScript lendBox Exchange HashDatum ( <> ada amount)
+        , modifyBox app'lendScript lendBox Exchange HashDatum (<> ada amount)
         , payToKey user (riderAda <> mintVal)
         ]
 
     mintVal = app'lendValue $ getLovelace amount
 
 buy :: App -> PubKeyHash -> Integer -> Run ()
-buy app@App{..} user amount = do
+buy app@App {..} user amount = do
   withLend app $ \lendBox ->
     withSpend user mintVal $ \usp ->
       submitTx user $ buyTx usp lendBox
@@ -124,7 +127,7 @@ buy app@App{..} user amount = do
       mconcat
         [ userSpend usp
         , mintValue app'lendMint () (Plutus.negate mintVal)
-        , modifyBox app'lendScript lendBox Exchange HashDatum ( <> Plutus.negate userVal)
+        , modifyBox app'lendScript lendBox Exchange HashDatum (<> Plutus.negate userVal)
         , payToKey user userVal
         ]
 
@@ -132,7 +135,7 @@ buy app@App{..} user amount = do
     mintVal = app'lendValue amount
 
 stealTokens :: App -> PubKeyHash -> Integer -> Run ()
-stealTokens App{..} user amount = do
+stealTokens App {..} user amount = do
   usp <- spend user riderAda
   submitTx user $ stealTx usp
   where
@@ -144,4 +147,3 @@ stealTokens App{..} user amount = do
         ]
 
     mintVal = app'lendValue amount
-

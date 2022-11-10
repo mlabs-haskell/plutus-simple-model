@@ -1,6 +1,7 @@
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+
 -- | Alonzo era conversions
-module Plutus.Model.Fork.Cardano.Alonzo(
+module Plutus.Model.Fork.Cardano.Alonzo (
   Era,
   toAlonzoTx,
   toTxOut,
@@ -8,43 +9,43 @@ module Plutus.Model.Fork.Cardano.Alonzo(
 
 import Prelude
 
-import Data.Sequence.Strict qualified as Seq
-import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Alonzo (AlonzoEra, PParams)
+import Cardano.Ledger.Alonzo (AlonzoEra)
+import Cardano.Ledger.Alonzo.PParams qualified as C
 import Cardano.Ledger.Alonzo.Tx qualified as C
 import Cardano.Ledger.Alonzo.TxBody qualified as C
-import Cardano.Ledger.Compactible qualified as C
+import Cardano.Ledger.Alonzo.TxWits qualified as C
+import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CompactAddress qualified as C
+import Cardano.Ledger.Compactible qualified as C
+import Cardano.Ledger.Crypto (StandardCrypto)
+import Cardano.Ledger.Hashes qualified as C
+import Cardano.Ledger.SafeHash
 import Cardano.Ledger.SafeHash qualified as C (hashAnnotated)
 import Cardano.Ledger.Shelley.API.Types qualified as C (
-  StrictMaybe(..),
-  )
-import Cardano.Ledger.Alonzo.PParams qualified as C
-import Cardano.Ledger.Alonzo.TxWitness qualified as C
-import Plutus.Model.Fork.TxExtra qualified as P
-import Plutus.V2.Ledger.Api qualified as P
-import Plutus.V2.Ledger.Tx qualified as Plutus hiding (TxIn(..))
-import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
-import Plutus.Model.Fork.Cardano.Common(
-  getInputsBy,
+  StrictMaybe (..),
+ )
+import Data.Sequence.Strict qualified as Seq
+import Plutus.Model.Fork.Cardano.Class
+import Plutus.Model.Fork.Cardano.Common (
+  getDCerts,
   getFee,
+  getInputsBy,
   getInterval,
   getMint,
-  getDCerts,
   getSignatories,
   getWdrl,
-  toValue,
   toAddr,
   toDataHash,
   toDatumWitness,
   toKeyWitness,
   toRedeemerWitness,
   toScriptWitness,
-  )
-import Cardano.Ledger.SafeHash
-import Cardano.Ledger.Hashes qualified as C
-import Plutus.Model.Fork.Cardano.Class
+  toValue,
+ )
+import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
+import Plutus.Model.Fork.TxExtra qualified as P
+import PlutusLedgerApi.V2 qualified as P
+import PlutusLedgerApi.V2.Tx qualified as Plutus
 
 type Era = AlonzoEra StandardCrypto
 type ToCardanoError = String
@@ -58,20 +59,21 @@ instance IsCardanoTx Era where
     caddr <- toAddr network addr
     cvalue <- toValue value
     fullValue caddr cvalue
-  {- TODO: implement compact case
-    case cvalue of
-      C.Value ada [] ->
-        case C.toCompact (Coin ada) of
-          Just compactAda ->
-            case caddr of
-              C.Addr network cred C.StakeRefNull ->
-                let addr28 = snd $ C.encodeAddress28 netw cred
-                in  adaOnly addr28 compactAda
-              _ -> fullValue caddr cvalue
-          Nothing         -> fullValue caddr cvalue
-      _              -> fullValue caddr cvalue
-  -}
     where
+      {- TODO: implement compact case
+        case cvalue of
+          C.Value ada [] ->
+            case C.toCompact (Coin ada) of
+              Just compactAda ->
+                case caddr of
+                  C.Addr network cred C.StakeRefNull ->
+                    let addr28 = snd $ C.encodeAddress28 netw cred
+                    in  adaOnly addr28 compactAda
+                  _ -> fullValue caddr cvalue
+              Nothing         -> fullValue caddr cvalue
+          _              -> fullValue caddr cvalue
+      -}
+
       {-
       adaOnly (C.Addr netw pred cred) ada = do
         let addr28 = snd $ C.encodeAddress28 netw cred
@@ -98,15 +100,15 @@ instance IsCardanoTx Era where
           toVal v =
             case C.toCompact v of
               Just cval -> Right cval
-              Nothing   -> Left "Fail to create compact value"
+              Nothing -> Left "Fail to create compact value"
 
-toAlonzoTx :: Network -> PParams Era -> P.Tx -> Either ToCardanoError (C.ValidatedTx Era)
+toAlonzoTx :: Network -> C.AlonzoPParams Era -> P.Tx -> Either ToCardanoError (C.AlonzoTx Era)
 toAlonzoTx network params tx = do
   body <- toBody
   wits <- toWits (C.hashAnnotated body) tx
   let isValid = C.IsValid True -- TODO or maybe False
       auxData = C.SNothing
-  pure $ C.ValidatedTx body wits isValid auxData
+  pure $ C.AlonzoTx body wits isValid auxData
   where
     toBody = do
       inputs <- getInputsBy Plutus.txInputs tx
@@ -123,7 +125,7 @@ toAlonzoTx network params tx = do
           adHash = C.SNothing
           txnetworkid = C.SJust network
       pure $
-        C.TxBody
+        C.AlonzoTxBody
           inputs
           collateral
           outputs
@@ -139,17 +141,15 @@ toAlonzoTx network params tx = do
           txnetworkid
 
     getOutputs =
-        fmap Seq.fromList
-      . mapM (toTxOut mempty network)
-      . Plutus.txOutputs
-      . P.tx'plutus
+      fmap Seq.fromList
+        . mapM (toTxOut mempty network)
+        . Plutus.txOutputs
+        . P.tx'plutus
 
-toWits :: SafeHash StandardCrypto C.EraIndependentTxBody -> P.Tx -> Either ToCardanoError (C.TxWitness Era)
+toWits :: SafeHash StandardCrypto C.EraIndependentTxBody -> P.Tx -> Either ToCardanoError (C.AlonzoTxWits Era)
 toWits txBodyHash tx = do
   let bootstrapWits = mempty
   datumWits <- toDatumWitness tx
   let redeemerWits = toRedeemerWitness tx
   scriptWits <- toScriptWitness tx
-  pure $ C.TxWitness (toKeyWitness txBodyHash tx) bootstrapWits scriptWits datumWits redeemerWits
-
-
+  pure $ C.AlonzoTxWits (toKeyWitness txBodyHash tx) bootstrapWits scriptWits datumWits redeemerWits

@@ -5,7 +5,7 @@ module Suites.Plutus.Model.Util (
 
 import Control.Monad (replicateM)
 import Plutus.Model
-import Plutus.V1.Ledger.Api
+import PlutusLedgerApi.V2
 import Prelude
 
 -- alocate 3 users with 1000 lovelaces each

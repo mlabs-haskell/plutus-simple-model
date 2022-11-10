@@ -11,15 +11,15 @@ module Suites.Plutus.Model.Script.V1.Onchain.Safe (
 
 import Prelude
 
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Contexts (
+import PlutusLedgerApi.V1.Contexts (
   findDatum,
   findOwnInput,
   getContinuingOutputs,
   txSignedBy,
  )
-import Plutus.V1.Ledger.Interval (contains)
-import Plutus.V1.Ledger.Value (gt)
+import PlutusLedgerApi.V1.Interval (contains)
+import PlutusLedgerApi.V1.Value (gt)
+import PlutusLedgerApi.V1
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
 
@@ -28,6 +28,8 @@ data SafeDatum = Safe PubKeyHash
 
 instance Plutus.Eq SafeDatum where
   Safe pkh1 == Safe pkh2 = pkh1 Plutus.== pkh2
+
+PlutusTx.unstableMakeIsData ''SafeDatum
 
 data SafeAct = Spend | Deposit
 
@@ -54,8 +56,10 @@ safeContract (SafeParams _spendTime) (Safe pkh) act ctx =
     -- and value of script has rised by some amount
     onDeposit :: Bool
     onDeposit =
-      to _spendTime `contains` txInfoValidRange info
-        && txOutValue ownOutput `gt` txOutValue ownInput
+      to _spendTime
+        `contains` txInfoValidRange info
+        && txOutValue ownOutput
+        `gt` txOutValue ownInput
 
     -- check that Safe at input and at output has the same pub key hash
     keyIsSame :: Bool
@@ -76,7 +80,6 @@ safeContract (SafeParams _spendTime) (Safe pkh) act ctx =
       [o] -> o
       _ -> Plutus.error ()
 
-PlutusTx.unstableMakeIsData ''SafeDatum
 PlutusTx.unstableMakeIsData ''SafeAct
 PlutusTx.unstableMakeIsData ''SafeParams
 PlutusTx.makeLift ''SafeParams

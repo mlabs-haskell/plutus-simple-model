@@ -6,28 +6,30 @@ module Suites.Plutus.Model.Script.V2.Onchain.Lend.Script (
   lendPolicy,
 ) where
 
-import Prelude (($))
-import PlutusTx qualified
-import Suites.Plutus.Model.Script.V2.Onchain.Lend
 import Plutus.Model.V2 (
-  toBuiltinValidator,
-  TypedValidator,
-  mkTypedValidator,
-  toBuiltinPolicy,
   TypedPolicy,
-  mkTypedPolicy
-  )
+  TypedValidator,
+  -- mkTypedPolicy,
+  -- mkTypedValidator,
+  -- toBuiltinPolicy,
+  -- toBuiltinValidator,
+ )
+-- import PlutusTx qualified
+import Suites.Plutus.Model.Script.V2.Onchain.Lend
+-- import Prelude (($))
+import PlutusTx.Builtins (error)
 
 type Lend = TypedValidator LendDatum LendAct
 
 -- | The TypedValidator for Lend contract
 lendScript :: Lend
-lendScript = mkTypedValidator $$(PlutusTx.compile [|| toBuiltinValidator lendContract ||])
+lendScript = error ()
+-- lendScript = mkTypedValidator $$(PlutusTx.compile [||toBuiltinValidator lendContract||])
 
 type LendMint = TypedPolicy ()
 
 lendPolicy :: LendMintParams -> LendMint
-lendPolicy lendMintParams =
-  mkTypedPolicy $
-    $$(PlutusTx.compile [|| \param -> toBuiltinPolicy (lendPolicyContract param)||])
-      `PlutusTx.applyCode` PlutusTx.liftCode lendMintParams
+lendPolicy _lendMintParams = error ()
+  -- mkTypedPolicy $
+  --   $$(PlutusTx.compile [||\param -> toBuiltinPolicy (lendPolicyContract param)||])
+  --     `PlutusTx.applyCode` PlutusTx.liftCode lendMintParams

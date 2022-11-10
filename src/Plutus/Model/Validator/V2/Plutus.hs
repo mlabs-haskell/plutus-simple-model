@@ -1,54 +1,54 @@
 -- | Utility functions for Plutus V2 scripts
-module Plutus.Model.Validator.V2.Plutus(
+module Plutus.Model.Validator.V2.Plutus (
   datumOf,
   inlinedDatum,
   getThrough,
   forwardTo,
 ) where
 
-import PlutusTx.Prelude
+import PlutusLedgerApi.V1.Address (scriptHashAddress)
+import PlutusLedgerApi.V2
+import PlutusLedgerApi.V2.Contexts
 import PlutusTx.AssocMap qualified as Map
-import Plutus.V1.Ledger.Address (scriptHashAddress)
-import Plutus.V2.Ledger.Api
-import Plutus.V2.Ledger.Contexts
+import PlutusTx.Prelude
 
-{-# inlinable getThrough #-}
+{-# INLINEABLE getThrough #-}
 getThrough :: ScriptContext -> (TxOut, TxOut)
 getThrough ctx = (tin, tout)
   where
-    [tout] = getContinuingOutputs ctx
-    Just tinInfo = findOwnInput ctx
+    tout = head (getContinuingOutputs ctx)
+    tinInfo = fromMaybe (error ()) (findOwnInput ctx)
     tin = txInInfoResolved tinInfo
 
-{-# inlinable datumOf #-}
+{-# INLINEABLE datumOf #-}
 datumOf :: FromData a => TxInfo -> TxOut -> Maybe a
 datumOf info tout = do
   dh <- txOutDatumHash tout
   dat <- getDatum <$> findDatum dh info
   fromBuiltinData dat
 
-{-# inlinable txOutDatumHash #-}
+{-# INLINEABLE txOutDatumHash #-}
 txOutDatumHash :: TxOut -> Maybe DatumHash
 txOutDatumHash tout =
   case txOutDatum tout of
     OutputDatumHash dh -> Just dh
-    _                  -> Nothing
+    _ -> Nothing
 
-{-# inlinable inlinedDatum #-}
+{-# INLINEABLE inlinedDatum #-}
 inlinedDatum :: FromData a => TxOut -> Maybe a
 inlinedDatum tout = do
   d <- case txOutDatum tout of
     OutputDatum (Datum dat) -> Just dat
-    _                       -> Nothing
+    _ -> Nothing
   fromBuiltinData d
 
-{-# inlinable forwardTo #-}
+{-# INLINEABLE forwardTo #-}
+
 -- | check that script is spent with given redeemer
-forwardTo :: ToData redeemer => ValidatorHash -> redeemer -> TxInfo -> Bool
+forwardTo :: ToData redeemer => ScriptHash -> redeemer -> TxInfo -> Bool
 forwardTo vh redeemer info =
   Map.lookup (Spending ref) (txInfoRedeemers info) == Just (Redeemer $ toBuiltinData redeemer)
   where
-    Just inInfo = find ((== addr) . txOutAddress . txInInfoResolved) $ txInfoInputs info
+    inInfo = fromMaybe (error ()) . find ((== addr) . txOutAddress . txInInfoResolved) $ txInfoInputs info
     !addr = scriptHashAddress vh
     !ref = txInInfoOutRef inInfo
-

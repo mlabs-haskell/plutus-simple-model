@@ -1,12 +1,12 @@
 module Suites.Plutus.Model.Script.V1.Test.Staking (
-  tests
+  tests,
 ) where
 
-import Prelude
 import Test.Tasty
+import Prelude
 
 import Plutus.Model
-import Plutus.V1.Ledger.Api
+import PlutusLedgerApi.V2
 import Suites.Plutus.Model.Script.V1.Onchain.Staking
 import Suites.Plutus.Model.Util
 
@@ -50,4 +50,3 @@ registerCredentialTx stakeScript poolId sp fee =
     , registerStakeScript stakeScript
     , delegateStakeScript stakeScript () poolId
     ]
-

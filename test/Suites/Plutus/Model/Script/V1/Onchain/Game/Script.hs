@@ -4,12 +4,14 @@ module Suites.Plutus.Model.Script.V1.Onchain.Game.Script (
   gameScript,
 ) where
 
-import PlutusTx qualified
+import Plutus.Model.V1 (TypedValidator) --, mkTypedValidator, toBuiltinValidator)
+-- import PlutusTx qualified
 import Suites.Plutus.Model.Script.V1.Onchain.Game
-import Plutus.Model.V1 (toBuiltinValidator, TypedValidator, mkTypedValidator)
+import PlutusTx.Builtins ( error )
 
 type Game = TypedValidator GameDatum GameAct
 
 -- | The GeroGov validator script instance
 gameScript :: Game
-gameScript = mkTypedValidator $$(PlutusTx.compile [|| toBuiltinValidator gameContract ||])
+gameScript = error ()
+-- gameScript = mkTypedValidator $$(PlutusTx.compile [||toBuiltinValidator gameContract||])

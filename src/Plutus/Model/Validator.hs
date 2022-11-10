@@ -34,21 +34,21 @@ module Plutus.Model.Validator(
   redeemerHash,
 ) where
 
-import Prelude
+import Cardano.Ledger.Alonzo.Language qualified as C
 import Data.Coerce (coerce)
 import Data.Kind (Type)
-import Cardano.Ledger.Alonzo.Language qualified as C
+import Prelude
 
-import Plutus.V1.Ledger.Api
-import Plutus.V1.Ledger.Scripts (ScriptHash(..))
-import Plutus.Model.Mock (
-  HasAddress(..),
-  AppendStaking(..),
-  HasStakingCredential(..),
-  )
-import Plutus.Model.Fork.TxExtra qualified as Fork
-import Plutus.Model.Fork.Ledger.Scripts (Versioned(..), dataHash, datumHash, redeemerHash, toV1, toV2, isV1, isV2)
+import Plutus.Model.Fork.Ledger.Scripts (Versioned (..), dataHash, datumHash, isV1, isV2, redeemerHash, toV1, toV2)
 import Plutus.Model.Fork.Ledger.Scripts qualified as Fork
+import Plutus.Model.Fork.TxExtra qualified as Fork
+import Plutus.Model.Mock (
+  AppendStaking (..),
+  HasAddress (..),
+  HasStakingCredential (..),
+ )
+import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
+import PlutusLedgerApi.V1
 
 type IsData a = (ToData a, FromData a)
 
@@ -67,7 +67,7 @@ class HasValidator a where
   -- ^ Get internal avlidator
 
 class HasValidatorHash a where
-  toValidatorHash :: a -> ValidatorHash
+  toValidatorHash :: a -> ScriptHash
   -- ^ Get internal avlidator
 
 type IsValidator a = (HasAddress a, HasDatum a, HasRedeemer a, HasLanguage a, HasValidator a)
@@ -104,7 +104,7 @@ instance HasAddress (TypedValidator datum redeemer) where
 
 -- | Typed validator. It's phantom type to annotate types for validators
 newtype TypedValidatorHash datum redeemer =
-  TypedValidatorHash { unTypedValidatorHash :: Versioned ValidatorHash }
+  TypedValidatorHash { unTypedValidatorHash :: Versioned ScriptHash }
   deriving newtype (HasLanguage)
 
 instance IsData datum => HasDatum (TypedValidatorHash datum redeemer) where
