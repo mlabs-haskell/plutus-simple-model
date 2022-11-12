@@ -766,10 +766,11 @@ checkBalanceBy :: (a -> BalanceDiff) -> Run a -> Run a
 checkBalanceBy getDiffs act = do
   beforeSt <- get
   res <- act
+  afterSt <- get
   let BalanceDiff diffs = getDiffs res
       addrs = M.keys diffs
       before =  fmap (`valueAtState` beforeSt) addrs
-  after <- mapM valueAt addrs
+      after = fmap (`valueAtState` afterSt) addrs
   mapM_ (logError . show . vcat <=< mapM ppError) (check addrs diffs before after)
   pure res
   where
