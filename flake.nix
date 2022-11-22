@@ -10,7 +10,7 @@
   };
 
   inputs = {
-    tooling.url = "github:mlabs-haskell/mlabs-tooling.nix";
+    tooling.url = "github:AriFordsham/mlabs-tooling.nix?ref=ari/new-hackage";
   };
 
   outputs = inputs@{ self, tooling, ... }: tooling.lib.mkFlake { inherit self; }
