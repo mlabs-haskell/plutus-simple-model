@@ -125,6 +125,7 @@ library
     Plutus.Model.Mock.Stat
     Plutus.Model.Pretty
     Plutus.Model.Stake
+    Plutus.Model.Tx
     Plutus.Model.V1
     Plutus.Model.V2
     Plutus.Model.Validator
