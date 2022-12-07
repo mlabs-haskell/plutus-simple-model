@@ -772,7 +772,7 @@ txOutRefAt addr = txOutRefAtState addr <$> get
 
 -- | Read all TxOutRefs that belong to given address.
 txOutRefAtState :: Address -> Mock -> [TxOutRef]
-txOutRefAtState addr st = maybe [] S.toList . M.lookup addr $ mockAddresses st
+txOutRefAtState addr st = foldMap S.toList . M.lookup addr $ mockAddresses st
 
 -- | Get all UTXOs that belong to an address (it does not include reference script UTXOs)
 utxoAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
@@ -794,11 +794,10 @@ withFirstUtxo = withUtxo (const True)
  It's done for convenience.
 -}
 withUtxo :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
-withUtxo isUtxo user cont =
-  withMayBy readMsg (L.find isUtxo <$> utxoAt user) cont
+withUtxo isUtxo user = withMayBy readMsg (L.find isUtxo <$> utxoAt user)
   where
     readMsg = do
-      fmap (\name -> "No UTxO for: " <> name) $ getPrettyAddress user
+      ("No UTxO for: " <>) <$> getPrettyAddress user
 
 -- | Reads the first reference script UTXO by address
 withFirstRefScript :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
@@ -812,11 +811,11 @@ withFirstRefScript = withRefScript (const True)
  It's done for convenience.
 -}
 withRefScript :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
-withRefScript isUtxo user cont =
-  withMayBy readMsg (L.find isUtxo <$> refScriptAt user) cont
+withRefScript isUtxo user =
+  withMayBy readMsg (L.find isUtxo <$> refScriptAt user)
   where
     readMsg = do
-      fmap (\name -> "No UTxO for: " <> name) $ getPrettyAddress user
+      ("No UTxO for: " <>) <$> getPrettyAddress user
 
 -- | Get all UTXOs that belong to an address
 utxoAtStateBy :: HasAddress user => (Mock -> Map TxOutRef TxOut) -> user -> Mock -> [(TxOutRef, TxOut)]
@@ -831,11 +830,11 @@ datumAt ref = do
   mdat <- getHashDatum ref
   case mdat of
     Just dat -> pure (Just dat)
-    Nothing -> fmap (getInlineDatum =<<) $ getTxOut ref
+    Nothing -> (getInlineDatum =<<) <$> getTxOut ref
 
 -- | Reads datum with continuation
 withDatum :: FromData a => TxOutRef -> (a -> Run ()) -> Run ()
-withDatum ref cont = withMay err (datumAt ref) cont
+withDatum ref = withMay err (datumAt ref)
   where
     err = "No datum for TxOutRef: " <> show ref
 
@@ -880,7 +879,7 @@ txOutDatumHash tout =
 
 -- | Reads current reward amount for a staking credential
 rewardAt :: HasStakingCredential cred => cred -> Run Integer
-rewardAt cred = gets (maybe 0 id . lookupReward (toStakingCredential cred) . mockStake)
+rewardAt cred = gets (fromMaybe 0 . lookupReward (toStakingCredential cred) . mockStake)
 
 -- | Returns all stakes delegatged to a pool
 stakesAt :: PoolId -> Run [StakingCredential]

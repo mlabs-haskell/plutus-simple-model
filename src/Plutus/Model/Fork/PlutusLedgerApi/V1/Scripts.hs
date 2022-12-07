@@ -136,4 +136,4 @@ decodeViaFlat :: Flat.Get a -> CBOR.Decoder s a
 decodeViaFlat decoder = do
   bs <- decodeBytes
   -- lift any flat's failures to be cborg failures (MonadFail)
-  Haskell.either (\x -> Haskell.fail (Haskell.show x)) Haskell.pure (Flat.unflatWith decoder bs)
+  Haskell.either (Haskell.fail . Haskell.show) Haskell.pure (Flat.unflatWith decoder bs)
