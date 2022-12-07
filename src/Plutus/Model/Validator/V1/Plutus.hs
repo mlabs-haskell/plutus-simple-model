@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 -- | Utility functions for Plutus V1 scripts
 module Plutus.Model.Validator.V1.Plutus (
   getThrough,

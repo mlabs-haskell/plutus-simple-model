@@ -1,7 +1,8 @@
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 {- | Tets for reference scripts. We deploy script for hash game
  to UTxO and use it as reference input
 -}
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 module Suites.Plutus.Model.Script.V2.Test.GameRef (
   tests,
 ) where

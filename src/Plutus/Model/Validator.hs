@@ -1,22 +1,22 @@
+{-# LANGUAGE UndecidableInstances #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
-{-# Language UndecidableInstances #-}
-module Plutus.Model.Validator(
-  IsData,
-  HasDatum(..),
-  HasRedeemer(..),
-  HasLanguage(..),
-  HasValidator(..),
-  HasValidatorHash(..),
 
+module Plutus.Model.Validator (
+  IsData,
+  HasDatum (..),
+  HasRedeemer (..),
+  HasLanguage (..),
+  HasValidator (..),
+  HasValidatorHash (..),
   IsValidator,
   IsValidatorHash,
+  TypedValidator (..),
+  TypedValidatorHash (..),
+  TypedPolicy (..),
+  TypedStake (..),
 
-  TypedValidator(..),
-  TypedValidatorHash(..),
-  TypedPolicy(..),
-  TypedStake(..),
   -- * Versioned
-  Versioned(..),
+  Versioned (..),
   toV1,
   toV2,
   isV1,
@@ -41,13 +41,13 @@ import Prelude
 
 import Plutus.Model.Fork.Ledger.Scripts (Versioned (..), dataHash, datumHash, isV1, isV2, redeemerHash, toV1, toV2)
 import Plutus.Model.Fork.Ledger.Scripts qualified as Fork
+import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
 import Plutus.Model.Fork.TxExtra qualified as Fork
 import Plutus.Model.Mock (
   AppendStaking (..),
   HasAddress (..),
   HasStakingCredential (..),
  )
-import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
 import PlutusLedgerApi.V1
 
 type IsData a = (ToData a, FromData a)
@@ -83,8 +83,7 @@ instance (HasLanguage a, HasValidator a) => HasValidatorHash a where
 -- typed validator
 
 -- | Typed validator. It's phantom type to annotate types for validators
-newtype TypedValidator datum redeemer =
-  TypedValidator { unTypedValidator :: Versioned Validator }
+newtype TypedValidator datum redeemer = TypedValidator {unTypedValidator :: Versioned Validator}
   deriving newtype (HasLanguage)
 
 instance IsData datum => HasDatum (TypedValidator datum redeemer) where
@@ -103,8 +102,7 @@ instance HasAddress (TypedValidator datum redeemer) where
 -- typed validator hash
 
 -- | Typed validator. It's phantom type to annotate types for validators
-newtype TypedValidatorHash datum redeemer =
-  TypedValidatorHash { unTypedValidatorHash :: Versioned ScriptHash }
+newtype TypedValidatorHash datum redeemer = TypedValidatorHash {unTypedValidatorHash :: Versioned ScriptHash}
   deriving newtype (HasLanguage)
 
 instance IsData datum => HasDatum (TypedValidatorHash datum redeemer) where
@@ -123,8 +121,7 @@ instance HasAddress (TypedValidatorHash datum redeemer) where
 -- typed policy
 
 -- | Typed minting policy. It's phantom type to annotate types for minting policies
-newtype TypedPolicy redeemer =
-  TypedPolicy { unTypedPolicy :: Versioned MintingPolicy }
+newtype TypedPolicy redeemer = TypedPolicy {unTypedPolicy :: Versioned MintingPolicy}
   deriving newtype (HasLanguage)
 
 instance IsData redeemer => HasRedeemer (TypedPolicy redeemer) where
@@ -140,8 +137,7 @@ instance HasAddress (TypedPolicy redeemer) where
 -- typed stake
 
 -- | Typed stake valdiators. It's phantom type to annotate types for stake valdiators
-newtype TypedStake redeemer =
-  TypedStake { unTypedStake :: Versioned StakeValidator }
+newtype TypedStake redeemer = TypedStake {unTypedStake :: Versioned StakeValidator}
   deriving newtype (HasLanguage)
 
 instance IsData redeemer => HasRedeemer (TypedStake redeemer) where
@@ -159,16 +155,16 @@ instance HasAddress (TypedStake redeemer) where
 ---------------------------------------------------------------------
 -- append staking
 
-instance {-# overlapping #-} IsData (DatumType a) => HasDatum (AppendStaking a) where
+instance {-# OVERLAPPING #-} IsData (DatumType a) => HasDatum (AppendStaking a) where
   type DatumType (AppendStaking a) = DatumType a
 
-instance {-# overlapping #-} IsData (RedeemerType a) => HasRedeemer (AppendStaking a) where
+instance {-# OVERLAPPING #-} IsData (RedeemerType a) => HasRedeemer (AppendStaking a) where
   type RedeemerType (AppendStaking a) = RedeemerType a
 
-instance {-# overlapping #-} HasLanguage a => HasLanguage (AppendStaking a) where
+instance {-# OVERLAPPING #-} HasLanguage a => HasLanguage (AppendStaking a) where
   getLanguage (AppendStaking _ a) = getLanguage a
 
-instance {-# overlapping #-} HasValidator a => HasValidator (AppendStaking a) where
+instance {-# OVERLAPPING #-} HasValidator a => HasValidator (AppendStaking a) where
   toValidator (AppendStaking _ a) = toValidator a
 
 ---------------------------------------------------------------------
@@ -197,4 +193,3 @@ stakeValidatorHash (TypedStake script) = Fork.stakeValidatorHash script
 -- | Get minting policy hash
 mintingPolicyHash :: TypedPolicy a -> MintingPolicyHash
 mintingPolicyHash (TypedPolicy script) = Fork.mintingPolicyHash script
-

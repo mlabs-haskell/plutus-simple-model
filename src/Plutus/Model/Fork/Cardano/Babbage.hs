@@ -20,7 +20,7 @@ import Cardano.Ledger.Babbage.TxBody qualified as C
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CompactAddress qualified as C
 import Cardano.Ledger.Compactible qualified as C
-import Cardano.Ledger.Core qualified as C (TxWits(..))
+import Cardano.Ledger.Core qualified as C (TxWits (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Hashes qualified as C
 import Cardano.Ledger.SafeHash
@@ -50,8 +50,8 @@ import Plutus.Model.Fork.Cardano.Common (
  )
 import Plutus.Model.Fork.Ledger.Scripts qualified as C (Versioned (..), toScript)
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
-import Plutus.Model.Fork.TxExtra qualified as P
 import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts qualified as P
+import Plutus.Model.Fork.TxExtra qualified as P
 import PlutusLedgerApi.V2 qualified as P
 
 type Era = BabbageEra StandardCrypto

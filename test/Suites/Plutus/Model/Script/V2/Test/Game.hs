@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 -- | Guess hash Game with inlined datum
 module Suites.Plutus.Model.Script.V2.Test.Game (
   tests,

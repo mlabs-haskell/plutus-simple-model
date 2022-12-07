@@ -36,8 +36,8 @@ import Cardano.Ledger.Core qualified as C (hashScript)
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Mary.Value qualified as C
 import Cardano.Ledger.SafeHash qualified as C
-import PlutusLedgerApi.V2 qualified as P
 import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts qualified as P
+import PlutusLedgerApi.V2 qualified as P
 
 -- | Appends plutus version to the value.
 data Versioned a = Versioned

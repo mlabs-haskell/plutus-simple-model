@@ -32,7 +32,6 @@ import Plutus.Model.Fork.Ledger.Scripts (Versioned (..))
 import Plutus.Model.Fork.Ledger.Slot
 import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
 
-
 -- | A transaction, including witnesses for its inputs.
 data Tx = Tx
   { txInputs :: Set.Set TxIn

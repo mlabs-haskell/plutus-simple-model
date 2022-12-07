@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 -- | Simple counter that increments internal counter on every usage in TX.
 module Suites.Plutus.Model.Script.V1.Onchain.Counter (
   CounterDatum (..),

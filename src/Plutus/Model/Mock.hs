@@ -150,8 +150,8 @@ import Data.Vector qualified as V
 import Cardano.Crypto.DSIGN.Class qualified as C
 import Cardano.Crypto.Hash.Class qualified as C
 import Cardano.Crypto.Seed qualified as C
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
 import Cardano.Ledger.Alonzo.Tx qualified as C
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
 import Cardano.Ledger.Alonzo.UTxO qualified as C
 import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Crypto qualified as C
@@ -184,11 +184,11 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Babbage.PParams
+import Cardano.Ledger.Block qualified as Ledger
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Shelley.API.Wallet (evaluateTransactionBalance)
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.TxIn qualified as Ledger
-import Cardano.Ledger.Block qualified as Ledger
 import Plutus.Model.Ada (Ada (..))
 import Plutus.Model.Fork.Cardano.Alonzo ()
 import Plutus.Model.Fork.Cardano.Alonzo qualified as Alonzo

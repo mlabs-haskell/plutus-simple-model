@@ -15,8 +15,8 @@ import Data.Map qualified as Map
 import Plutus.Model.Fork.Cardano.Common (ToCardanoError, toTxIn)
 import Plutus.Model.Fork.Ledger.Scripts qualified as C
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
-import Plutus.Model.Fork.TxExtra qualified as P
 import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts qualified as P
+import Plutus.Model.Fork.TxExtra qualified as P
 import PlutusLedgerApi.V2 qualified as P
 
 class (C.EraCrypto era ~ StandardCrypto) => IsCardanoTx era where

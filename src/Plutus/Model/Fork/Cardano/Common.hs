@@ -78,8 +78,8 @@ import Plutus.Model.Ada qualified as Ada
 import Plutus.Model.Fork.Ledger.Scripts qualified as C
 import Plutus.Model.Fork.Ledger.Slot qualified as P
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
-import Plutus.Model.Fork.TxExtra qualified as P
 import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts qualified as P
+import Plutus.Model.Fork.TxExtra qualified as P
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 qualified as P
 import PlutusLedgerApi.V2.Tx qualified as P
