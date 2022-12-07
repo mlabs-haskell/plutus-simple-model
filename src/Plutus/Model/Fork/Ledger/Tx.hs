@@ -1,8 +1,10 @@
 -- | Plutus TX
 module Plutus.Model.Fork.Ledger.Tx (
   Tx (..),
+  txInputIns,
   txId,
-  TxIn (..),
+  TxIn (TxIn, txInRef),
+  TxSpendIn (TxSpendIn, txSpendInType, txSpendIn),
   TxInType (..),
 ) where
 
@@ -35,7 +37,7 @@ import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
 
 -- | A transaction, including witnesses for its inputs.
 data Tx = Tx
-  { txInputs :: Set.Set TxIn
+  { txInputs :: Set.Set TxSpendIn
   -- ^ The inputs to this transaction.
   , txCollateral :: Set.Set TxIn
   -- ^ The collateral inputs to cover the fees in case validation of the transaction fails.
@@ -65,6 +67,10 @@ data Tx = Tx
   }
   deriving stock (Show, Generic)
   deriving anyclass ({-ToJSON, FromJSON, Serialise, -} NFData)
+
+-- | For use with 'getInputsBy'
+txInputIns :: Tx -> Set.Set TxIn
+txInputIns = Set.map txSpendIn . txInputs
 
 instance Semigroup Tx where
   tx1 <> tx2 =
@@ -115,12 +121,18 @@ data TxStripped = TxStripped
 strip :: Tx -> TxStripped
 strip Tx {..} = TxStripped i txOutputs txMint txFee
   where
-    i = Set.map txInRef txInputs
+    i = Set.map (txInRef . txSpendIn) txInputs
 
--- | A transaction input, consisting of a transaction output reference and an input type.
-data TxIn = TxIn
-  { txInRef :: !TxOutRef
-  , txInType :: Maybe TxInType
+-- | A transaction input, for contextx where a spend type is not necessary.
+newtype TxIn = TxIn { txInRef :: TxOutRef }
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
+
+-- | A transaction input for spendng, consisting of a transaction output 
+-- reference and an input type.
+data TxSpendIn = TxSpendIn
+  { txSpendIn :: !TxIn
+  , txSpendInType :: TxInType
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData)

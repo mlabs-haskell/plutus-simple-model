@@ -111,7 +111,7 @@ toAlonzoTx network params tx = do
   pure $ C.AlonzoTx body wits isValid auxData
   where
     toBody = do
-      inputs <- getInputsBy Plutus.txInputs tx
+      inputs <- getInputsBy Plutus.txInputIns tx
       collateral <- getInputsBy Plutus.txCollateral tx
       outputs <- getOutputs tx
       txcerts <- getDCerts network (C._poolDeposit params) (C._minPoolCost params) tx

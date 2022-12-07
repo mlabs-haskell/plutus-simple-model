@@ -293,7 +293,7 @@ toDatumWitness tx = do
     validatorDatums1 = fmap (\(_, _, datum) -> datum) validatorInfo
     validatorDatums2 = Map.toList $ Plutus.txData $ P.tx'plutus tx
 
-    validatorInfo = mapMaybe (fromInType <=< Plutus.txInType) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
+    validatorInfo = mapMaybe (fromInType . Plutus.txSpendInType) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
 
 fromInType :: Plutus.TxInType -> Maybe (Maybe (C.Versioned P.Script), P.Redeemer, P.Datum)
 fromInType = \case
@@ -325,9 +325,12 @@ toRedeemerWitness tx =
                 P.tx'plutus tx
       where
         toInput (n, tin) =
-          case Plutus.txInType tin of
-            Just (Plutus.ConsumeScriptAddress _validator redeemer _datum) ->
-              Just (C.RdmrPtr C.Spend (fromInteger n), addDefaultExUnits $ toRedeemer redeemer)
+          case Plutus.txSpendInType tin of
+            Plutus.ConsumeScriptAddress _validator redeemer _datum ->
+              Just
+                ( C.RdmrPtr C.Spend (fromInteger n)
+                , addDefaultExUnits $ toRedeemer redeemer
+                )
             _ -> Nothing
 
     certRedeemers = redeemersBy C.Cert (fmap P.certificate'script . P.extra'certificates)
@@ -360,7 +363,7 @@ toScriptWitness tx =
         certificates = mapMaybe (fmap (fmap P.getStakeValidator . snd) . P.certificate'script) (P.extra'certificates $ P.tx'extra tx)
         validators = mapMaybe (\(script, _, _) -> script) validatorInfo
 
-    validatorInfo = mapMaybe (fromInType <=< Plutus.txInType) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
+    validatorInfo = mapMaybe (fromInType . Plutus.txSpendInType) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
 
 toDatum :: (C.Era era) => P.Datum -> C.Data era
 toDatum (P.Datum (P.BuiltinData d)) = C.Data d

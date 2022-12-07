@@ -75,7 +75,7 @@ toBabbageTx scriptMap network params tx = do
   pure $ C.AlonzoTx body wits isValid auxData
   where
     getBody = do
-      spendInputs <- getInputsBy Plutus.txInputs tx
+      spendInputs <- getInputsBy (Plutus.txInputIns) tx
       collateralInputs <- getInputsBy Plutus.txCollateral tx
       referenceInputs <- getInputsBy Plutus.txReferenceInputs tx
       collateralReturn <- getCollateralReturn tx

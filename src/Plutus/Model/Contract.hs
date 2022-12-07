@@ -255,7 +255,7 @@ valueAtStateBy extract user st = foldMap (txOutValue . snd) $ utxoAtStateBy extr
  back to the user.
 -}
 data UserSpend = UserSpend
-  { userSpend'inputs :: Set Fork.TxIn
+  { userSpend'inputs :: Set Fork.TxSpendIn
   , userSpend'change :: Maybe TxOut
   }
   deriving (Show)
@@ -264,7 +264,8 @@ data UserSpend = UserSpend
  It can be useful to create NFTs that depend on TxOutRef's.
 -}
 getHeadRef :: UserSpend -> TxOutRef
-getHeadRef UserSpend {..} = Fork.txInRef $ S.elemAt 0 userSpend'inputs
+getHeadRef UserSpend {..} =
+  Fork.txInRef . Fork.txSpendIn $ S.elemAt 0 userSpend'inputs
 
 -- | Variant of spend' that fails in run-time if there are not enough funds to spend.
 spend :: PubKeyHash -> Value -> Run UserSpend
@@ -303,11 +304,14 @@ spend' pkh expected = do
           where
             (neg, pos) = split $ b <> Plutus.negate a
 
+    toRes :: (Value, [(TxOutRef, TxOut)]) -> Maybe UserSpend
     toRes (curVal, utxos)
       | curVal `leq` mempty = Just $ UserSpend (foldMap (S.singleton . toInput) utxos) (getChange utxos)
       | otherwise = Nothing
 
-    toInput (ref, _) = Fork.TxIn ref (Just Fork.ConsumePublicKeyAddress)
+    toInput :: (TxOutRef , TxOut) -> Fork.TxSpendIn
+    toInput (ref, _) =
+      Fork.TxSpendIn (Fork.TxIn ref) Fork.ConsumePublicKeyAddress
 
     getChange utxos
       | change /= mempty = Just $ TxOut (pubKeyHashAddress pkh) change NoOutputDatum Nothing
@@ -422,7 +426,9 @@ spendPubKey :: TxOutRef -> Tx
 spendPubKey ref =
   toExtra $
     mempty
-      { P.txInputs = S.singleton $ Fork.TxIn ref (Just Fork.ConsumePublicKeyAddress)
+      { P.txInputs =
+        S.singleton $
+          Fork.TxSpendIn (Fork.TxIn ref) Fork.ConsumePublicKeyAddress
       }
 
 -- | Spend script input.
@@ -436,7 +442,15 @@ spendScript ::
 spendScript tv ref red dat =
   toExtra $
     mempty
-      { P.txInputs = S.singleton $ Fork.TxIn ref (Just $ Fork.ConsumeScriptAddress (Just $ Versioned (getLanguage tv) (toValidator tv)) (toRedeemer red) (toDatum dat))
+      { P.txInputs =
+        S.singleton $
+          Fork.TxSpendIn
+            (Fork.TxIn ref)
+            (Fork.ConsumeScriptAddress
+              (Just $ Versioned (getLanguage tv) (toValidator tv))
+              (toRedeemer red)
+              (toDatum dat)
+            )
       }
 
 -- | Spends script that references other script
@@ -451,8 +465,12 @@ spendScriptRef ::
 spendScriptRef refScript script refOut red dat =
   toExtra $
     mempty
-      { P.txInputs = S.singleton $ Fork.TxIn refOut (Just $ Fork.ConsumeScriptAddress Nothing (toRedeemer red) (toDatum dat))
-      , P.txReferenceInputs = S.singleton $ Fork.TxIn refScript Nothing
+      { P.txInputs =
+          S.singleton $
+            Fork.TxSpendIn
+              (Fork.TxIn refOut)
+              (Fork.ConsumeScriptAddress Nothing (toRedeemer red) (toDatum dat))
+      , P.txReferenceInputs = S.singleton $ Fork.TxIn refScript
       , P.txScripts = M.singleton sh validator
       }
   where
@@ -464,7 +482,7 @@ refInputInline :: TxOutRef -> Tx
 refInputInline ref =
   toExtra $
     mempty
-      { P.txReferenceInputs = S.singleton $ Fork.TxIn ref Nothing
+      { P.txReferenceInputs = S.singleton $ Fork.TxIn ref
       }
 
 -- | Reference input with hashed datum
@@ -472,7 +490,7 @@ refInputHash :: ToData datum => TxOutRef -> datum -> Tx
 refInputHash ref dat =
   toExtra $
     mempty
-      { P.txReferenceInputs = S.singleton $ Fork.TxIn ref Nothing
+      { P.txReferenceInputs = S.singleton $ Fork.TxIn ref
       , P.txData = M.singleton dh datum
       }
   where
@@ -484,7 +502,7 @@ collateralInput :: TxOutRef -> Tx
 collateralInput ref =
   toExtra $
     mempty
-      { P.txCollateral = S.singleton $ Fork.TxIn ref Nothing
+      { P.txCollateral = S.singleton $ Fork.TxIn ref
       }
 
 -- | Reference box with inlined datum

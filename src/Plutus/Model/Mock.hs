@@ -682,7 +682,7 @@ getUTxO tx = do
   where
     ins =
       mconcat
-        [ S.toList $ P.txInputs tx
+        [ S.toList $ P.txInputIns tx
         , S.toList $ P.txCollateral tx
         , S.toList $ P.txReferenceInputs tx
         ]
@@ -730,14 +730,17 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
       removeIns txInputs
       mapM_ insertOut $ zip [0 ..] txOutputs
 
+    removeIns :: Set Plutus.TxSpendIn -> Run ()
     removeIns ins = modify $ \s ->
       s
         { mockUtxos = rmIns (mockUtxos s)
         , mockAddresses = fmap (`S.difference` inRefSet) (mockAddresses s)
         }
       where
-        inRefSet = S.map Plutus.txInRef ins
-        inRefs = M.fromList $ (,()) . Plutus.txInRef <$> S.toList ins
+        inRefSet = S.map (Plutus.txInRef . Plutus.txSpendIn) ins
+        inRefs =
+          M.fromList $
+            (,()) . Plutus.txInRef . Plutus.txSpendIn <$> S.toList ins
         rmIns a = M.difference a inRefs
 
     insertOut (ix, out) = do
