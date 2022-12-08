@@ -13,12 +13,14 @@
     tooling.url = "github:mlabs-haskell/mlabs-tooling.nix";
   };
 
-  outputs = inputs@{ self, tooling, ... }: tooling.lib.mkFlake { inherit self; }
-    {
-      imports = [
-        (tooling.lib.mkHaskellFlakeModule1 {
-          project.src = ./.;
-        })
-      ];
-    };
+  outputs = inputs@{ self, tooling, ... }:
+    { herculesCI.ciSystems = [ "x86_64-linux" ]; } //
+    tooling.lib.mkFlake { inherit self; }
+      {
+        imports = [
+          (tooling.lib.mkHaskellFlakeModule1 {
+            project.src = ./.;
+          })
+        ];
+      };
 }
