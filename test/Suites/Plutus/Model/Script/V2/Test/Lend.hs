@@ -28,7 +28,7 @@ tests cfg =
     , good "Buy more than sell" buyMoreThanSell
     ]
   where
-    good msg act = testNoErrors (adaValue 10_000_000) cfg msg act
+    good = testNoErrors (adaValue 10_000_000) cfg
 
 -------------------------------------------------------
 -- scripts

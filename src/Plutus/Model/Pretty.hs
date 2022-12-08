@@ -43,7 +43,7 @@ ppMockEvent _names = show . vcat . fmap ppSlot . fromGroupLog
 
 ppLimitInfo :: MockNames -> Log TxStat -> String
 ppLimitInfo names mock =
-  show $ vcat $ fmap ppGroup $ fromGroupLog mock
+  show $ vcat $ ppGroup <$> fromGroupLog mock
   where
     ppGroup (slot, events) =
       vcat
@@ -150,7 +150,7 @@ instance Pretty Mock where
           xs ->
             vcat
               [ "Failures:"
-              , indent 2 . vcat . map (ppFailureWith names) $ xs
+              , indent 2 . vcat . fmap (ppFailureWith names) $ xs
               ]
       ]
     where
@@ -177,7 +177,7 @@ balance names utxos (prettyAddr, txSet) =
     ]
 
 valueSet :: MockUtxos -> Utxos -> Value
-valueSet utxos = foldMap $ maybe mempty txOutValue . (\ref -> M.lookup ref utxos)
+valueSet utxos = foldMap $ maybe mempty txOutValue . (`M.lookup` utxos)
 
 -- | Pretty-prints balance for all users/scripts
 ppBalanceSheet :: Mock -> String

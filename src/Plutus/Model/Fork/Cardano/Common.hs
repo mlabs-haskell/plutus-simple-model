@@ -170,13 +170,17 @@ toAssetName :: P.TokenName -> C.AssetName
 toAssetName (P.TokenName bs) = C.AssetName $ toShort $ PlutusTx.fromBuiltin bs
 
 toPolicyId :: P.CurrencySymbol -> Either ToCardanoError (C.PolicyID StandardCrypto)
-toPolicyId (P.CurrencySymbol bs) = fmap C.PolicyID $ toScriptHash (P.ScriptHash bs)
+toPolicyId (P.CurrencySymbol bs) = C.PolicyID <$> toScriptHash (P.ScriptHash bs)
 
 toScriptHash :: P.ScriptHash -> Either ToCardanoError (C.ScriptHash StandardCrypto)
 toScriptHash (P.ScriptHash bs) =
   let bsx = PlutusTx.fromBuiltin bs
       tg = "toScriptHash (" <> show (BS.length bsx) <> " bytes)"
-   in tag tg $ maybe (Left "Failed to get Script hash") Right $ C.ScriptHash <$> Crypto.hashFromBytes bsx
+   in tag tg $
+        maybe
+          (Left "Failed to get Script hash")
+          (Right . C.ScriptHash)
+          (Crypto.hashFromBytes bsx)
 
 tag :: String -> Either ToCardanoError t -> Either ToCardanoError t
 tag s = first (\x -> "tag " <> s <> " :" <> x)
@@ -216,7 +220,11 @@ toTxId :: P.TxId -> Either ToCardanoError (C.TxId StandardCrypto)
 toTxId (P.TxId bs) =
   let bsx = PlutusTx.fromBuiltin bs
       tg = "toTxIdHash (" <> show (BS.length bsx) <> " bytes)"
-   in tag tg $ maybe (Left "Failed to get TxId Hash") Right $ C.TxId . unsafeMakeSafeHash <$> Crypto.hashFromBytes bsx
+   in tag tg $
+        maybe
+          (Left "Failed to get TxId Hash")
+          (Right . C.TxId . unsafeMakeSafeHash)
+          (Crypto.hashFromBytes bsx)
 
 toVrf :: P.PubKeyHash -> Either ToCardanoError (Shelley.Hash StandardCrypto (C.VerKeyVRF StandardCrypto))
 toVrf (P.PubKeyHash bs) =
@@ -228,7 +236,11 @@ toPubKeyHash :: P.PubKeyHash -> Either ToCardanoError (C.KeyHash kr StandardCryp
 toPubKeyHash (P.PubKeyHash bs) =
   let bsx = PlutusTx.fromBuiltin bs
       tg = "toPubKeyHash (" <> show (BS.length bsx) <> " bytes)"
-   in tag tg $ maybe (Left "Failed to get Hash") Right $ C.KeyHash <$> Crypto.hashFromBytes bsx
+   in tag tg $
+        maybe
+          (Left "Failed to get Hash")
+          (Right . C.KeyHash)
+          (Crypto.hashFromBytes bsx)
 
 toCredential :: P.Credential -> Either ToCardanoError (C.Credential a StandardCrypto)
 toCredential = \case
@@ -262,7 +274,11 @@ toDataHash :: P.DatumHash -> Either ToCardanoError (C.DataHash StandardCrypto)
 toDataHash (P.DatumHash bs) =
   let bsx = PlutusTx.fromBuiltin bs
       tg = "toDatumHash (" <> show (BS.length bsx) <> " bytes)"
-   in tag tg $ maybe (Left "Failed to get TxId Hash") Right $ unsafeMakeSafeHash <$> Crypto.hashFromBytes bsx
+   in tag tg $
+        maybe
+          (Left "Failed to get TxId Hash")
+          (Right . unsafeMakeSafeHash)
+          (Crypto.hashFromBytes bsx)
 
 toStrictMaybe :: Maybe a -> C.StrictMaybe a
 toStrictMaybe = maybe C.SNothing C.SJust
@@ -286,8 +302,8 @@ toKeyWitness txBodyHash tx =
 
 toDatumWitness :: (C.Era era, C.EraCrypto era ~ StandardCrypto) => P.Tx -> Either ToCardanoError (C.TxDats era)
 toDatumWitness tx = do
-  datumWits1 <- fmap Map.fromList $ mapM (\d -> (,toDatum d) <$> (toDataHash $ C.datumHash d)) validatorDatums1
-  datumWits2 <- fmap Map.fromList $ mapM (\(dh, d) -> (,toDatum d) <$> toDataHash dh) validatorDatums2
+  datumWits1 <- Map.fromList <$> mapM (\d -> (,toDatum d) <$> toDataHash (C.datumHash d)) validatorDatums1
+  datumWits2 <- Map.fromList <$> mapM (\(dh, d) -> (,toDatum d) <$> toDataHash dh) validatorDatums2
   pure $ C.TxDats $ datumWits1 <> datumWits2
   where
     validatorDatums1 = fmap (\(_, _, datum) -> datum) validatorInfo
@@ -355,7 +371,7 @@ toScriptWitness ::
   P.Tx ->
   Either ToCardanoError (Map (C.ScriptHash (C.EraCrypto era)) (C.AlonzoScript era))
 toScriptWitness tx =
-  fmap Map.fromList $ mapM (\s -> (,C.toScript s) <$> toScriptHash (C.validatorHash (fmap P.Validator s))) allScripts
+  Map.fromList <$> mapM (\s -> (,C.toScript s) <$> toScriptHash (C.validatorHash (fmap P.Validator s))) allScripts
   where
     allScripts = mints <> withdraws <> validators <> certificates
       where

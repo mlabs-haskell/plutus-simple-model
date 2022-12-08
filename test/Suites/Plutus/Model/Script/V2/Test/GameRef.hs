@@ -27,8 +27,8 @@ tests cfg =
     , bad "Good guess but no script loaded" makeGuessGameNoScript
     ]
   where
-    bad msg act = good msg (mustFail act)
-    good msg act = testNoErrors (adaValue 10_000_000) cfg msg act
+    bad msg = good msg . mustFail
+    good = testNoErrors (adaValue 10_000_000) cfg
 
 data RefScriptMode
   = LoadScript
