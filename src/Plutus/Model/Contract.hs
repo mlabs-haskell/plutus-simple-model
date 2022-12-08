@@ -255,7 +255,7 @@ valueAtStateBy extract user st = foldMap (txOutValue . snd) $ utxoAtStateBy extr
  back to the user.
 -}
 data UserSpend = UserSpend
-  { userSpend'inputs :: Set Fork.TxSpendIn
+  { userSpend'inputs :: Set Fork.TxIn
   , userSpend'change :: Maybe TxOut
   }
   deriving (Show)
@@ -265,7 +265,7 @@ data UserSpend = UserSpend
 -}
 getHeadRef :: UserSpend -> TxOutRef
 getHeadRef UserSpend {..} =
-  Fork.txInRef . Fork.txSpendIn $ S.elemAt 0 userSpend'inputs
+  Fork.txInRef $ S.elemAt 0 userSpend'inputs
 
 -- | Variant of spend' that fails in run-time if there are not enough funds to spend.
 spend :: PubKeyHash -> Value -> Run UserSpend
@@ -309,9 +309,8 @@ spend' pkh expected = do
       | curVal `leq` mempty = Just $ UserSpend (foldMap (S.singleton . toInput) utxos) (getChange utxos)
       | otherwise = Nothing
 
-    toInput :: (TxOutRef , TxOut) -> Fork.TxSpendIn
-    toInput (ref, _) =
-      Fork.TxSpendIn (Fork.TxIn ref) Fork.ConsumePublicKeyAddress
+    toInput :: (TxOutRef, TxOut) -> Fork.TxIn
+    toInput (ref, _) = Fork.TxInWallet (Fork.WalletTxIn ref)
 
     getChange utxos
       | change /= mempty = Just $ TxOut (pubKeyHashAddress pkh) change NoOutputDatum Nothing
@@ -363,15 +362,21 @@ payToKey pkh val =
       { P.txOutputs = [TxOut (toAddress pkh) val NoOutputDatum Nothing]
       }
 
--- | Pay to the script.
--- We can use TypedValidator as argument and it will be checked that the datum is correct.
-payToScript :: (HasDatum script, HasAddress script) =>
-  script -> DatumMode (DatumType script) -> Value -> Tx
-payToScript script dat val = toExtra $
-  mempty
-    { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
-    , P.txData = datumMap
-    }
+{- | Pay to the script.
+ We can use TypedValidator as argument and it will be checked that the datum is correct.
+-}
+payToScript ::
+  (HasDatum script, HasAddress script) =>
+  script ->
+  DatumMode (DatumType script) ->
+  Value ->
+  Tx
+payToScript script dat val =
+  toExtra $
+    mempty
+      { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
+      , P.txData = datumMap
+      }
   where
     (outDatum, datumMap) = fromDatumMode dat
 
@@ -403,13 +408,18 @@ loadRefScriptBy script mDat val =
     (outDatum, datumMap) = maybe (NoOutputDatum, M.empty) fromDatumMode mDat
 
 -- | Pays to the TxOut that references some script stored on ledger
-payToRef :: (HasAddress script, HasDatum script) =>
-  script -> DatumMode (DatumType script) -> Value -> Tx
-payToRef script dat val = toExtra $
-  mempty
-    { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
-    , P.txData = datumMap
-    }
+payToRef ::
+  (HasAddress script, HasDatum script) =>
+  script ->
+  DatumMode (DatumType script) ->
+  Value ->
+  Tx
+payToRef script dat val =
+  toExtra $
+    mempty
+      { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
+      , P.txData = datumMap
+      }
   where
     (outDatum, datumMap) = fromDatumMode dat
 
@@ -427,8 +437,8 @@ spendPubKey ref =
   toExtra $
     mempty
       { P.txInputs =
-        S.singleton $
-          Fork.TxSpendIn (Fork.TxIn ref) Fork.ConsumePublicKeyAddress
+          S.singleton $
+            Fork.TxInWallet (Fork.WalletTxIn ref)
       }
 
 -- | Spend script input.
@@ -443,14 +453,18 @@ spendScript tv ref red dat =
   toExtra $
     mempty
       { P.txInputs =
-        S.singleton $
-          Fork.TxSpendIn
-            (Fork.TxIn ref)
-            (Fork.ConsumeScriptAddress
-              (Just $ Versioned (getLanguage tv) (toValidator tv))
-              (toRedeemer red)
-              (toDatum dat)
-            )
+          S.singleton $
+            Fork.TxInScript
+              ( Fork.ScriptTxIn
+                  ref
+                  ( Just
+                      ( Fork.ScriptTxInData
+                          (Just $ Versioned (getLanguage tv) (toValidator tv))
+                          (toRedeemer red)
+                          (toDatum dat)
+                      )
+                  )
+              )
       }
 
 -- | Spends script that references other script
@@ -467,10 +481,12 @@ spendScriptRef refScript script refOut red dat =
     mempty
       { P.txInputs =
           S.singleton $
-            Fork.TxSpendIn
-              (Fork.TxIn refOut)
-              (Fork.ConsumeScriptAddress Nothing (toRedeemer red) (toDatum dat))
-      , P.txReferenceInputs = S.singleton $ Fork.TxIn refScript
+            Fork.TxInScript
+              ( Fork.ScriptTxIn
+                  refOut
+                  (Just $ P.ScriptTxInData Nothing (toRedeemer red) (toDatum dat))
+              )
+      , P.txReferenceInputs = S.singleton $ Fork.TxInScript (Fork.ScriptTxIn refScript Nothing)
       , P.txScripts = M.singleton sh validator
       }
   where
@@ -482,7 +498,7 @@ refInputInline :: TxOutRef -> Tx
 refInputInline ref =
   toExtra $
     mempty
-      { P.txReferenceInputs = S.singleton $ Fork.TxIn ref
+      { P.txReferenceInputs = S.singleton $ Fork.TxInScript (Fork.ScriptTxIn ref Nothing)
       }
 
 -- | Reference input with hashed datum
@@ -490,7 +506,7 @@ refInputHash :: ToData datum => TxOutRef -> datum -> Tx
 refInputHash ref dat =
   toExtra $
     mempty
-      { P.txReferenceInputs = S.singleton $ Fork.TxIn ref
+      { P.txReferenceInputs = S.singleton $ Fork.TxInScript (Fork.ScriptTxIn ref Nothing)
       , P.txData = M.singleton dh datum
       }
   where
@@ -502,7 +518,7 @@ collateralInput :: TxOutRef -> Tx
 collateralInput ref =
   toExtra $
     mempty
-      { P.txCollateral = S.singleton $ Fork.TxIn ref
+      { P.txCollateral = S.singleton $ Fork.WalletTxIn ref
       }
 
 -- | Reference box with inlined datum

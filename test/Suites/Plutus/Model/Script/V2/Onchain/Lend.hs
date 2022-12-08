@@ -27,7 +27,6 @@ data LendAct = Exchange
 
 PlutusTx.unstableMakeIsData ''LendAct
 
-
 {-# INLINEABLE lendContract #-}
 lendContract :: LendDatum -> LendAct -> ScriptContext -> Bool
 lendContract (LendDatum sym tok) Exchange ctx =

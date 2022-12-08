@@ -1,11 +1,12 @@
 -- | Plutus TX
 module Plutus.Model.Fork.Ledger.Tx (
   Tx (..),
-  txInputIns,
   txId,
-  TxIn (TxIn, txInRef),
-  TxSpendIn (TxSpendIn, txSpendInType, txSpendIn),
-  TxInType (..),
+  WalletTxIn (WalletTxIn, walletTxInRef),
+  ScriptTxIn (ScriptTxIn, scriptTxInRef, scriptTxInData),
+  ScriptTxInData (ScriptTxInData),
+  TxIn (TxInWallet, TxInScript),
+  txInRef,
 ) where
 
 import Control.Applicative (Alternative (..))
@@ -34,12 +35,11 @@ import Plutus.Model.Fork.Ledger.Scripts (Versioned (..))
 import Plutus.Model.Fork.Ledger.Slot
 import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
 
-
 -- | A transaction, including witnesses for its inputs.
 data Tx = Tx
-  { txInputs :: Set.Set TxSpendIn
+  { txInputs :: Set.Set TxIn
   -- ^ The inputs to this transaction.
-  , txCollateral :: Set.Set TxIn
+  , txCollateral :: Set.Set WalletTxIn
   -- ^ The collateral inputs to cover the fees in case validation of the transaction fails.
   , txReferenceInputs :: Set.Set TxIn
   -- ^ Reference inputs
@@ -67,10 +67,6 @@ data Tx = Tx
   }
   deriving stock (Show, Generic)
   deriving anyclass ({-ToJSON, FromJSON, Serialise, -} NFData)
-
--- | For use with 'getInputsBy'
-txInputIns :: Tx -> Set.Set TxIn
-txInputIns = Set.map txSpendIn . txInputs
 
 instance Semigroup Tx where
   tx1 <> tx2 =
@@ -121,30 +117,33 @@ data TxStripped = TxStripped
 strip :: Tx -> TxStripped
 strip Tx {..} = TxStripped i txOutputs txMint txFee
   where
-    i = Set.map (txInRef . txSpendIn) txInputs
+    i = Set.map txInRef txInputs
 
--- | A transaction input, for contextx where a spend type is not necessary.
-newtype TxIn = TxIn { txInRef :: TxOutRef }
+-- | A transaction input from a wallet
+newtype WalletTxIn = WalletTxIn {walletTxInRef :: TxOutRef}
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData)
 
--- | A transaction input for spendng, consisting of a transaction output 
--- reference and an input type.
-data TxSpendIn = TxSpendIn
-  { txSpendIn :: !TxIn
-  , txSpendInType :: TxInType
+-- | A transaction input from a wallet
+data ScriptTxIn = ScriptTxIn
+  { scriptTxInRef :: !TxOutRef
+  , scriptTxInData :: Maybe ScriptTxInData
   }
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData)
 
-data TxInType
-  = -- TODO: these should all be hashes, with the validators and data segregated to the side
-
-    -- | A transaction input that consumes a script address with the given validator, redeemer, and datum.
-    ConsumeScriptAddress !(Maybe (Versioned Validator)) !Redeemer !Datum
-  | -- | A transaction input that consumes a public key address.
-    ConsumePublicKeyAddress
-  | -- | Consume a simple script
-    ConsumeSimpleScriptAddress
+-- TODO: these should all be hashes, with the validators and data segregated to the side
+data ScriptTxInData
+  = ScriptTxInData !(Maybe (Versioned Validator)) !Redeemer !Datum
   deriving stock (Show, Eq, Ord, Generic)
   deriving anyclass (NFData)
+
+data TxIn
+  = TxInWallet !WalletTxIn
+  | TxInScript !ScriptTxIn
+  deriving stock (Show, Eq, Ord, Generic)
+  deriving anyclass (NFData)
+
+txInRef :: TxIn -> TxOutRef
+txInRef (TxInWallet (WalletTxIn ref)) = ref
+txInRef (TxInScript (ScriptTxIn ref _)) = ref

@@ -20,7 +20,7 @@ import Cardano.Ledger.Babbage.TxBody qualified as C
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CompactAddress qualified as C
 import Cardano.Ledger.Compactible qualified as C
-import Cardano.Ledger.Core qualified as C (TxWits(..))
+import Cardano.Ledger.Core qualified as C (TxWits (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Hashes qualified as C
 import Cardano.Ledger.SafeHash
@@ -50,9 +50,10 @@ import Plutus.Model.Fork.Cardano.Common (
  )
 import Plutus.Model.Fork.Ledger.Scripts qualified as C (Versioned (..), toScript)
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
-import Plutus.Model.Fork.TxExtra qualified as P
 import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts qualified as P
+import Plutus.Model.Fork.TxExtra qualified as P
 import PlutusLedgerApi.V2 qualified as P
+import qualified Data.Set as Set
 
 type Era = BabbageEra StandardCrypto
 
@@ -75,8 +76,8 @@ toBabbageTx scriptMap network params tx = do
   pure $ C.AlonzoTx body wits isValid auxData
   where
     getBody = do
-      spendInputs <- getInputsBy (Plutus.txInputIns) tx
-      collateralInputs <- getInputsBy Plutus.txCollateral tx
+      spendInputs <- getInputsBy (Plutus.txInputs) tx
+      collateralInputs <- getInputsBy (Set.map Plutus.TxInWallet . Plutus.txCollateral) tx
       referenceInputs <- getInputsBy Plutus.txReferenceInputs tx
       collateralReturn <- getCollateralReturn tx
       let totalCollateral = getTotalCollateral tx

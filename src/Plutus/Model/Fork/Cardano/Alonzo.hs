@@ -46,6 +46,7 @@ import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
 import Plutus.Model.Fork.TxExtra qualified as P
 import PlutusLedgerApi.V2 qualified as P
 import PlutusLedgerApi.V2.Tx qualified as Plutus
+import Data.Set qualified as Set
 
 type Era = AlonzoEra StandardCrypto
 type ToCardanoError = String
@@ -111,8 +112,8 @@ toAlonzoTx network params tx = do
   pure $ C.AlonzoTx body wits isValid auxData
   where
     toBody = do
-      inputs <- getInputsBy Plutus.txInputIns tx
-      collateral <- getInputsBy Plutus.txCollateral tx
+      inputs <- getInputsBy Plutus.txInputs tx
+      collateral <- getInputsBy (Set.map Plutus.TxInWallet . Plutus.txCollateral) tx
       outputs <- getOutputs tx
       txcerts <- getDCerts network (C._poolDeposit params) (C._minPoolCost params) tx
       txwdrls <- getWdrl network tx

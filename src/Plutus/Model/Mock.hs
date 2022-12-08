@@ -150,8 +150,8 @@ import Data.Vector qualified as V
 import Cardano.Crypto.DSIGN.Class qualified as C
 import Cardano.Crypto.Hash.Class qualified as C
 import Cardano.Crypto.Seed qualified as C
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
 import Cardano.Ledger.Alonzo.Tx qualified as C
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
 import Cardano.Ledger.Alonzo.UTxO qualified as C
 import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Crypto qualified as C
@@ -184,11 +184,11 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Babbage.PParams
+import Cardano.Ledger.Block qualified as Ledger
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Shelley.API.Wallet (evaluateTransactionBalance)
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.TxIn qualified as Ledger
-import Cardano.Ledger.Block qualified as Ledger
 import Plutus.Model.Ada (Ada (..))
 import Plutus.Model.Fork.Cardano.Alonzo ()
 import Plutus.Model.Fork.Cardano.Alonzo qualified as Alonzo
@@ -682,8 +682,8 @@ getUTxO tx = do
   where
     ins =
       mconcat
-        [ S.toList $ P.txInputIns tx
-        , S.toList $ P.txCollateral tx
+        [ S.toList $ P.txInputs tx
+        , S.toList . S.map P.TxInWallet $ P.txCollateral tx
         , S.toList $ P.txReferenceInputs tx
         ]
 
@@ -730,17 +730,17 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
       removeIns txInputs
       mapM_ insertOut $ zip [0 ..] txOutputs
 
-    removeIns :: Set Plutus.TxSpendIn -> Run ()
+    removeIns :: Set Plutus.TxIn -> Run ()
     removeIns ins = modify $ \s ->
       s
         { mockUtxos = rmIns (mockUtxos s)
         , mockAddresses = fmap (`S.difference` inRefSet) (mockAddresses s)
         }
       where
-        inRefSet = S.map (Plutus.txInRef . Plutus.txSpendIn) ins
+        inRefSet = S.map Plutus.txInRef ins
         inRefs =
           M.fromList $
-            (,()) . Plutus.txInRef . Plutus.txSpendIn <$> S.toList ins
+            (,()) . Plutus.txInRef <$> S.toList ins
         rmIns a = M.difference a inRefs
 
     insertOut (ix, out) = do

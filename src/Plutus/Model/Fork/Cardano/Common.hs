@@ -78,8 +78,8 @@ import Plutus.Model.Ada qualified as Ada
 import Plutus.Model.Fork.Ledger.Scripts qualified as C
 import Plutus.Model.Fork.Ledger.Slot qualified as P
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
-import Plutus.Model.Fork.TxExtra qualified as P
 import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts qualified as P
+import Plutus.Model.Fork.TxExtra qualified as P
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 qualified as P
 import PlutusLedgerApi.V2.Tx qualified as P
@@ -293,12 +293,12 @@ toDatumWitness tx = do
     validatorDatums1 = fmap (\(_, _, datum) -> datum) validatorInfo
     validatorDatums2 = Map.toList $ Plutus.txData $ P.tx'plutus tx
 
-    validatorInfo = mapMaybe (fromInType . Plutus.txSpendInType) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
+    validatorInfo = mapMaybe txInData (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
 
-fromInType :: Plutus.TxInType -> Maybe (Maybe (C.Versioned P.Script), P.Redeemer, P.Datum)
-fromInType = \case
-  Plutus.ConsumeScriptAddress script redeemer datum -> Just (fmap P.getValidator <$> script, redeemer, datum)
-  _ -> Nothing
+txInData :: Plutus.TxIn -> Maybe (Maybe (C.Versioned P.Script), P.Redeemer, P.Datum)
+txInData (Plutus.TxInWallet _) = Nothing
+txInData (Plutus.TxInScript (Plutus.ScriptTxIn _ d)) =
+  (\(Plutus.ScriptTxInData script redeemer datum) -> (fmap P.getValidator <$> script, redeemer, datum)) <$> d
 
 toRedeemerWitness :: (C.Era era) => P.Tx -> C.Redeemers era
 toRedeemerWitness tx =
@@ -324,14 +324,15 @@ toRedeemerWitness tx =
               Plutus.txInputs $
                 P.tx'plutus tx
       where
-        toInput (n, tin) =
-          case Plutus.txSpendInType tin of
-            Plutus.ConsumeScriptAddress _validator redeemer _datum ->
-              Just
+        toInput (_, Plutus.TxInWallet _) = Nothing
+        toInput (n, Plutus.TxInScript (Plutus.ScriptTxIn _ md)) =
+          fmap
+            ( \(Plutus.ScriptTxInData _validator redeemer _datum) ->
                 ( C.RdmrPtr C.Spend (fromInteger n)
                 , addDefaultExUnits $ toRedeemer redeemer
                 )
-            _ -> Nothing
+            )
+            md
 
     certRedeemers = redeemersBy C.Cert (fmap P.certificate'script . P.extra'certificates)
     withdrawRedeemers = redeemersBy C.Rewrd (fmap P.withdraw'script . P.extra'withdraws)
@@ -363,7 +364,7 @@ toScriptWitness tx =
         certificates = mapMaybe (fmap (fmap P.getStakeValidator . snd) . P.certificate'script) (P.extra'certificates $ P.tx'extra tx)
         validators = mapMaybe (\(script, _, _) -> script) validatorInfo
 
-    validatorInfo = mapMaybe (fromInType . Plutus.txSpendInType) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
+    validatorInfo = mapMaybe txInData (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
 
 toDatum :: (C.Era era) => P.Datum -> C.Data era
 toDatum (P.Datum (P.BuiltinData d)) = C.Data d

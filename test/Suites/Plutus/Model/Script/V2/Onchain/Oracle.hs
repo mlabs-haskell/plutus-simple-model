@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 {- | Oracle example to test reference inputs
  with inlined and hashed datums.
 
@@ -9,7 +11,6 @@
 
  The winner is player with the closest guess to the Oracle's answer.
 -}
-{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 module Suites.Plutus.Model.Script.V2.Onchain.Oracle (
   AnswerDatum (..),
   BetDatum (..),
