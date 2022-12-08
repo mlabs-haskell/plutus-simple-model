@@ -561,7 +561,7 @@ checkSingleTx params (Tx extra tx) = do
     checkRange :: Validate ()
     checkRange = do
       curSlot <- gets mockCurrentSlot
-      when
+      unless
         (Interval.member curSlot $ P.txValidRange tx)
         (throwError $ TxInvalidRange curSlot (P.txValidRange tx))
 
@@ -628,9 +628,9 @@ checkSingleTx params (Tx extra tx) = do
             let res' = (\(k, v) -> fmap (k,) v) <$> M.toList res
                 errs = foldErrors res'
                 cost = foldCost res'
-             in case errs of
-                  [] -> pure cost
-                  _ -> throwError $ GenericFail $ unlines $ fmap show errs
+             in if null errs
+                  then pure cost
+                  else throwError $ GenericFail $ unlines $ fmap show errs
 
         toAlonzoCostModels ::
           Alonzo.CostModels ->
