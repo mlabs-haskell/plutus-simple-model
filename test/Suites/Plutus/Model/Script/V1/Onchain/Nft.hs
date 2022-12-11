@@ -41,7 +41,7 @@ nftContract (NftParams ref tok) _ ctx =
 ----------------------------------------------------------
 -- compiled code
 
-{-# HLINT ignore nftMintingPolicy #-}
+{- HLINT ignore nftMintingPolicy -}
 nftMintingPolicy :: NftParams -> TypedPolicy ()
 nftMintingPolicy _nftp = undefined
 
