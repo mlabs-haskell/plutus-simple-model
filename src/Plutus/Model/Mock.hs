@@ -22,6 +22,7 @@ module Plutus.Model.Mock (
 
   -- * Mock blockchain model
   Mock (..),
+  mockRefScripts,
   MockConfig (..),
   CheckLimits (..),
   MockNames (..),
@@ -219,7 +220,6 @@ data Mock = Mock
   { mockUsers :: !(Map PubKeyHash User)
   , mockAddresses :: !(Map Address (Set TxOutRef))
   , mockUtxos :: !(Map TxOutRef TxOut)
-  , mockRefScripts :: !(Map TxOutRef TxOut)
   , mockDatums :: !(Map DatumHash Datum)
   , mockStake :: !Stake
   , mockTxs :: !(Log TxStat)
@@ -233,6 +233,9 @@ data Mock = Mock
   -- ^ human readable names. Idea is to substitute for them
   -- in pretty printers for error logs, user names, script names.
   }
+
+mockRefScripts :: Mock -> Map TxOutRef TxOut
+mockRefScripts = Map.filter (isJust . txOutReferenceScript) . mockUtxos
 
 -- | Result of the execution.
 data Result = Ok | Fail FailReason
@@ -360,7 +363,6 @@ initMock cfg initVal =
     { mockUsers = M.singleton genesisUserId genesisUser
     , mockUtxos = M.singleton genesisTxOutRef genesisTxOut
     , mockDatums = M.empty
-    , mockRefScripts = M.empty
     , mockAddresses = M.singleton genesisAddress (S.singleton genesisTxOutRef)
     , mockStake = initStake
     , mockTxs = mempty
@@ -748,11 +750,7 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
         addr = txOutAddress out
 
         insertAddresses = modify' $ \s -> s {mockAddresses = M.alter (Just . maybe (S.singleton ref) (S.insert ref)) addr $ mockAddresses s}
-        insertUtxos
-          | isRefScript = modify' $ \s -> s {mockRefScripts = M.singleton ref out <> mockRefScripts s}
-          | otherwise = modify' $ \s -> s {mockUtxos = M.singleton ref out <> mockUtxos s}
-
-        isRefScript = isJust (txOutReferenceScript out)
+        insertUtxos = modify' $ \s -> s {mockUtxos = M.singleton ref out <> mockUtxos s}
 
     updateRewards = mapM_ modifyWithdraw $ extra'withdraws extra
       where
