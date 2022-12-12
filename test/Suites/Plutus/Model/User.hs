@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 -- | Tests creation of users and spending funds
 module Suites.Plutus.Model.User (
   tests,

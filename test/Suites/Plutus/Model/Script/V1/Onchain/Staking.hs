@@ -3,8 +3,10 @@ module Suites.Plutus.Model.Script.V1.Onchain.Staking (
 ) where
 
 import Plutus.Model.V1
+
 -- import PlutusLedgerApi.V1.Value
 import PlutusLedgerApi.V1
+
 -- import PlutusTx qualified
 import PlutusTx.Prelude
 
@@ -37,6 +39,7 @@ import PlutusTx.Prelude
 
 stakeValidator :: Address -> TypedStake ()
 stakeValidator _addr = error ()
-  -- mkTypedStake $
-  --   $$(PlutusTx.compile [||\param -> toBuiltinStake (mkStakingValidator param)||])
-  --     `PlutusTx.applyCode` PlutusTx.liftCode addr
+
+-- mkTypedStake $
+--   $$(PlutusTx.compile [||\param -> toBuiltinStake (mkStakingValidator param)||])
+--     `PlutusTx.applyCode` PlutusTx.liftCode addr

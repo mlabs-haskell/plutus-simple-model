@@ -1927,11 +1927,11 @@
         "plutus": "plutus"
       },
       "locked": {
-        "lastModified": 1666903620,
-        "narHash": "sha256-SXiO1YfXxm+BM9pXvBaq+ZZwu3KzVuSaj3VkPCLDZJw=",
+        "lastModified": 1668586974,
+        "narHash": "sha256-m3Ai3XpUDKQrmVIblZ8h4s18wJmr7dwvwHo6u6YhyfI=",
         "owner": "mlabs-haskell",
         "repo": "mlabs-tooling.nix",
-        "rev": "38e004af21b23d91f2be59c4451bdacab3840882",
+        "rev": "e0b970888863c79ed108f2354f00f8af871d0bb7",
         "type": "github"
       },
       "original": {

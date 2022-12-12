@@ -39,7 +39,7 @@ data Stake = Stake
 newtype PoolId = PoolId {unPoolId :: PubKeyHash}
   deriving (Show, Eq, Ord)
 
-data Pool = Pool
+newtype Pool = Pool
   { pool'stakes :: [StakingCredential]
   }
 
@@ -58,18 +58,19 @@ reactDCert = \case
 checkDCert :: DCert -> Stake -> Maybe DCertError
 checkDCert = \case
   DCertDelegRegKey cred -> checkRegStake cred `onFalse` RegStakeError cred
-  DCertDelegDeRegKey cred -> checkDeregStake cred `onFalse` DeRegStakeError cred
+  DCertDelegDeRegKey cred -> hasStakingCredential cred `onFalse` DeRegStakeError cred
   DCertDelegDelegate cred pkh -> checkDelegateStake cred (PoolId pkh) `onFalse` DelegateError cred pkh
   -- TODO: pool parameters not supported
   DCertPoolRegister pkh _pvrf -> checkRegPool (PoolId pkh) `onFalse` PoolRegError pkh
   -- TODO: retire after so many epochs not supported
-  DCertPoolRetire pkh _n -> checkRetirePool (PoolId pkh) `onFalse` PoolRetireError pkh
+  DCertPoolRetire pkh _n -> hasPool (PoolId pkh) `onFalse` PoolRetireError pkh
   DCertGenesis -> const $ Just CertGenesisNotSupported
   DCertMir -> const $ Just CertMirNotSupported
   where
-    onFalse answer err st = case answer st of
-      True -> Nothing
-      False -> Just err
+    onFalse answer err st =
+      if answer st
+        then Nothing
+        else Just err
 
 hasStakingCredential :: StakingCredential -> Stake -> Bool
 hasStakingCredential cred st = M.member cred $ stake'stakes st
@@ -96,9 +97,6 @@ retirePool pid st =
     , stake'poolIds = V.filter (/= pid) $ stake'poolIds st
     }
 
-checkRetirePool :: PoolId -> Stake -> Bool
-checkRetirePool pid st = hasPool pid st
-
 regStake :: StakingCredential -> Stake -> Stake
 regStake cred st =
   st
@@ -113,9 +111,6 @@ deregStake cred st =
   st
     { stake'stakes = M.delete cred $ stake'stakes st
     }
-
-checkDeregStake :: StakingCredential -> Stake -> Bool
-checkDeregStake cred st = hasStakingCredential cred st
 
 delegateStake :: StakingCredential -> PoolId -> Stake -> Stake
 delegateStake cred pid st =
@@ -145,7 +140,7 @@ checkWithdrawStake signatures cred amount st =
 
     checkSign = case cred of
       StakingHash (PubKeyCredential pkh) ->
-        if elem pkh signatures
+        if pkh `elem` signatures
           then Nothing
           else Just (WithdrawNotSigned pkh)
       _ -> Nothing
@@ -154,7 +149,7 @@ lookupReward :: StakingCredential -> Stake -> Maybe Integer
 lookupReward cred Stake {..} = M.lookup cred stake'stakes
 
 lookupStakes :: PoolId -> Stake -> [StakingCredential]
-lookupStakes pid Stake {..} = maybe [] pool'stakes $ M.lookup pid stake'pools
+lookupStakes pid Stake {..} = foldMap pool'stakes $ M.lookup pid stake'pools
 
 rewardStake :: Integer -> Stake -> Maybe Stake
 rewardStake amount st =

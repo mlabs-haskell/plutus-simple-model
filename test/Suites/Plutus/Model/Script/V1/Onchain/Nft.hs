@@ -41,11 +41,13 @@ nftContract (NftParams ref tok) _ ctx =
 ----------------------------------------------------------
 -- compiled code
 
+{- HLINT ignore nftMintingPolicy -}
 nftMintingPolicy :: NftParams -> TypedPolicy ()
 nftMintingPolicy _nftp = undefined
-  -- mkTypedPolicy $
-  --   $$(PlutusTx.compile [||\param -> toBuiltinPolicy (nftContract param)||])
-  --     `PlutusTx.applyCode` PlutusTx.liftCode nftp
+
+-- mkTypedPolicy $
+--   $$(PlutusTx.compile [||\param -> toBuiltinPolicy (nftContract param)||])
+--     `PlutusTx.applyCode` PlutusTx.liftCode nftp
 
 nftCurrencySymbol :: NftParams -> CurrencySymbol
 nftCurrencySymbol = scriptCurrencySymbol . nftMintingPolicy

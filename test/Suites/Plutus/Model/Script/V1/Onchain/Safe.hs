@@ -11,6 +11,7 @@ module Suites.Plutus.Model.Script.V1.Onchain.Safe (
 
 import Prelude
 
+import PlutusLedgerApi.V1
 import PlutusLedgerApi.V1.Contexts (
   findDatum,
   findOwnInput,
@@ -19,11 +20,10 @@ import PlutusLedgerApi.V1.Contexts (
  )
 import PlutusLedgerApi.V1.Interval (contains)
 import PlutusLedgerApi.V1.Value (gt)
-import PlutusLedgerApi.V1
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
 
-data SafeDatum = Safe PubKeyHash
+newtype SafeDatum = Safe PubKeyHash
   deriving (Eq)
 
 instance Plutus.Eq SafeDatum where
@@ -33,7 +33,7 @@ PlutusTx.unstableMakeIsData ''SafeDatum
 
 data SafeAct = Spend | Deposit
 
-data SafeParams = SafeParams POSIXTime
+newtype SafeParams = SafeParams POSIXTime
 
 {-# INLINEABLE safeContract #-}
 safeContract :: SafeParams -> SafeDatum -> SafeAct -> ScriptContext -> Bool

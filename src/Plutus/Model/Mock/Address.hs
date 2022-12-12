@@ -10,8 +10,8 @@ module Plutus.Model.Mock.Address (
 ) where
 
 import Data.Coerce
-import Plutus.Model.Fork.TxExtra (keyToStaking)
 import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
+import Plutus.Model.Fork.TxExtra (keyToStaking)
 import PlutusLedgerApi.V1.Address
 import PlutusLedgerApi.V2
 import Prelude

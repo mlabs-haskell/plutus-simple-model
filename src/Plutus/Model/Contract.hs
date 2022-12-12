@@ -173,7 +173,7 @@ newUser val = do
       let user = intToUser userCount
           pkh = userPubKeyHash user
           addr = pubKeyHashAddress pkh
-          userNo = "User " ++ show userCount
+          userNo = "User " <> show userCount
       modify' $ \s -> s {mockUserStep = userCount + 1, mockUsers = M.insert pkh user (mockUsers s)}
       writeUserName pkh userNo >> writeAddressName addr userNo
       pure pkh
@@ -281,7 +281,7 @@ spend pkh val = do
 spend' :: PubKeyHash -> Value -> Run (Maybe UserSpend)
 spend' pkh expected = do
   refs <- txOutRefAt (pubKeyHashAddress pkh)
-  mUtxos <- fmap (\m -> mapM (\r -> (r,) <$> M.lookup r m) refs) $ gets mockUtxos
+  mUtxos <- (\m -> mapM (\r -> (r,) <$> M.lookup r m) refs) <$> gets mockUtxos
   case mUtxos of
     Just utxos -> pure $ toRes $ foldl go (expected, []) utxos
     Nothing -> pure Nothing
@@ -359,25 +359,31 @@ payToKey pkh val =
       { P.txOutputs = [TxOut (toAddress pkh) val NoOutputDatum Nothing]
       }
 
--- | Pay to the script.
--- We can use TypedValidator as argument and it will be checked that the datum is correct.
-payToScript :: (HasDatum script, HasAddress script) =>
-  script -> DatumMode (DatumType script) -> Value -> Tx
-payToScript script dat val = toExtra $
-  mempty
-    { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
-    , P.txData = datumMap
-    }
+{- | Pay to the script.
+ We can use TypedValidator as argument and it will be checked that the datum is correct.
+-}
+payToScript ::
+  (HasDatum script, HasAddress script) =>
+  script ->
+  DatumMode (DatumType script) ->
+  Value ->
+  Tx
+payToScript script dat val =
+  toExtra $
+    mempty
+      { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
+      , P.txData = datumMap
+      }
   where
     (outDatum, datumMap) = fromDatumMode dat
 
 -- | Uploads the reference script to blockchain
 loadRefScript :: (IsValidator script) => script -> Value -> Tx
-loadRefScript script val = loadRefScriptBy script Nothing val
+loadRefScript script = loadRefScriptBy script Nothing
 
 -- | Uploads the reference script to blockchain
 loadRefScriptDatum :: (IsValidator script) => script -> DatumMode (DatumType script) -> Value -> Tx
-loadRefScriptDatum script dat val = loadRefScriptBy script (Just dat) val
+loadRefScriptDatum script dat = loadRefScriptBy script (Just dat)
 
 -- | Uploads the reference script to blockchain
 loadRefScriptBy ::
@@ -399,13 +405,18 @@ loadRefScriptBy script mDat val =
     (outDatum, datumMap) = maybe (NoOutputDatum, M.empty) fromDatumMode mDat
 
 -- | Pays to the TxOut that references some script stored on ledger
-payToRef :: (HasAddress script, HasDatum script) =>
-  script -> DatumMode (DatumType script) -> Value -> Tx
-payToRef script dat val = toExtra $
-  mempty
-    { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
-    , P.txData = datumMap
-    }
+payToRef ::
+  (HasAddress script, HasDatum script) =>
+  script ->
+  DatumMode (DatumType script) ->
+  Value ->
+  Tx
+payToRef script dat val =
+  toExtra $
+    mempty
+      { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
+      , P.txData = datumMap
+      }
   where
     (outDatum, datumMap) = fromDatumMode dat
 
@@ -535,7 +546,7 @@ userSpend (UserSpend ins mChange) =
   toExtra $
     mempty
       { P.txInputs = ins
-      , P.txOutputs = maybe [] pure mChange
+      , P.txOutputs = foldMap pure mChange
       }
 
 mintTx :: Mint -> Tx
@@ -595,7 +606,7 @@ txBoxValue = txOutValue . txBoxOut
 boxAt :: (IsValidator script) => script -> Run [TxBox script]
 boxAt addr = do
   utxos <- utxoAt (toAddress addr)
-  fmap catMaybes $ mapM (\(ref, tout) -> fmap (\dat -> TxBox ref tout dat) <$> datumAt ref) utxos
+  catMaybes <$> mapM (\(ref, tout) -> fmap (TxBox ref tout) <$> datumAt ref) utxos
 
 {- | It expects that Typed validator can have only one UTXO
  which is NFT.
@@ -605,8 +616,8 @@ nftAt tv = head <$> boxAt tv
 
 -- | Safe query for single Box
 withBox :: IsValidator script => (TxBox script -> Bool) -> script -> (TxBox script -> Run ()) -> Run ()
-withBox isBox script cont =
-  withMayBy readMsg (L.find isBox <$> boxAt script) cont
+withBox isBox script =
+  withMayBy readMsg (L.find isBox <$> boxAt script)
   where
     readMsg = ("No UTxO box for: " <>) <$> getPrettyAddress (toAddress script)
 
@@ -685,7 +696,7 @@ mustFailWithName name msg act = do
   where
     noNewErrors (fromLog -> a) (fromLog -> b) = length a == length b
     mkMustFailLog (unLog -> pre) (unLog -> post) =
-      Log $ (second $ MustFailLog name) <$> Seq.drop (Seq.length pre) post
+      Log $ second (MustFailLog name) <$> Seq.drop (Seq.length pre) post
 
 {- | Checks that script runs without errors and returns pretty printed failure
  if something bad happens.
