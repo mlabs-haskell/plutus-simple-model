@@ -220,6 +220,7 @@ data Mock = Mock
   { mockUsers :: !(Map PubKeyHash User)
   , mockAddresses :: !(Map Address (Set TxOutRef))
   , mockUtxos :: !(Map TxOutRef TxOut)
+  -- ^ Since 0.4, reference script UTxOs are also included.
   , mockDatums :: !(Map DatumHash Datum)
   , mockStake :: !Stake
   , mockTxs :: !(Log TxStat)
@@ -234,6 +235,10 @@ data Mock = Mock
   -- in pretty printers for error logs, user names, script names.
   }
 
+{- | All UTxOs containing reference scripts.
+
+Since 0.4 this has been a function rather than a field.
+-}
 mockRefScripts :: Mock -> Map TxOutRef TxOut
 mockRefScripts = Map.filter (isJust . txOutReferenceScript) . mockUtxos
 
@@ -693,11 +698,7 @@ getUTxO tx = do
 
 -- | Reads TxOut by its reference.
 getTxOut :: TxOutRef -> Run (Maybe TxOut)
-getTxOut ref = do
-  mTout <- M.lookup ref <$> gets mockUtxos
-  case mTout of
-    Just tout -> pure $ Just tout
-    Nothing -> M.lookup ref <$> gets mockRefScripts
+getTxOut ref = M.lookup ref <$> gets mockUtxos
 
 -- | Update slot counter by one.
 bumpSlot :: Run ()
@@ -772,13 +773,16 @@ txOutRefAt addr = txOutRefAtState addr <$> get
 txOutRefAtState :: Address -> Mock -> [TxOutRef]
 txOutRefAtState addr st = foldMap S.toList . M.lookup addr $ mockAddresses st
 
--- | Get all UTXOs that belong to an address (it does not include reference script UTXOs)
+{- | Get all UTXOs that belong to an address.
+
+Since 0.4 this includes UTxOs that have reference scripts.
+-}
 utxoAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
-utxoAt addr = utxoAtStateBy mockUtxos addr <$> get
+utxoAt addr = gets (utxoAtStateBy mockUtxos addr)
 
 -- | Get all reference script UTXOs that belong to an address
 refScriptAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
-refScriptAt addr = utxoAtStateBy mockRefScripts addr <$> get
+refScriptAt addr = gets (utxoAtStateBy mockRefScripts addr)
 
 -- | Reads the first UTXO by address
 withFirstUtxo :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
@@ -788,8 +792,7 @@ withFirstUtxo = withUtxo (const True)
  certain UTXO in that list. It proceeds with continuation if UTXO is present
  and fails with @logError@ if there is no such UTXO.
 
- Note that it does not search among UTXOs that store scripts (used for reference scripts).
- It's done for convenience.
+Since 0.4 this includes UTxOs that have reference scripts.
 -}
 withUtxo :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
 withUtxo isUtxo user = withMayBy readMsg (L.find isUtxo <$> utxoAt user)
