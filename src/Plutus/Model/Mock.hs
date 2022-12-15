@@ -549,10 +549,12 @@ checkSingleTx params (Tx extra tx) = do
     getTxBody = do
       cfg <- gets mockConfig
       let localScriptMap = P.txScripts tx
-      either
-        (throwError . GenericFail)
-        pure
-        (Class.toCardanoTx localScriptMap (mockConfigNetworkId cfg) params (Tx extra tx))
+      orFailValidate GenericFail $
+        Class.toCardanoTx
+          localScriptMap
+          (mockConfigNetworkId cfg)
+          params
+          (Tx extra tx)
 
     checkStaking = do
       checkWithdraws (extra'withdraws extra)
@@ -662,6 +664,9 @@ newtype Validate a = Validate {unValidate :: ExceptT FailReason Run a}
 runValidate :: Validate a -> Run (Either FailReason a)
 runValidate = runExceptT . unValidate
 
+orFailValidate :: (e -> FailReason) -> Either e a -> Validate a
+orFailValidate err = either (throwError . err) pure
+
 instance MonadError FailReason Validate where
   throwError err = Validate (lift $ logFail err) >> throwError err
   catchError (Validate a) cont = Validate $ catchError a (unValidate . cont)
@@ -693,7 +698,7 @@ getUTxO tx = do
           . Plutus.txInRef
       )
       ins
-  either (throwError . FailToCardano) pure $ (Class.toUtxo localScriptMap networkId . zip ins) mOuts
+  orFailValidate FailToCardano $ (Class.toUtxo localScriptMap networkId . zip ins) mOuts
   where
     ins =
       mconcat
