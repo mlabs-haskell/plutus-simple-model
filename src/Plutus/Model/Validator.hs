@@ -14,6 +14,9 @@ module Plutus.Model.Validator (
   TypedValidatorHash (..),
   TypedPolicy (..),
   TypedStake (..),
+  Script,
+  Validator,
+  MintingPolicy,
 
   -- * Versioned
   Versioned (..),
@@ -24,6 +27,9 @@ module Plutus.Model.Validator (
   toVersionedScript,
 
   -- * Hashes
+  StakeValidator,
+  ValidatorHash,
+  MintingPolicyHash,
   validatorHash,
   scriptHash,
   scriptCurrencySymbol,
