@@ -153,7 +153,8 @@ library
   other-modules:   Paths_plutus_simple_model
   hs-source-dirs:  src
 
-test-suite plutus-simple-model-test
+-- Disable until tests arnix e built
+executable plutus-simple-model-test
   import:         lang
   import:         deps
   import:         test-deps
