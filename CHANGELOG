@@ -1,0 +1,28 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to the [Haskell Package Versioning Policy](https://pvp.haskell.org/).
+
+## [0.4.0.0] - 2022-12-13
+
+### Changed
+
+- The behaviour of various functions with regard to reference scripts has
+  changed.
+
+  Mainly, the special treatment given to UTxOs with reference scripts has been
+  removed. This enables using UTxOs that hold both value/datums and a reference
+  script.
+
+  - `Mock.mockUtxos` now includes UTxOs with reference scripts
+
+  - `Mock.mockRefScripts` is now a function rather than a record
+    field
+
+  - `Contract.valueAt`, `Contract.checkBalance`, `Contract.checkBalanceBy`, `Contract.utxoAt`, `Contract.boxAt`, `Contract.withUtxo`, `Pretty.ppBalanceSheet` and the `Pretty` instance for `Mock` will now include outputs that have reference scripts.
+
+  - `Contract.spend'`,`Contract.sendValue`, `Contract.withSpend`, `Contract.spend` will not spend a UTxO that has a reference script.
+
+  - The behaviour of `Mock.getTxOut`, `Mock.getUTxO`, `Mock.datumAt`, `Mock.getHashDatum`, `Mock.submitTx` and similar is unchanged.
