@@ -16,6 +16,10 @@ module Plutus.Model.Tx (
     txData,
     txScripts
   ),
+  Tx.TxIn (
+    TxIn,
+    txInRef
+  ),
 ) where
 
 import Plutus.Model.Fork.Ledger.Tx qualified as Tx
