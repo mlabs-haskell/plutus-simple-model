@@ -234,7 +234,10 @@ waitUntil time = do
 noErrors :: Run Bool
 noErrors = nullLog <$> gets mockFails
 
--- | Get total value on the address or user by @PubKeyHash@ (but not on reference script UTXOs).
+{- | Get total value on the address or user by @PubKeyHash@
+
+Since 0.4 this includes UTxOs that have reference scripts.
+-}
 valueAt :: HasAddress user => user -> Run Value
 valueAt user = foldMap (txOutValue . snd) <$> utxoAt user
 
@@ -272,16 +275,22 @@ spend pkh val = do
   mSp <- spend' pkh val
   pure $ fromJust mSp
 
-{- | User wants to spend money.
- It returns input UTXOs and output UTXOs for change.
- Note that it does not removes UTXOs from user account.
- We can only spend by submitting TXs, so if you run it twice
- it will choose from the same set of UTXOs.
+{- | Generate a transaction to spend value.
+
+Does not submit the transaction, or mark UTxOs as spent.
+
+Will not spend value from a UTxO if it contains a reference script, so as not to
+  make the script unreferencable.
 -}
 spend' :: PubKeyHash -> Value -> Run (Maybe UserSpend)
 spend' pkh expected = do
   refs <- txOutRefAt (pubKeyHashAddress pkh)
-  mUtxos <- (\m -> mapM (\r -> (r,) <$> M.lookup r m) refs) <$> gets mockUtxos
+  mUtxos <-
+    gets
+      ( (\m -> mapM (\r -> (r,) <$> M.lookup r m) refs)
+          . M.filter (isNothing . txOutReferenceScript)
+          . mockUtxos
+      )
   case mUtxos of
     Just utxos -> pure $ toRes $ foldl go (expected, []) utxos
     Nothing -> pure Nothing
@@ -602,7 +611,10 @@ txBoxDatumHash = txOutDatumHash . txBoxOut
 txBoxValue :: TxBox a -> Value
 txBoxValue = txOutValue . txBoxOut
 
--- | Read UTXOs with datums.
+{- | Read UTXOs with datums.
+
+Since 0.4 this includes UTxOs that have reference scripts.
+-}
 boxAt :: (IsValidator script) => script -> Run [TxBox script]
 boxAt addr = do
   utxos <- utxoAt (toAddress addr)
