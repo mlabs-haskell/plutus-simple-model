@@ -44,7 +44,8 @@ data Versioned a = Versioned
   { versioned'language :: !C.Language
   , versioned'content :: a
   }
-  deriving (Show, Eq, Ord, Generic, NFData, Functor)
+  deriving stock (Show, Eq, Ord, Generic, Functor)
+  deriving anyclass (NFData)
 
 -- | Version with PlutusV1
 toV1 :: a -> Versioned a

@@ -10,6 +10,7 @@ module Plutus.Model.Mock.Address (
 ) where
 
 import Data.Coerce
+import Plutus.Model.Fork.Ledger.Scripts (Versioned (versioned'content))
 import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
 import Plutus.Model.Fork.TxExtra (keyToStaking)
 import PlutusLedgerApi.V1.Address
@@ -38,6 +39,9 @@ instance HasStakingCredential StakingCredential where
 
 instance HasStakingCredential PubKeyHash where
   toStakingCredential = keyToStaking
+
+instance (HasAddress a) => HasAddress (Versioned a) where
+  toAddress = toAddress . versioned'content
 
 -- | Encodes appening of staking address
 data AppendStaking a
