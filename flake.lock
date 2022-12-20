@@ -1936,6 +1936,7 @@
       },
       "original": {
         "owner": "mlabs-haskell",
+        "ref": "e0b970888863c79ed108f2354f00f8af871d0bb7",
         "repo": "mlabs-tooling.nix",
         "type": "github"
       }
