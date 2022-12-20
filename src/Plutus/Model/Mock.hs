@@ -22,6 +22,7 @@ module Plutus.Model.Mock (
 
   -- * Mock blockchain model
   Mock (..),
+  mockRefScripts,
   MockConfig (..),
   CheckLimits (..),
   MockNames (..),
@@ -150,9 +151,8 @@ import Data.Vector qualified as V
 import Cardano.Crypto.DSIGN.Class qualified as C
 import Cardano.Crypto.Hash.Class qualified as C
 import Cardano.Crypto.Seed qualified as C
-import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
 import Cardano.Ledger.Alonzo.Tx qualified as C
-import Cardano.Ledger.Alonzo.UTxO qualified as C
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
 import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Crypto qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as C
@@ -171,7 +171,7 @@ import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Ledger.Hashes as Ledger (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash qualified as Ledger (unsafeMakeSafeHash)
-import Cardano.Ledger.Slot (EpochSize (..))
+import Cardano.Ledger.Slot (EpochInfo, EpochSize (..))
 import Plutus.Model.Fork.Ledger.Slot
 import Plutus.Model.Fork.Ledger.TimeSlot (SlotConfig (..))
 import Plutus.Model.Fork.TxExtra
@@ -184,11 +184,13 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Babbage.PParams
+import Cardano.Ledger.Block qualified as Ledger
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Shelley.API.Wallet (evaluateTransactionBalance)
+import Cardano.Ledger.Shelley.API.Wallet qualified as C
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.TxIn qualified as Ledger
-import Cardano.Ledger.Block qualified as Ledger
+import Control.Monad.Except (ExceptT (ExceptT), MonadError (catchError, throwError), liftEither, runExceptT)
 import Plutus.Model.Ada (Ada (..))
 import Plutus.Model.Fork.Cardano.Alonzo ()
 import Plutus.Model.Fork.Cardano.Alonzo qualified as Alonzo
@@ -219,7 +221,7 @@ data Mock = Mock
   { mockUsers :: !(Map PubKeyHash User)
   , mockAddresses :: !(Map Address (Set TxOutRef))
   , mockUtxos :: !(Map TxOutRef TxOut)
-  , mockRefScripts :: !(Map TxOutRef TxOut)
+  -- ^ Since 0.4, reference script UTxOs are also included.
   , mockDatums :: !(Map DatumHash Datum)
   , mockStake :: !Stake
   , mockTxs :: !(Log TxStat)
@@ -233,6 +235,13 @@ data Mock = Mock
   -- ^ human readable names. Idea is to substitute for them
   -- in pretty printers for error logs, user names, script names.
   }
+
+{- | All UTxOs containing reference scripts.
+
+Since 0.4 this has been a function rather than a field.
+-}
+mockRefScripts :: Mock -> Map TxOutRef TxOut
+mockRefScripts = Map.filter (isJust . txOutReferenceScript) . mockUtxos
 
 -- | Result of the execution.
 data Result = Ok | Fail FailReason
@@ -360,7 +369,6 @@ initMock cfg initVal =
     { mockUsers = M.singleton genesisUserId genesisUser
     , mockUtxos = M.singleton genesisTxOutRef genesisTxOut
     , mockDatums = M.empty
-    , mockRefScripts = M.empty
     , mockAddresses = M.singleton genesisAddress (S.singleton genesisTxOutRef)
     , mockStake = initStake
     , mockTxs = mempty
@@ -501,111 +509,108 @@ sendTx tx = do
  and produces performance stats if TX was ok.
 -}
 sendSingleTx :: Tx -> Run (Either FailReason Stat)
-sendSingleTx preTx = do
-  case processMints preTx of
-    Right tx -> do
+sendSingleTx preTx =
+  runValidate $
+    liftEither (processMints preTx) >>= \tx -> do
       genParams <- gets (mockConfigProtocol . mockConfig)
       case genParams of
         AlonzoParams params -> checkSingleTx @Alonzo.Era params tx
         BabbageParams params -> checkSingleTx @Babbage.Era params tx
-    Left err -> leftFail err
 
 -- | Confirms that single TX is valid. Works across several Eras (see @Plutus.Model.Fork.Cardano.Class@)
 checkSingleTx ::
   forall era.
   ( ExtendedUTxO era
-  , C.AlonzoEraTx era
   , HasField "_costmdls" (Core.PParams era) Alonzo.CostModels
   , HasField "_maxTxExUnits" (Core.PParams era) Alonzo.ExUnits
   , HasField "_protocolVersion" (Core.PParams era) C.ProtVer
   , Core.Script era ~ Alonzo.AlonzoScript era
-  , Ledger.EraUTxO era
-  , Ledger.ScriptsNeeded era ~ C.AlonzoScriptsNeeded era
-  , HasField "_poolDeposit" (Core.PParams era) C.Coin
-  , HasField "_keyDeposit" (Core.PParams era) C.Coin
   , Class.IsCardanoTx era
   , Core.Value era ~ Mary.MaryValue C.StandardCrypto
+  , C.CLI era
+  , C.AlonzoEraTx era
   ) =>
   Core.PParams era ->
   Tx ->
-  Run (Either FailReason Stat)
-checkSingleTx params (Tx extra tx) =
-  withCheckStaking $
-    withCheckRange $
-      withTxBody $ \txBody -> do
-        let tid = fromTxId $ Ledger.txid (Class.getTxBody txBody)
-        withUTxO $ \utxo ->
-          withCheckBalance utxo txBody $
-            withCheckUnits utxo txBody $ \cost -> do
-              let txSize = fromIntegral $ BS.length $ CBOR.serialize' txBody
-                  stat = Stat txSize cost
-              withCheckTxLimits stat $ do
-                applyTx stat tid (Tx extra tx)
-                pure $ Right stat
+  Validate Stat
+checkSingleTx params (Tx extra tx) = do
+  checkStaking
+  checkRange
+  txBody <- getTxBody
+  let tid = fromTxId $ Ledger.txid (Class.getTxBody txBody)
+  utxo <- getUTxO tx
+  checkBalance utxo txBody
+  cost <- checkUnits utxo txBody
+  let txSize = fromIntegral $ BS.length $ CBOR.serialize' txBody
+      stat = Stat txSize cost
+  checkTxLimits stat
+  Validate . lift $ applyTx stat tid (Tx extra tx)
+  pure stat
   where
     pkhs = M.keys $ P.txSignatures tx
 
-    withTxBody cont = do
+    getTxBody :: Validate (Core.Tx era)
+    getTxBody = do
       cfg <- gets mockConfig
       let localScriptMap = P.txScripts tx
-      case Class.toCardanoTx localScriptMap (mockConfigNetworkId cfg) params (Tx extra tx) of
-        Right txBody -> cont txBody
-        Left err -> leftFail $ GenericFail err
+      orFailValidate GenericFail $
+        Class.toCardanoTx
+          localScriptMap
+          (mockConfigNetworkId cfg)
+          params
+          (Tx extra tx)
 
-    withCheckStaking cont = withCheckWithdraw (withCheckCertificates cont)
+    checkStaking = do
+      checkWithdraws (extra'withdraws extra)
+      checkCertificates (extra'certificates extra)
 
-    withCheckWithdraw cont = maybe cont leftFail =<< checkWithdraws (extra'withdraws extra)
-    withCheckCertificates cont = maybe cont leftFail =<< checkCertificates (extra'certificates extra)
-
-    withCheckRange cont = do
+    checkRange :: Validate ()
+    checkRange = do
       curSlot <- gets mockCurrentSlot
-      if Interval.member curSlot $ P.txValidRange tx
-        then cont
-        else leftFail $ TxInvalidRange curSlot (P.txValidRange tx)
+      unless
+        (Interval.member curSlot $ P.txValidRange tx)
+        (throwError $ TxInvalidRange curSlot (P.txValidRange tx))
 
+    checkWithdraws :: [Withdraw] -> Validate ()
     checkWithdraws ws = do
       st <- gets mockStake
       go st ws
       where
         go st = \case
-          [] -> pure Nothing
+          [] -> pure ()
           Withdraw {..} : rest ->
             case checkWithdrawStake pkhs withdraw'credential withdraw'amount st of
               Nothing -> go st rest
-              Just err -> pure $ Just $ TxInvalidWithdraw err
+              Just err -> throwError (TxInvalidWithdraw err)
 
+    checkCertificates :: [Certificate] -> Validate ()
     checkCertificates certs = do
       st <- gets mockStake
       go st (certificate'dcert <$> certs)
       where
+        go :: Stake -> [DCert] -> Validate ()
         go st = \case
-          [] -> pure Nothing
+          [] -> pure ()
           c : cs -> case checkDCert c st of
             Nothing -> go (reactDCert c st) cs
-            Just err -> pure $ Just $ TxInvalidCertificate err
+            Just err -> throwError (TxInvalidCertificate err)
 
-    withUTxO cont = do
-      mUtxo <- getUTxO tx
-      case mUtxo of
-        Just (Right utxo) -> cont utxo
-        Just (Left err) -> leftFail $ FailToCardano err
-        Nothing -> leftFail FailToReadUtxo
-
-    withCheckBalance utxo txBody cont
-      | balance == mempty = cont
-      | otherwise = leftFail (NotBalancedTx $ fromCardanoValue balance)
+    checkBalance :: Ledger.UTxO era -> Core.Tx era -> Validate ()
+    checkBalance utxo txBody =
+      when
+        (balance /= mempty)
+        (throwError $ NotBalancedTx $ fromCardanoValue balance)
       where
         balance = evaluateTransactionBalance params utxo isNewPool (Class.getTxBody txBody)
 
         -- \| TODO: use pool ids info
         -- isNewPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
         isNewPool _kh = True -- StakePoolKeyHash kh `S.notMember` poolids
-    withCheckUnits ::
+    checkUnits ::
       Ledger.UTxO era ->
       Core.Tx era ->
-      (Alonzo.ExUnits -> Run (Either FailReason a)) ->
-      Run (Either FailReason a)
-    withCheckUnits utxo txBody cont = do
+      Validate Alonzo.ExUnits
+    checkUnits utxo txBody = do
       slotCfg <- gets (mockConfigSlotConfig . mockConfig)
       let cardanoSystemStart = SystemStart $ posixSecondsToUTCTime $ fromInteger $ (`div` 1000) $ getPOSIXTime $ scSlotZeroTime slotCfg
           epochSize = EpochSize 1
@@ -616,6 +621,7 @@ checkSingleTx params (Tx extra tx) =
         foldErrors = lefts
         foldCost = foldMap snd . rights
 
+        evalAlonzo :: SystemStart -> EpochInfo (Either Text) -> Validate Alonzo.ExUnits
         evalAlonzo systemStart history = case evaluateTransactionExecutionUnits
           params
           txBody
@@ -623,14 +629,14 @@ checkSingleTx params (Tx extra tx) =
           history
           systemStart
           (toAlonzoCostModels $ getField @"_costmdls" params) of
-          Left err -> leftFail $ GenericFail $ show err
+          Left err -> throwError $ GenericFail $ show err
           Right res ->
             let res' = (\(k, v) -> fmap (k,) v) <$> M.toList res
                 errs = foldErrors res'
                 cost = foldCost res'
-             in case errs of
-                  [] -> cont cost
-                  _ -> leftFail $ GenericFail $ unlines $ fmap show errs
+             in if null errs
+                  then pure cost
+                  else throwError $ GenericFail $ unlines $ fmap show errs
 
         toAlonzoCostModels ::
           Alonzo.CostModels ->
@@ -642,22 +648,32 @@ checkSingleTx params (Tx extra tx) =
             | (lang, costmodel) <- Map.toList costmodels
             ]
 
-    withCheckTxLimits stat cont = do
+    checkTxLimits :: Stat -> Validate ()
+    checkTxLimits stat = do
       maxLimits <- gets (mockConfigLimitStats . mockConfig)
       checkLimits <- gets (mockConfigCheckLimits . mockConfig)
       let errs = compareLimits maxLimits stat
           statPercent = toStatPercent maxLimits stat
-      if null errs
-        then cont
-        else case checkLimits of
-          IgnoreLimits -> cont
-          WarnLimits -> logFail (TxLimitError errs statPercent) >> cont
-          ErrorLimits -> leftFail (TxLimitError errs statPercent)
+      unless
+        (null errs)
+        ( case checkLimits of
+            IgnoreLimits -> pure ()
+            WarnLimits -> throwError (TxLimitError errs statPercent)
+            ErrorLimits -> throwError (TxLimitError errs statPercent)
+        )
 
-leftFail :: FailReason -> Run (Either FailReason a)
-leftFail err = do
-  logFail err
-  pure $ Left err
+newtype Validate a = Validate {unValidate :: ExceptT FailReason Run a}
+  deriving newtype (Functor, Applicative, Monad, MonadState Mock)
+
+runValidate :: Validate a -> Run (Either FailReason a)
+runValidate = runExceptT . unValidate
+
+orFailValidate :: (e -> FailReason) -> Either e a -> Validate a
+orFailValidate err = either (throwError . err) pure
+
+instance MonadError FailReason Validate where
+  throwError err = Validate (lift $ logFail err) >> throwError err
+  catchError (Validate a) cont = Validate $ catchError a (unValidate . cont)
 
 compareLimits :: Stat -> Stat -> [LimitOverflow]
 compareLimits maxLimits stat =
@@ -674,11 +690,19 @@ compareLimits maxLimits stat =
         overflow = getter stat - getter maxLimits
 
 -- | Read UTxO relevant to transaction
-getUTxO :: (Class.IsCardanoTx era) => P.Tx -> Run (Maybe (Either String (Ledger.UTxO era)))
+getUTxO :: (Class.IsCardanoTx era) => P.Tx -> Validate (Ledger.UTxO era)
 getUTxO tx = do
   networkId <- mockConfigNetworkId <$> gets mockConfig
-  mOuts <- sequence <$> mapM (getTxOut . Plutus.txInRef) ins
-  pure $ fmap (Class.toUtxo localScriptMap networkId . zip ins) mOuts
+  mOuts <-
+    mapM
+      ( Validate
+          . ExceptT
+          . fmap (maybe (throwError FailToReadUtxo) pure)
+          . getTxOut
+          . Plutus.txInRef
+      )
+      ins
+  orFailValidate FailToCardano $ (Class.toUtxo localScriptMap networkId . zip ins) mOuts
   where
     ins =
       mconcat
@@ -691,11 +715,7 @@ getUTxO tx = do
 
 -- | Reads TxOut by its reference.
 getTxOut :: TxOutRef -> Run (Maybe TxOut)
-getTxOut ref = do
-  mTout <- M.lookup ref <$> gets mockUtxos
-  case mTout of
-    Just tout -> pure $ Just tout
-    Nothing -> M.lookup ref <$> gets mockRefScripts
+getTxOut ref = gets (M.lookup ref . mockUtxos)
 
 -- | Update slot counter by one.
 bumpSlot :: Run ()
@@ -748,11 +768,7 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
         addr = txOutAddress out
 
         insertAddresses = modify' $ \s -> s {mockAddresses = M.alter (Just . maybe (S.singleton ref) (S.insert ref)) addr $ mockAddresses s}
-        insertUtxos
-          | isRefScript = modify' $ \s -> s {mockRefScripts = M.singleton ref out <> mockRefScripts s}
-          | otherwise = modify' $ \s -> s {mockUtxos = M.singleton ref out <> mockUtxos s}
-
-        isRefScript = isJust (txOutReferenceScript out)
+        insertUtxos = modify' $ \s -> s {mockUtxos = M.singleton ref out <> mockUtxos s}
 
     updateRewards = mapM_ modifyWithdraw $ extra'withdraws extra
       where
@@ -772,15 +788,18 @@ txOutRefAt addr = txOutRefAtState addr <$> get
 
 -- | Read all TxOutRefs that belong to given address.
 txOutRefAtState :: Address -> Mock -> [TxOutRef]
-txOutRefAtState addr st = maybe [] S.toList . M.lookup addr $ mockAddresses st
+txOutRefAtState addr st = foldMap S.toList . M.lookup addr $ mockAddresses st
 
--- | Get all UTXOs that belong to an address (it does not include reference script UTXOs)
+{- | Get all UTXOs that belong to an address.
+
+Since 0.4 this includes UTxOs that have reference scripts.
+-}
 utxoAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
-utxoAt addr = utxoAtStateBy mockUtxos addr <$> get
+utxoAt addr = gets (utxoAtStateBy mockUtxos addr)
 
 -- | Get all reference script UTXOs that belong to an address
 refScriptAt :: HasAddress user => user -> Run [(TxOutRef, TxOut)]
-refScriptAt addr = utxoAtStateBy mockRefScripts addr <$> get
+refScriptAt addr = gets (utxoAtStateBy mockRefScripts addr)
 
 -- | Reads the first UTXO by address
 withFirstUtxo :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
@@ -790,15 +809,13 @@ withFirstUtxo = withUtxo (const True)
  certain UTXO in that list. It proceeds with continuation if UTXO is present
  and fails with @logError@ if there is no such UTXO.
 
- Note that it does not search among UTXOs that store scripts (used for reference scripts).
- It's done for convenience.
+Since 0.4 this includes UTxOs that have reference scripts.
 -}
 withUtxo :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
-withUtxo isUtxo user cont =
-  withMayBy readMsg (L.find isUtxo <$> utxoAt user) cont
+withUtxo isUtxo user = withMayBy readMsg (L.find isUtxo <$> utxoAt user)
   where
     readMsg = do
-      fmap (\name -> "No UTxO for: " <> name) $ getPrettyAddress user
+      ("No UTxO for: " <>) <$> getPrettyAddress user
 
 -- | Reads the first reference script UTXO by address
 withFirstRefScript :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
@@ -812,11 +829,11 @@ withFirstRefScript = withRefScript (const True)
  It's done for convenience.
 -}
 withRefScript :: HasAddress user => ((TxOutRef, TxOut) -> Bool) -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
-withRefScript isUtxo user cont =
-  withMayBy readMsg (L.find isUtxo <$> refScriptAt user) cont
+withRefScript isUtxo user =
+  withMayBy readMsg (L.find isUtxo <$> refScriptAt user)
   where
     readMsg = do
-      fmap (\name -> "No UTxO for: " <> name) $ getPrettyAddress user
+      ("No UTxO for: " <>) <$> getPrettyAddress user
 
 -- | Get all UTXOs that belong to an address
 utxoAtStateBy :: HasAddress user => (Mock -> Map TxOutRef TxOut) -> user -> Mock -> [(TxOutRef, TxOut)]
@@ -831,11 +848,11 @@ datumAt ref = do
   mdat <- getHashDatum ref
   case mdat of
     Just dat -> pure (Just dat)
-    Nothing -> fmap (getInlineDatum =<<) $ getTxOut ref
+    Nothing -> (getInlineDatum =<<) <$> getTxOut ref
 
 -- | Reads datum with continuation
 withDatum :: FromData a => TxOutRef -> (a -> Run ()) -> Run ()
-withDatum ref cont = withMay err (datumAt ref) cont
+withDatum ref = withMay err (datumAt ref)
   where
     err = "No datum for TxOutRef: " <> show ref
 
@@ -880,7 +897,7 @@ txOutDatumHash tout =
 
 -- | Reads current reward amount for a staking credential
 rewardAt :: HasStakingCredential cred => cred -> Run Integer
-rewardAt cred = gets (maybe 0 id . lookupReward (toStakingCredential cred) . mockStake)
+rewardAt cred = gets (fromMaybe 0 . lookupReward (toStakingCredential cred) . mockStake)
 
 -- | Returns all stakes delegatged to a pool
 stakesAt :: PoolId -> Run [StakingCredential]

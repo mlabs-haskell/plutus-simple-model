@@ -48,7 +48,7 @@ import Cardano.Crypto.Hash.Class qualified as Crypto
 import Cardano.Ledger.Alonzo.Data qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as C
 import Cardano.Ledger.Alonzo.TxInfo qualified as C
-import Cardano.Ledger.Alonzo.TxWits qualified as C
+import Cardano.Ledger.Alonzo.TxWitness qualified as C
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Era qualified as C
@@ -78,8 +78,8 @@ import Plutus.Model.Ada qualified as Ada
 import Plutus.Model.Fork.Ledger.Scripts qualified as C
 import Plutus.Model.Fork.Ledger.Slot qualified as P
 import Plutus.Model.Fork.Ledger.Tx qualified as Plutus
-import Plutus.Model.Fork.TxExtra qualified as P
 import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts qualified as P
+import Plutus.Model.Fork.TxExtra qualified as P
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 qualified as P
 import PlutusLedgerApi.V2.Tx qualified as P
@@ -109,8 +109,8 @@ getFee = toCoin . Plutus.txFee . P.tx'plutus
 getInterval :: P.Tx -> C.ValidityInterval
 getInterval = toInterval . Plutus.txValidRange . P.tx'plutus
 
-getMint :: P.Tx -> Either ToCardanoError (C.MultiAsset StandardCrypto)
-getMint = toMultiAsset . Plutus.txMint . P.tx'plutus
+getMint :: P.Tx -> Either ToCardanoError (C.MaryValue StandardCrypto)
+getMint = toValue . Plutus.txMint . P.tx'plutus
 
 getDCerts :: Network -> C.Coin -> C.Coin -> P.Tx -> Either ToCardanoError (Seq.StrictSeq (C.DCert StandardCrypto))
 getDCerts network poolDeposit minPoolCost =
@@ -148,21 +148,6 @@ toValue val = C.valueFromList totalAda <$> traverse fromValue vs
       where
         assetName = toAssetName tok
 
-toMultiAsset :: P.Value -> Either ToCardanoError (C.MultiAsset StandardCrypto)
-toMultiAsset val = C.multiAssetFromList <$> traverse fromValue vs
-  where
-    (_, vs) = foldForAda $ Value.flattenValue val
-
-    foldForAda = L.foldl' go (0, [])
-      where
-        go (ada, rest) coin@(cs, tok, amount)
-          | cs == Value.adaSymbol && tok == Value.adaToken = (ada + amount, rest)
-          | otherwise = (ada, coin : rest)
-
-    fromValue (cs, tok, amount) = (,assetName,amount) <$> toPolicyId cs
-      where
-        assetName = toAssetName tok
-
 fromCardanoValue :: C.MaryValue StandardCrypto -> P.Value
 fromCardanoValue = C.transValue
 
@@ -170,13 +155,17 @@ toAssetName :: P.TokenName -> C.AssetName
 toAssetName (P.TokenName bs) = C.AssetName $ toShort $ PlutusTx.fromBuiltin bs
 
 toPolicyId :: P.CurrencySymbol -> Either ToCardanoError (C.PolicyID StandardCrypto)
-toPolicyId (P.CurrencySymbol bs) = fmap C.PolicyID $ toScriptHash (P.ScriptHash bs)
+toPolicyId (P.CurrencySymbol bs) = C.PolicyID <$> toScriptHash (P.ScriptHash bs)
 
 toScriptHash :: P.ScriptHash -> Either ToCardanoError (C.ScriptHash StandardCrypto)
 toScriptHash (P.ScriptHash bs) =
   let bsx = PlutusTx.fromBuiltin bs
       tg = "toScriptHash (" <> show (BS.length bsx) <> " bytes)"
-   in tag tg $ maybe (Left "Failed to get Script hash") Right $ C.ScriptHash <$> Crypto.hashFromBytes bsx
+   in tag tg $
+        maybe
+          (Left "Failed to get Script hash")
+          (Right . C.ScriptHash)
+          (Crypto.hashFromBytes bsx)
 
 tag :: String -> Either ToCardanoError t -> Either ToCardanoError t
 tag s = first (\x -> "tag " <> s <> " :" <> x)
@@ -216,7 +205,11 @@ toTxId :: P.TxId -> Either ToCardanoError (C.TxId StandardCrypto)
 toTxId (P.TxId bs) =
   let bsx = PlutusTx.fromBuiltin bs
       tg = "toTxIdHash (" <> show (BS.length bsx) <> " bytes)"
-   in tag tg $ maybe (Left "Failed to get TxId Hash") Right $ C.TxId . unsafeMakeSafeHash <$> Crypto.hashFromBytes bsx
+   in tag tg $
+        maybe
+          (Left "Failed to get TxId Hash")
+          (Right . C.TxId . unsafeMakeSafeHash)
+          (Crypto.hashFromBytes bsx)
 
 toVrf :: P.PubKeyHash -> Either ToCardanoError (Shelley.Hash StandardCrypto (C.VerKeyVRF StandardCrypto))
 toVrf (P.PubKeyHash bs) =
@@ -228,7 +221,11 @@ toPubKeyHash :: P.PubKeyHash -> Either ToCardanoError (C.KeyHash kr StandardCryp
 toPubKeyHash (P.PubKeyHash bs) =
   let bsx = PlutusTx.fromBuiltin bs
       tg = "toPubKeyHash (" <> show (BS.length bsx) <> " bytes)"
-   in tag tg $ maybe (Left "Failed to get Hash") Right $ C.KeyHash <$> Crypto.hashFromBytes bsx
+   in tag tg $
+        maybe
+          (Left "Failed to get Hash")
+          (Right . C.KeyHash)
+          (Crypto.hashFromBytes bsx)
 
 toCredential :: P.Credential -> Either ToCardanoError (C.Credential a StandardCrypto)
 toCredential = \case
@@ -262,7 +259,11 @@ toDataHash :: P.DatumHash -> Either ToCardanoError (C.DataHash StandardCrypto)
 toDataHash (P.DatumHash bs) =
   let bsx = PlutusTx.fromBuiltin bs
       tg = "toDatumHash (" <> show (BS.length bsx) <> " bytes)"
-   in tag tg $ maybe (Left "Failed to get TxId Hash") Right $ unsafeMakeSafeHash <$> Crypto.hashFromBytes bsx
+   in tag tg $
+        maybe
+          (Left "Failed to get TxId Hash")
+          (Right . unsafeMakeSafeHash)
+          (Crypto.hashFromBytes bsx)
 
 toStrictMaybe :: Maybe a -> C.StrictMaybe a
 toStrictMaybe = maybe C.SNothing C.SJust
@@ -284,10 +285,10 @@ toKeyWitness ::
 toKeyWitness txBodyHash tx =
   Set.fromList $ fmap (C.makeWitnessVKey txBodyHash) $ Map.elems $ Plutus.txSignatures $ P.tx'plutus tx
 
-toDatumWitness :: (C.Era era, C.EraCrypto era ~ StandardCrypto) => P.Tx -> Either ToCardanoError (C.TxDats era)
+toDatumWitness :: (C.Era era, C.Crypto era ~ StandardCrypto) => P.Tx -> Either ToCardanoError (C.TxDats era)
 toDatumWitness tx = do
-  datumWits1 <- fmap Map.fromList $ mapM (\d -> (,toDatum d) <$> (toDataHash $ C.datumHash d)) validatorDatums1
-  datumWits2 <- fmap Map.fromList $ mapM (\(dh, d) -> (,toDatum d) <$> toDataHash dh) validatorDatums2
+  datumWits1 <- Map.fromList <$> mapM (\d -> (,toDatum d) <$> toDataHash (C.datumHash d)) validatorDatums1
+  datumWits2 <- Map.fromList <$> mapM (\(dh, d) -> (,toDatum d) <$> toDataHash dh) validatorDatums2
   pure $ C.TxDats $ datumWits1 <> datumWits2
   where
     validatorDatums1 = fmap (\(_, _, datum) -> datum) validatorInfo
@@ -333,7 +334,7 @@ toRedeemerWitness tx =
     certRedeemers = redeemersBy C.Cert (fmap P.certificate'script . P.extra'certificates)
     withdrawRedeemers = redeemersBy C.Rewrd (fmap P.withdraw'script . P.extra'withdraws)
 
-    redeemersBy :: (C.Era era) => C.Tag -> (P.Extra -> [Maybe (P.Redeemer, a)]) -> Map.Map C.RdmrPtr (C.Data era, C.ExUnits)
+    redeemersBy :: C.Tag -> (P.Extra -> [Maybe (P.Redeemer, a)]) -> Map.Map C.RdmrPtr (C.Data era, C.ExUnits)
     redeemersBy scriptTag extract =
       Map.fromList $
         mapMaybe toWithdraw $
@@ -347,11 +348,11 @@ toRedeemerWitness tx =
     addDefaultExUnits rdm = (rdm, C.ExUnits 1 1)
 
 toScriptWitness ::
-  (C.EraCrypto era ~ StandardCrypto) =>
+  (C.Crypto era ~ StandardCrypto) =>
   P.Tx ->
-  Either ToCardanoError (Map (C.ScriptHash (C.EraCrypto era)) (C.AlonzoScript era))
+  Either ToCardanoError (Map (C.ScriptHash (C.Crypto era)) (C.AlonzoScript era))
 toScriptWitness tx =
-  fmap Map.fromList $ mapM (\s -> (,C.toScript s) <$> toScriptHash (C.validatorHash (fmap P.Validator s))) allScripts
+  Map.fromList <$> mapM (\s -> (,C.toScript s) <$> toScriptHash (C.validatorHash (fmap P.Validator s))) allScripts
   where
     allScripts = mints <> withdraws <> validators <> certificates
       where
@@ -362,8 +363,8 @@ toScriptWitness tx =
 
     validatorInfo = mapMaybe (fromInType <=< Plutus.txInType) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
 
-toDatum :: (C.Era era) => P.Datum -> C.Data era
+toDatum :: P.Datum -> C.Data era
 toDatum (P.Datum (P.BuiltinData d)) = C.Data d
 
-toRedeemer :: (C.Era era) => P.Redeemer -> C.Data era
+toRedeemer :: P.Redeemer -> C.Data era
 toRedeemer (P.Redeemer (P.BuiltinData d)) = C.Data d

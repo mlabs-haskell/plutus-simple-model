@@ -2222,11 +2222,11 @@
         "plutus": "plutus"
       },
       "locked": {
-        "lastModified": 1670933510,
+        "lastModified": 1670944188,
         "narHash": "sha256-1xv0YUvsAEzPylUrKx/KI/SOgNWWOzV3YZbpd7WKydg=",
         "owner": "AriFordsham",
         "repo": "mlabs-tooling.nix",
-        "rev": "ca2d7329b83c08a39fc46d99a2345dd33571a1eb",
+        "rev": "b7354c02a719d44c62a8651553bb06b98cdcaf1d",
         "type": "github"
       },
       "original": {

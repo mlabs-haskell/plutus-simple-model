@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
+
 -- | Can use fake coins
 module Suites.Plutus.Model.FakeCoin (
   tests,

@@ -21,7 +21,7 @@ tests cfg =
     , good "Bet without ref input" betWithoutRefInput
     ]
   where
-    good msg act = testNoErrors (adaValue 10_000_000) cfg msg act
+    good = testNoErrors (adaValue 10_000_000) cfg
 
 -- | Happy path. Two players guess and one of the wins.
 playBet :: Run ()
@@ -56,7 +56,7 @@ betWithoutRefInput = do
 -- API
 
 -- | App holds the scripts of the test suite
-data App = App
+newtype App = App
   { app'betScript :: Bet
   }
 
@@ -117,7 +117,7 @@ postAnswer oraclePkh answer = do
       ]
 
 -- | Parameters of malicious behavior
-data Fraud = Fraud
+newtype Fraud = Fraud
   { fraud'refInput :: Tx -> Tx
   -- ^ tamper refInput part of TX
   }
