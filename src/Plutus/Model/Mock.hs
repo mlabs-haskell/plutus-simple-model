@@ -153,7 +153,6 @@ import Cardano.Crypto.Hash.Class qualified as C
 import Cardano.Crypto.Seed qualified as C
 import Cardano.Ledger.Alonzo.Tx qualified as C
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO)
-import Cardano.Ledger.Alonzo.UTxO qualified as C
 import Cardano.Ledger.Core qualified as Core
 import Cardano.Ledger.Crypto qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as C
@@ -188,6 +187,7 @@ import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Block qualified as Ledger
 import Cardano.Ledger.Mary.Value qualified as Mary
 import Cardano.Ledger.Shelley.API.Wallet (evaluateTransactionBalance)
+import Cardano.Ledger.Shelley.API.Wallet qualified as C
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.TxIn qualified as Ledger
 import Control.Monad.Except (ExceptT (ExceptT), MonadError (catchError, throwError), liftEither, runExceptT)
@@ -521,17 +521,14 @@ sendSingleTx preTx =
 checkSingleTx ::
   forall era.
   ( ExtendedUTxO era
-  , C.AlonzoEraTx era
   , HasField "_costmdls" (Core.PParams era) Alonzo.CostModels
   , HasField "_maxTxExUnits" (Core.PParams era) Alonzo.ExUnits
   , HasField "_protocolVersion" (Core.PParams era) C.ProtVer
   , Core.Script era ~ Alonzo.AlonzoScript era
-  , Ledger.EraUTxO era
-  , Ledger.ScriptsNeeded era ~ C.AlonzoScriptsNeeded era
-  , HasField "_poolDeposit" (Core.PParams era) C.Coin
-  , HasField "_keyDeposit" (Core.PParams era) C.Coin
   , Class.IsCardanoTx era
   , Core.Value era ~ Mary.MaryValue C.StandardCrypto
+  , C.CLI era
+  , C.AlonzoEraTx era
   ) =>
   Core.PParams era ->
   Tx ->
