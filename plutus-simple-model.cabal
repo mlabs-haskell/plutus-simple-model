@@ -59,7 +59,8 @@ common lang
 
   ghc-options:
     -Wall -Wcompat -Wredundant-constraints -Wmissing-export-lists
-    -Werror -Wincomplete-record-updates
+    -Werror -Wincomplete-record-updates -fobject-code
+    -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
 
 common deps
   build-depends:
@@ -92,6 +93,7 @@ common deps
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
+    , plutus-tx-plugin
     , prettyprinter
     , serialise
     , tagged
@@ -153,8 +155,7 @@ library
   other-modules:   Paths_plutus_simple_model
   hs-source-dirs:  src
 
--- Disable until tests arnix e built
-executable plutus-simple-model-test
+test-suite plutus-simple-model-test
   import:         lang
   import:         deps
   import:         test-deps

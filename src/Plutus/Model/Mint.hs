@@ -10,7 +10,9 @@ import Plutus.Model.Fork.Ledger.Scripts
 import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
 
 import PlutusLedgerApi.V1
+import PlutusLedgerApi.V1.Contexts
 import PlutusLedgerApi.V1.Value
+import PlutusTx qualified
 import PlutusTx.Prelude
 
 newtype FakeCoin = FakeCoin {fakeCoin'tag :: BuiltinByteString}
@@ -26,19 +28,17 @@ fakeCoin (FakeCoin tag) = assetClass sym tok
     tok = TokenName tag
 
 fakeMintingPolicy :: BuiltinByteString -> MintingPolicy
-fakeMintingPolicy _mintParams = error ()
+fakeMintingPolicy mintParams =
+  mkMintingPolicyScript $
+    $$( PlutusTx.compile
+          [||
+          \params redeemer ctx ->
+            check (fakeMintingPolicyContract params (unsafeFromBuiltinData redeemer) (unsafeFromBuiltinData ctx))
+          ||]
+      )
+      `PlutusTx.applyCode` PlutusTx.liftCode (TokenName mintParams)
 
--- mkMintingPolicyScript $
--- \$$( PlutusTx.compile
---       [||
---       \params redeemer ctx ->
---         PlutusTx.check (fakeMintingPolicyContract params (unsafeFromBuiltinData redeemer) (unsafeFromBuiltinData ctx))
---       ||]
---   )
---   `PlutusTx.applyCode` PlutusTx.liftCode (TokenName mintParams)
-
-{- | Can mint new coins if token name equals to fixed tag.
- fakeMintingPolicyContract :: TokenName -> () -> ScriptContext -> Bool
- fakeMintingPolicyContract tag _ ctx =
-   valueOf (txInfoMint (scriptContextTxInfo ctx)) (ownCurrencySymbol ctx) tag > 0
--}
+-- | Can mint new coins if token name equals to fixed tag.
+fakeMintingPolicyContract :: TokenName -> () -> ScriptContext -> Bool
+fakeMintingPolicyContract tag _ ctx =
+  valueOf (txInfoMint (scriptContextTxInfo ctx)) (ownCurrencySymbol ctx) tag > 0
