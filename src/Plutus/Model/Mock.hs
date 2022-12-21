@@ -672,7 +672,7 @@ orFailValidate :: (e -> FailReason) -> Either e a -> Validate a
 orFailValidate err = either (throwError . err) pure
 
 instance MonadError FailReason Validate where
-  throwError err = Validate (lift $ logFail err) >> throwError err
+  throwError err = Validate $ lift (logFail err) >> throwError err
   catchError (Validate a) cont = Validate $ catchError a (unValidate . cont)
 
 compareLimits :: Stat -> Stat -> [LimitOverflow]
