@@ -371,8 +371,8 @@ payToScript script dat val = toExtra $
 -- | Pay to the script untyped.
 -- The a type parameter represents the contents of the datum.
 -- Example for datum: `()` and not `Datum $ toBuiltinDatum ()`.
-payToScriptUntyped :: ToData a =>
-  UntypedValidator -> DatumMode a -> Value -> Tx
+payToScriptUntyped :: (ToData a, HasAddress script) =>
+  script -> DatumMode a -> Value -> Tx
 payToScriptUntyped script dat val = toExtra $
   mempty
     { P.txOutputs = [TxOut (toAddress script) val outDatum Nothing]
