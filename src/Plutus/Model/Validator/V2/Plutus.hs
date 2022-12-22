@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-unused-imports #-}
-
 -- | Utility functions for Plutus V2 scripts
 module Plutus.Model.Validator.V2.Plutus (
   datumOf,
