@@ -114,6 +114,16 @@ library
     Plutus.Model
     Plutus.Model.Ada
     Plutus.Model.Contract
+    Plutus.Model.Fork.Cardano.Alonzo
+    Plutus.Model.Fork.Cardano.Babbage
+    Plutus.Model.Fork.Cardano.Class
+    Plutus.Model.Fork.Cardano.Common
+    Plutus.Model.Fork.Ledger.Scripts
+    Plutus.Model.Fork.Ledger.Slot
+    Plutus.Model.Fork.Ledger.TimeSlot
+    Plutus.Model.Fork.Ledger.Tx
+    Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
+    Plutus.Model.Fork.TxExtra
     Plutus.Model.Mint
     Plutus.Model.Mock
     Plutus.Model.Mock.Address
@@ -125,7 +135,6 @@ library
     Plutus.Model.Mock.Stat
     Plutus.Model.Pretty
     Plutus.Model.Stake
-    Plutus.Model.Tx
     Plutus.Model.V1
     Plutus.Model.V2
     Plutus.Model.Validator
@@ -133,18 +142,6 @@ library
     Plutus.Model.Validator.V1.Plutus
     Plutus.Model.Validator.V2
     Plutus.Model.Validator.V2.Plutus
-
-  other-modules:
-    Plutus.Model.Fork.Cardano.Alonzo
-    Plutus.Model.Fork.Cardano.Babbage
-    Plutus.Model.Fork.Cardano.Class
-    Plutus.Model.Fork.Cardano.Common
-    Plutus.Model.Fork.Ledger.Scripts
-    Plutus.Model.Fork.Ledger.Slot
-    Plutus.Model.Fork.Ledger.TimeSlot
-    Plutus.Model.Fork.Ledger.Tx
-    Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
-    Plutus.Model.Fork.TxExtra
 
   build-depends:
     , tasty
