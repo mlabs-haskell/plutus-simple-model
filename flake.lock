@@ -2222,11 +2222,11 @@
         "plutus": "plutus"
       },
       "locked": {
-        "lastModified": 1671369511,
-        "narHash": "sha256-dVGnelQhOXn4ZyswerDjHdipEIxXtVmzi1/20V1vJfI=",
+        "lastModified": 1671582351,
+        "narHash": "sha256-SrNXbfheBuXTW8brxg//fHSbV249UlpWTQAg+3UPAHk=",
         "owner": "mlabs-haskell",
         "repo": "mlabs-tooling.nix",
-        "rev": "e459af28efdfa7fb12552b123dd033778d0f85af",
+        "rev": "2376c911c6f8b6dcf46f479afddd671b3d37de78",
         "type": "github"
       },
       "original": {
