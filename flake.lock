@@ -2222,16 +2222,15 @@
         "plutus": "plutus"
       },
       "locked": {
-        "lastModified": 1670944188,
-        "narHash": "sha256-1xv0YUvsAEzPylUrKx/KI/SOgNWWOzV3YZbpd7WKydg=",
-        "owner": "AriFordsham",
+        "lastModified": 1671582351,
+        "narHash": "sha256-SrNXbfheBuXTW8brxg//fHSbV249UlpWTQAg+3UPAHk=",
+        "owner": "mlabs-haskell",
         "repo": "mlabs-tooling.nix",
-        "rev": "b7354c02a719d44c62a8651553bb06b98cdcaf1d",
+        "rev": "2376c911c6f8b6dcf46f479afddd671b3d37de78",
         "type": "github"
       },
       "original": {
-        "owner": "AriFordsham",
-        "ref": "ari/new-hackage",
+        "owner": "mlabs-haskell",
         "repo": "mlabs-tooling.nix",
         "type": "github"
       }
