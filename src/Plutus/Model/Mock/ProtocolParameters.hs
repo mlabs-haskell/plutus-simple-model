@@ -1,9 +1,11 @@
 module Plutus.Model.Mock.ProtocolParameters (
   PParams (..),
   readAlonzoParams,
-  -- readBabbageParams,
+  readBabbageParams,
   defaultAlonzoParams,
   defaultBabbageParams,
+  customAlonzoParams,
+  customBabbageParams,
 ) where
 
 import Prelude
@@ -33,9 +35,29 @@ data PParams
   | -- | babbage era protocol parameters
     BabbageParams (Babbage.BabbagePParams (BabbageEra StandardCrypto))
 
+-- | Mutate the default params
+customAlonzoParams ::
+  ( Alonzo.AlonzoPParams (AlonzoEra StandardCrypto) ->
+    Alonzo.AlonzoPParams (AlonzoEra StandardCrypto)
+  ) ->
+  PParams
+customAlonzoParams f = AlonzoParams (f defaultAlonzoParams')
+
+-- | Mutate the default params
+customBabbageParams ::
+  ( Babbage.BabbagePParams (BabbageEra StandardCrypto) ->
+    Babbage.BabbagePParams (BabbageEra StandardCrypto)
+  ) ->
+  PParams
+customBabbageParams f = BabbageParams (f defaultBabbageParams')
+
 -- | Reads protocol parameters from file.
 readAlonzoParams :: FilePath -> IO PParams
 readAlonzoParams = fmap AlonzoParams . readJson
+
+-- | Reads protocol parameters from file.
+readBabbageParams :: FilePath -> IO PParams
+readBabbageParams = fmap (BabbageParams . B.translatePParams) . readJson
 
 readJson :: (FromJSON a) => FilePath -> IO a
 readJson = fmap fromJust . decodeFileStrict'
@@ -85,6 +107,9 @@ defaultAlonzoParams' =
     , Alonzo._maxCollateralInputs = 3
     }
 
+defaultBabbageParams' :: Babbage.BabbagePParams (BabbageEra StandardCrypto)
+defaultBabbageParams' = B.translatePParams defaultAlonzoParams'
+
 defaultCostModels :: Alonzo.CostModels
 defaultCostModels =
   Alonzo.CostModels $
@@ -98,4 +123,4 @@ defaultCostModels =
 
 -- | Default Babbage era parameters
 defaultBabbageParams :: PParams
-defaultBabbageParams = BabbageParams $ B.translatePParams defaultAlonzoParams'
+defaultBabbageParams = BabbageParams defaultBabbageParams'
