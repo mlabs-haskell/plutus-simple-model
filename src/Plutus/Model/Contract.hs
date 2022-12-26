@@ -1,5 +1,4 @@
 {-# LANGUAGE UndecidableInstances #-}
-{-# OPTIONS_GHC -Wno-redundant-constraints #-}
 
 -- | Functions to create TXs and query blockchain model.
 module Plutus.Model.Contract (
@@ -271,7 +270,7 @@ getHeadRef :: UserSpend -> TxOutRef
 getHeadRef UserSpend {..} = Fork.txInRef $ S.elemAt 0 userSpend'inputs
 
 -- | Variant of spend' that fails in run-time if there are not enough funds to spend.
-spend :: (HasCallStack) => PubKeyHash -> Value -> Run UserSpend
+spend :: PubKeyHash -> Value -> Run UserSpend
 spend pkh val = do
   mSp <- spend' pkh val
   pure $ fromJust mSp
