@@ -13,7 +13,7 @@ import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo.PParams qualified as C
 import Cardano.Ledger.Alonzo.Tx qualified as C
 import Cardano.Ledger.Alonzo.TxBody qualified as C
-import Cardano.Ledger.Alonzo.TxWits qualified as C
+import Cardano.Ledger.Alonzo.TxWitness qualified as C
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CompactAddress qualified as C
 import Cardano.Ledger.Compactible qualified as C
@@ -146,10 +146,10 @@ toAlonzoTx network params tx = do
         . Plutus.txOutputs
         . P.tx'plutus
 
-toWits :: SafeHash StandardCrypto C.EraIndependentTxBody -> P.Tx -> Either ToCardanoError (C.AlonzoTxWits Era)
+toWits :: SafeHash StandardCrypto C.EraIndependentTxBody -> P.Tx -> Either ToCardanoError (C.TxWitness Era)
 toWits txBodyHash tx = do
   let bootstrapWits = mempty
   datumWits <- toDatumWitness tx
   let redeemerWits = toRedeemerWitness tx
   scriptWits <- toScriptWitness tx
-  pure $ C.AlonzoTxWits (toKeyWitness txBodyHash tx) bootstrapWits scriptWits datumWits redeemerWits
+  pure $ C.TxWitness (toKeyWitness txBodyHash tx) bootstrapWits scriptWits datumWits redeemerWits

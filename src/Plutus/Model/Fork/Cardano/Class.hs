@@ -19,7 +19,7 @@ import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts qualified as P
 import Plutus.Model.Fork.TxExtra qualified as P
 import PlutusLedgerApi.V2 qualified as P
 
-class (C.EraCrypto era ~ StandardCrypto) => IsCardanoTx era where
+class (C.Crypto era ~ StandardCrypto) => IsCardanoTx era where
   toCardanoTx ::
     Map P.ScriptHash (C.Versioned P.Script) ->
     Network ->

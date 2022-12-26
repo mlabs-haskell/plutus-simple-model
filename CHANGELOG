@@ -13,6 +13,13 @@ and this project adheres to the [Haskell Package Versioning Policy](https://pvp.
 
 - A `HasCallStack` constraint has been added to `spend`.
 
+## [0.4.1.0] - 2022-12-13
+
+### Fixed
+
+- A bug which caused the blockchain to go into an infinite loop upon thowing an
+  error
+
 ## [0.4.0.0] - 2022-12-13
 
 ### Changed

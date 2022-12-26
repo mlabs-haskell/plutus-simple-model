@@ -12,7 +12,7 @@ import Data.Sequence.Strict qualified as Seq
 import Prelude
 
 import Cardano.Ledger.Alonzo.Data qualified as C
-import Cardano.Ledger.Alonzo.TxWits qualified as C
+import Cardano.Ledger.Alonzo.TxWitness qualified as C
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams qualified as C
 import Cardano.Ledger.Babbage.Tx qualified as C
@@ -20,7 +20,6 @@ import Cardano.Ledger.Babbage.TxBody qualified as C
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CompactAddress qualified as C
 import Cardano.Ledger.Compactible qualified as C
-import Cardano.Ledger.Core qualified as C (TxWits (..))
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Hashes qualified as C
 import Cardano.Ledger.SafeHash
@@ -203,10 +202,10 @@ toOutputDatum = \case
 toDatum :: P.Datum -> C.Data Era
 toDatum (P.Datum (P.BuiltinData d)) = C.Data d
 
-toWits :: SafeHash StandardCrypto C.EraIndependentTxBody -> P.Tx -> Either ToCardanoError (C.TxWits Era)
+toWits :: SafeHash StandardCrypto C.EraIndependentTxBody -> P.Tx -> Either ToCardanoError (C.TxWitness Era)
 toWits txBodyHash tx = do
   let bootstrapWits = mempty
   datumWits <- toDatumWitness tx
   let redeemerWits = toRedeemerWitness tx
   scriptWits <- toScriptWitness tx
-  pure $ C.AlonzoTxWits (toKeyWitness txBodyHash tx) bootstrapWits scriptWits datumWits redeemerWits
+  pure $ C.TxWitness (toKeyWitness txBodyHash tx) bootstrapWits scriptWits datumWits redeemerWits
