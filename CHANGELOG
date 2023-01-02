@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to the [Haskell Package Versioning Policy](https://pvp.haskell.org/).
 
-## [0.4.2.0] - 2022-12-13
+## [0.5.1.0] - 2023-01-02
 
 ### Added
 
@@ -19,6 +19,13 @@ and this project adheres to the [Haskell Package Versioning Policy](https://pvp.
   upgrade work.
 
 - `Mint.fakeMintingPolicy` now works instead of erroring.
+## [0.5.0.0] - 2022-12-18
+
+### Changed
+
+- `Contract.spend'`,`Contract.sendValue`, `Contract.withSpend`, `Contract.spend` wil now not spend UTxOs that have a datum.
+
+- A `HasCallStack` constraint has been added to `spend`.
 
 ## [0.4.1.0] - 2022-12-13
 

@@ -281,6 +281,8 @@ Does not submit the transaction, or mark UTxOs as spent.
 
 Will not spend value from a UTxO if it contains a reference script, so as not to
   make the script unreferencable.
+
+  Since 0.5, It will also not spend outputs that hold datums.
 -}
 spend' :: PubKeyHash -> Value -> Run (Maybe UserSpend)
 spend' pkh expected = do
@@ -288,7 +290,11 @@ spend' pkh expected = do
   mUtxos <-
     gets
       ( (\m -> mapM (\r -> (r,) <$> M.lookup r m) refs)
-          . M.filter (isNothing . txOutReferenceScript)
+          . M.filter
+            ( \txo ->
+                isNothing (txOutReferenceScript txo)
+                  && (== NoOutputDatum) (txOutDatum txo)
+            )
           . mockUtxos
       )
   case mUtxos of
