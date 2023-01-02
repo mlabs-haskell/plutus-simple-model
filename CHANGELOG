@@ -7,13 +7,18 @@ and this project adheres to the [Haskell Package Versioning Policy](https://pvp.
 
 ## [0.5.2.0] - 2023-01-02
 
+
 ### Added
+
+
 - `Plutus.Model.Validator.V1.mkTypedValidatorPlutarch`
   `Plutus.Model.Validator.V2.mkTypedValidatorPlutarch`
   `Plutus.Model.Validator.V1.mkTypedPolicyPlutarch`
   `Plutus.Model.Validator.V2.mkTypedPolicyPlutarch`
   `Plutus.Model.Validator.V1.mkStakePlutarch`
   `Plutus.Model.Validator.V2.mkStakePlutarch`
+
+These functions turn plutarch terms into the native validator types to make testing plutarch with PSM easier/possible.
 
 ## [0.5.1.0] - 2023-01-02
 
