@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to the [Haskell Package Versioning Policy](https://pvp.haskell.org/).
 
+## [0.5.2.0] - 2023-01-02
+
+### Added
+- `Plutus.Model.Validator.V1.mkTypedValidatorPlutarch`
+  `Plutus.Model.Validator.V2.mkTypedValidatorPlutarch`
+  `Plutus.Model.Validator.V1.mkTypedPolicyPlutarch`
+  `Plutus.Model.Validator.V2.mkTypedPolicyPlutarch`
+  `Plutus.Model.Validator.V1.mkStakePlutarch`
+  `Plutus.Model.Validator.V2.mkStakePlutarch`
+
 ## [0.5.1.0] - 2023-01-02
 
 ### Added
