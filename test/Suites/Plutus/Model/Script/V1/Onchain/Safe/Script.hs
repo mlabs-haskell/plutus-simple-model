@@ -4,19 +4,19 @@ module Suites.Plutus.Model.Script.V1.Onchain.Safe.Script (
   safeScript,
 ) where
 
-import Plutus.Model.V1 (TypedValidator) -- , mkTypedValidator, toBuiltinValidator)
--- import PlutusTx qualified
+import Plutus.Model.V1 (TypedValidator, mkTypedValidator, toBuiltinValidator)
+import PlutusTx qualified
 
-import PlutusTx.Builtins (error)
 import Suites.Plutus.Model.Script.V1.Onchain.Safe
 
 type Safe = TypedValidator SafeDatum SafeAct
 
+{- HLINT ignore safeScript "Avoid lambda" -}
+
 -- | The TypedValidator for Safe contract
 safeScript :: SafeParams -> Safe
-safeScript _params = error ()
-
--- mkTypedValidator
---   ( $$(PlutusTx.compile [||\ps -> toBuiltinValidator (safeContract ps)||])
---       `PlutusTx.applyCode` PlutusTx.liftCode params
---   )
+safeScript params =
+  mkTypedValidator
+    ( $$(PlutusTx.compile [||\ps -> toBuiltinValidator (safeContract ps)||])
+        `PlutusTx.applyCode` PlutusTx.liftCode params
+    )

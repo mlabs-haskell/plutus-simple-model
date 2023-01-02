@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-simple-model
-version:            0.5.0.0
+version:            0.5.1.0
 synopsis:           Unit test library for plutus
 description:        Unit test library for plutus with resource estimation
 homepage:           https://github.com/mlabs-haskell/plutus-simple-model
@@ -59,7 +59,9 @@ common lang
 
   ghc-options:
     -Wall -Wcompat -Wredundant-constraints -Wmissing-export-lists
-    -Werror -Wincomplete-record-updates
+    -Werror -Wincomplete-record-updates -fobject-code
+    -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
+    -fobject-code -fno-specialise
 
 common deps
   build-depends:
@@ -92,6 +94,7 @@ common deps
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
+    , plutus-tx-plugin
     , prettyprinter
     , serialise
     , tagged
@@ -153,8 +156,7 @@ library
   other-modules:   Paths_plutus_simple_model
   hs-source-dirs:  src
 
--- Disable until tests arnix e built
-executable plutus-simple-model-test
+test-suite plutus-simple-model-test
   import:         lang
   import:         deps
   import:         test-deps

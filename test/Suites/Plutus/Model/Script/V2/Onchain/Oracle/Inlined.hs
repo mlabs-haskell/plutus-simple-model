@@ -4,21 +4,21 @@ module Suites.Plutus.Model.Script.V2.Onchain.Oracle.Inlined (
   betScript,
 ) where
 
-import Plutus.Model.V2 (TypedValidator) -- , inlinedDatum, mkTypedValidator, toBuiltinValidator)
--- import PlutusTx qualified
--- import PlutusTx.Prelude (const)
+import Plutus.Model.V2 (TypedValidator, inlinedDatum, mkTypedValidator, toBuiltinValidator)
+import PlutusTx qualified
+import PlutusTx.Prelude (const)
 
 import Suites.Plutus.Model.Script.V2.Onchain.Oracle
 
--- import Prelude (($))
-import PlutusTx.Builtins (error)
+import Prelude (($))
 
 type Bet = TypedValidator BetDatum BetAct
 
+{- HLINT ignore betScript "Avoid lambda" -}
+
 -- | The TypedValidator for Bet on Oracle answer contract
 betScript :: BetParams -> Bet
-betScript _betParams = error ()
-
--- mkTypedValidator $
---   $$(PlutusTx.compile [||\param -> toBuiltinValidator (betContract (const inlinedDatum) param)||])
---     `PlutusTx.applyCode` PlutusTx.liftCode betParams
+betScript betParams =
+  mkTypedValidator $
+    $$(PlutusTx.compile [||\param -> toBuiltinValidator (betContract (const inlinedDatum) param)||])
+      `PlutusTx.applyCode` PlutusTx.liftCode betParams

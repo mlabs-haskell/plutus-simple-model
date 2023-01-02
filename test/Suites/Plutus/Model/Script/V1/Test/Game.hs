@@ -4,6 +4,7 @@ module Suites.Plutus.Model.Script.V1.Test.Game (
   tests,
   initGuessGame,
   makeGuessGame,
+  badGuessGame,
 ) where
 
 import Control.Monad (unless)
