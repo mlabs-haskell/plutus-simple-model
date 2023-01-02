@@ -91,6 +91,7 @@ common deps
     , http-api-data
     , memory
     , mtl
+    , plutarch
     , plutus-core
     , plutus-ledger-api
     , plutus-tx

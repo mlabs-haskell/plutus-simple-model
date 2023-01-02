@@ -11,13 +11,18 @@
 
   inputs = {
     tooling.url = "github:mlabs-haskell/mlabs-tooling.nix";
+    plutarch.url = "github:plutonomicon/plutarch-plutus";
   };
 
-  outputs = inputs@{ self, tooling, ... }: tooling.lib.mkFlake { inherit self; }
+  outputs = inputs@{ self, tooling, plutarch, ... }: tooling.lib.mkFlake { inherit self; }
     {
       imports = [
         (tooling.lib.mkHaskellFlakeModule1 {
           project.src = ./.;
+          project.extraHackage = [
+            "${plutarch}"
+          ];
+
         })
       ];
     };

@@ -3,6 +3,9 @@ module Plutus.Model.Validator.V2 (
   mkTypedValidator,
   mkTypedPolicy,
   mkTypedStake,
+  mkTypedValidatorPlutarch,
+  mkTypedPolicyPlutarch,
+  mkTypedStakePlutarch,
   toBuiltinValidator,
   toBuiltinPolicy,
   toBuiltinStake,
@@ -17,6 +20,10 @@ import Plutus.Model.Fork.Ledger.Scripts (toV2)
 import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
 import Plutus.Model.Validator (TypedPolicy (..), TypedStake (..), TypedValidator (..))
 
+import Data.Text (Text)
+import Plutarch (ClosedTerm, Config)
+import Prelude (Either, (<$>))
+
 -- | Create Plutus V2 typed validator
 mkTypedValidator :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> TypedValidator datum redeemer
 mkTypedValidator = TypedValidator . toV2 . mkValidatorScript
@@ -28,6 +35,18 @@ mkTypedPolicy = TypedPolicy . toV2 . mkMintingPolicyScript
 -- | Create Plutus V2 typed stake validator
 mkTypedStake :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedStake redeemer
 mkTypedStake = TypedStake . toV2 . mkStakeValidatorScript
+
+-- | Create Plutus V2 typed validator from a plutarch term
+mkTypedValidatorPlutarch :: Config -> ClosedTerm p -> Either Text (TypedValidator datum redeemer)
+mkTypedValidatorPlutarch conf term = TypedValidator . toV2 <$> mkValidatorScriptPlutarch conf term
+
+-- | Create Plutus V2 typed minting policy from a plutarch term
+mkTypedPolicyPlutarch :: Config -> ClosedTerm p -> Either Text (TypedPolicy redeemer)
+mkTypedPolicyPlutarch conf term = TypedPolicy . toV2 <$> mkMintingPolicyScriptPlutarch conf term
+
+-- | Create Plutus V2 typed stake validator from a plutarch term
+mkTypedStakePlutarch :: Config -> ClosedTerm p -> Either Text (TypedStake redeemer)
+mkTypedStakePlutarch conf term = TypedStake . toV2 <$> mkStakeValidatorScriptPlutarch conf term
 
 -- | Coverts to low-level validator representation
 {-# INLINEABLE toBuiltinValidator #-}

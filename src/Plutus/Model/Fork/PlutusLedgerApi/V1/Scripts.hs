@@ -3,6 +3,9 @@ module Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts (
   mkValidatorScript,
   mkMintingPolicyScript,
   mkStakeValidatorScript,
+  mkValidatorScriptPlutarch,
+  mkMintingPolicyScriptPlutarch,
+  mkStakeValidatorScriptPlutarch,
   Script (..),
   Validator (..),
   MintingPolicy (..),
@@ -18,9 +21,12 @@ import Codec.CBOR.Decoding as CBOR
 import Codec.Serialise (Serialise (..), serialise)
 import Control.DeepSeq (NFData)
 import Data.ByteString.Lazy qualified as BSL
+import Data.Text (Text)
 import Flat qualified
 import Flat.Decoder qualified as Flat
 import GHC.Generics (Generic)
+import Plutarch (ClosedTerm, Config, compile)
+import Plutarch.Script qualified as Plutarch
 import PlutusCore qualified as PLC
 import PlutusPrelude (over)
 import PlutusTx (CompiledCode, getPlc)
@@ -59,6 +65,18 @@ mkMintingPolicyScript = MintingPolicy . fromCompiledCode
 
 mkStakeValidatorScript :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> StakeValidator
 mkStakeValidatorScript = StakeValidator . fromCompiledCode
+
+mkValidatorScriptPlutarch :: Config -> ClosedTerm a -> Either Text Validator
+mkValidatorScriptPlutarch conf term =
+  Validator . Script . Plutarch.unScript <$> compile conf term
+
+mkMintingPolicyScriptPlutarch :: Config -> ClosedTerm a -> Either Text MintingPolicy
+mkMintingPolicyScriptPlutarch conf term =
+  MintingPolicy . Script . Plutarch.unScript <$> compile conf term
+
+mkStakeValidatorScriptPlutarch :: Config -> ClosedTerm a -> Either Text StakeValidator
+mkStakeValidatorScriptPlutarch conf term =
+  StakeValidator . Script . Plutarch.unScript <$> compile conf term
 
 -- | 'Validator' is a wrapper around 'Script's which are used as validators in transaction outputs.
 newtype Validator = Validator {getValidator :: Script}
