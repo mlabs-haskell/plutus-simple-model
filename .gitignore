@@ -11,7 +11,8 @@ result
 result-*
 
 # direnv
-#.envrc
+.direnv
+.envrc
 
 .swp
 
