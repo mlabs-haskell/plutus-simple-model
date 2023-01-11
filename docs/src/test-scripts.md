@@ -89,7 +89,7 @@ As input we can use `TypedValidator`, `TypedValidatorHash` and `AppendStaking`-w
 Note that in example we wrap it in `HashDatum`. Starting from Babbage era 
 we can store not only datum hashes in `TxOut` but also we can inline datum values
 stright into `TxOut`. To distinguish between two cases we use `DatumMode` wrapper.
-It's available from Babbage era. In Alonzo era wr can use only `HashDatum` mode.
+It's available from Babbage era. In Alonzo era we can use only `HashDatum` mode.
 
 Let's create another Tx to post solution to the puzzle. It seems to be more involved but don't be scary.
 We will take it bit by bit:
