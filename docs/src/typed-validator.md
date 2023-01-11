@@ -100,7 +100,7 @@ or `Plutus.Model.V2`. We have constructors like `mkTypedValidator` or `mkTypedPo
 with the same names but internally they use corresponding language tag to
 annotate the version of the language properly.
 
-Let's imagine that we wokk with PlutusV1. Then we import:
+Let's imagine that we work with PlutusV1. Then we import:
 
 ```haskell
 import Plutus.Model.V1
