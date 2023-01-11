@@ -1,6 +1,6 @@
 # Testing with tasty
 
-In real unit test suite we are likely to use `tasty` to create tests. Fo that we have
+In real unit test suite we are likely to use `tasty` to create tests. For that we have
 helper funtion that checks that no errors has happened during execution:
 
 ```haskell
