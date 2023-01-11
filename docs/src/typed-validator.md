@@ -61,11 +61,11 @@ class HasLanguage a where
 
 class HasValidator a where
   toValidator :: a -> Validator
-  -- ^ Get internal avlidator
+  -- ^ Get internal validator
 
 class HasValidatorHash a where
   toValidatorHash :: a -> ValidatorHash
-  -- ^ Get internal avlidator
+  -- ^ Get internal validator
 ```
 
 We have constraints synonyms for validator and validator hash based entities:
