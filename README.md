@@ -50,3 +50,37 @@ cd docs
 mdbook serve
 ```
 
+## Known issues
+
+### `nix develop` haddock phase fails
+
+#### Using `mlabs-tooling.nix`
+
+Add following snippet to `mkHaskellFlakeModule1`
+
+```nix
+mkHaskellFlakeModule1 {
+  # ...
+  project.modules = [({ config, ... }: {
+    packages.plutus-simple-model.doHaddock = false;
+  })];
+  # ...
+};
+
+```
+
+#### Using plain `haskell.nix`
+
+Add following snippet to `cabalProject'`
+
+```nix
+pkgs.haskell-nix.cabalProject' {
+  # ...
+  modules = [
+    ({ config, ... }: {
+      packages.plutus-simple-model.doHaddock = false;
+    })
+  ];
+  # ...
+};
+```
