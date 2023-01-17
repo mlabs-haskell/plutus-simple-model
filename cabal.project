@@ -1,8 +1,5 @@
 packages: ./.
 
-package plutus-simple-model
-  haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
-
 allow-newer:
     *:aeson
   , size-based:template-haskell
