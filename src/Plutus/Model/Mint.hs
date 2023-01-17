@@ -5,40 +5,72 @@ module Plutus.Model.Mint (
   fakeValue,
 ) where
 
-import Cardano.Ledger.Alonzo.Language qualified as C
-import Plutus.Model.Fork.Ledger.Scripts
-import Plutus.Model.Fork.PlutusLedgerApi.V1.Scripts
+import Prelude (either, error, id, ($), (.))
+
+import Data.Text qualified as Text
 
 import PlutusLedgerApi.V1
-import PlutusLedgerApi.V1.Contexts
+
+-- import PlutusLedgerApi.V1.Contexts
+
+import Plutarch
+import Plutarch.Api.V1 as Plutarch
+import Plutarch.Api.V1.Value
+import Plutarch.DataRepr
+import Plutarch.Prelude
 import PlutusLedgerApi.V1.Value
-import PlutusTx qualified
-import PlutusTx.Prelude
+import PlutusTx.Prelude qualified as PlutusTx
 
 newtype FakeCoin = FakeCoin {fakeCoin'tag :: BuiltinByteString}
 
-fakeValue :: FakeCoin -> Integer -> Value
+fakeValue :: FakeCoin -> PlutusTx.Integer -> Value
 fakeValue tag = assetClassValue (fakeCoin tag)
 
 -- | Fake coin class generated from fixed tag.
 fakeCoin :: FakeCoin -> AssetClass
 fakeCoin (FakeCoin tag) = assetClass sym tok
   where
-    sym = scriptCurrencySymbol $ Versioned C.PlutusV1 $ fakeMintingPolicy tag
+    sym =
+      CurrencySymbol $
+        getScriptHash $
+          Plutarch.scriptHash $
+            fakeMintingPolicy tag
     tok = TokenName tag
 
-fakeMintingPolicy :: BuiltinByteString -> MintingPolicy
-fakeMintingPolicy mintParams =
-  mkMintingPolicyScript $
-    $$( PlutusTx.compile
-          [||
-          \params redeemer ctx ->
-            check (fakeMintingPolicyContract params (unsafeFromBuiltinData redeemer) (unsafeFromBuiltinData ctx))
-          ||]
-      )
-      `PlutusTx.applyCode` PlutusTx.liftCode (TokenName mintParams)
+fakeMintingPolicy :: BuiltinByteString -> Plutarch.Script
+fakeMintingPolicy mintParam =
+  either (error . Text.unpack) id $
+    compile (Config {tracingMode = DetTracing}) $
+      fakeMintingPolicyScript mintParam
 
--- | Can mint new coins if token name equals to fixed tag.
-fakeMintingPolicyContract :: TokenName -> () -> ScriptContext -> Bool
-fakeMintingPolicyContract tag _ ctx =
-  valueOf (txInfoMint (scriptContextTxInfo ctx)) (ownCurrencySymbol ctx) tag > 0
+fakeMintingPolicyScript :: BuiltinByteString -> ClosedTerm PMintingPolicy
+fakeMintingPolicyScript mintParam = plam $ \_redeemer ctx ->
+  pif
+    (0 #< pvalueOf # mint ctx # cs ctx # pconstant (TokenName mintParam))
+    (popaque $ pcon PUnit)
+    perror
+  where
+    deCtx ::
+      Term s PScriptContext ->
+      ( HRec
+          '[ '("txInfo", Term s (PAsData PTxInfo))
+           , '("purpose", Term s (PAsData PScriptPurpose))
+           ] ->
+        Term s b
+      ) ->
+      Term s b
+    deCtx ctx cont =
+      pmatch ctx $ \(PScriptContext r) ->
+        pletFields @'["purpose", "txInfo"] r cont
+
+    cs ctx =
+      deCtx
+        ctx
+        ( \hr -> pmatch (pfromData $ getField @"purpose" hr) $ \case
+            PMinting tdcs -> pfromData $ pfield @"_0" # tdcs
+            _ -> perror
+        )
+
+    mint ctx =
+      pmatch (deCtx ctx (pfromData . getField @"txInfo")) $ \(PTxInfo txi) ->
+        pfromData $ pfield @"mint" # txi
