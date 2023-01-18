@@ -22,8 +22,10 @@
           project.extraHackage = [
             "${plutarch}"
           ];
-
         })
       ];
+      perSystem = { pkgs, ... }: {
+        packages.haddock = pkgs.runCommandLocal "empty" {} "touch $out";
+      };
     };
 }
