@@ -6,7 +6,7 @@ stage of execution or which values certain datum has.
 For that we can use function:
 
 ```haskell
-logInfo :: String -> Run ()
+**logInfo** :: String -> Run ()
 ```
 
 It will add the message to the internal logs.
