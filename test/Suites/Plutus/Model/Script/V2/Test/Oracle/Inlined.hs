@@ -107,7 +107,7 @@ bet app@App {..} pkh (AnswerDatum answer) = do
     updateDat (BetDatum answers) = BetDatum ((pkh, answer) : answers)
     updateVal = (<> adaValue betStep)
 
-{- | Oracle posts an answer as PubKeyHash guaeded UTXO with inlined datum
+{- | Oracle posts an answer as PubKeyHash guarded UTXO with inlined datum
  of the answer
 -}
 postAnswer :: PubKeyHash -> Integer -> Run ()
