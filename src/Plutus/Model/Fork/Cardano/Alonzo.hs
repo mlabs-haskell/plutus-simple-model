@@ -102,10 +102,10 @@ instance IsCardanoTx Era where
               Just cval -> Right cval
               Nothing -> Left "Fail to create compact value"
 
-toAlonzoTx :: Network -> C.AlonzoPParams Era -> P.Tx -> Either ToCardanoError (C.AlonzoTx Era)
-toAlonzoTx network params tx = do
+toAlonzoTx :: Network -> C.AlonzoPParams Era -> P.Extra -> Plutus.Tx -> Either ToCardanoError (C.AlonzoTx Era)
+toAlonzoTx network params extra tx = do
   body <- toBody
-  wits <- toWits (C.hashAnnotated body) tx
+  wits <- toWits (C.hashAnnotated body) extra tx
   let isValid = C.IsValid True -- TODO or maybe False
       auxData = C.SNothing
   pure $ C.AlonzoTx body wits isValid auxData
@@ -114,8 +114,13 @@ toAlonzoTx network params tx = do
       inputs <- getInputsBy Plutus.txInputs tx
       collateral <- getInputsBy Plutus.txCollateral tx
       outputs <- getOutputs tx
-      txcerts <- getDCerts network (C._poolDeposit params) (C._minPoolCost params) tx
-      txwdrls <- getWdrl network tx
+      txcerts <-
+        getDCerts
+          network
+          (C._poolDeposit params)
+          (C._minPoolCost params)
+          extra
+      txwdrls <- getWdrl network extra
       let txfee = getFee tx
           txvldt = getInterval tx
           txUpdates = C.SNothing
@@ -144,12 +149,21 @@ toAlonzoTx network params tx = do
       fmap Seq.fromList
         . mapM (toTxOut mempty network)
         . Plutus.txOutputs
-        . P.tx'plutus
 
-toWits :: SafeHash StandardCrypto C.EraIndependentTxBody -> P.Tx -> Either ToCardanoError (C.TxWitness Era)
-toWits txBodyHash tx = do
+toWits ::
+  SafeHash StandardCrypto C.EraIndependentTxBody ->
+  P.Extra ->
+  Plutus.Tx ->
+  Either ToCardanoError (C.TxWitness Era)
+toWits txBodyHash extra tx = do
   let bootstrapWits = mempty
   datumWits <- toDatumWitness tx
-  let redeemerWits = toRedeemerWitness tx
-  scriptWits <- toScriptWitness tx
-  pure $ C.TxWitness (toKeyWitness txBodyHash tx) bootstrapWits scriptWits datumWits redeemerWits
+  let redeemerWits = toRedeemerWitness extra tx
+  scriptWits <- toScriptWitness extra tx
+  pure $
+    C.TxWitness
+      (toKeyWitness txBodyHash tx)
+      bootstrapWits
+      scriptWits
+      datumWits
+      redeemerWits

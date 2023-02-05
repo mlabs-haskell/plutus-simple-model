@@ -64,11 +64,12 @@ toBabbageTx ::
   Map P.ScriptHash (C.Versioned P.Script) ->
   Network ->
   C.BabbagePParams Era ->
-  P.Tx ->
+  P.Extra ->
+  Plutus.Tx ->
   Either ToCardanoError (C.AlonzoTx Era)
-toBabbageTx scriptMap network params tx = do
+toBabbageTx scriptMap network params extra tx = do
   body <- getBody
-  wits <- toWits (hashAnnotated body) tx
+  wits <- toWits (hashAnnotated body) extra tx
   let isValid = C.IsValid True -- TODO or maybe False
       auxData = C.SNothing
   pure $ C.AlonzoTx body wits isValid auxData
@@ -80,8 +81,13 @@ toBabbageTx scriptMap network params tx = do
       collateralReturn <- getCollateralReturn tx
       let totalCollateral = getTotalCollateral tx
       outputs <- getOutputs tx
-      txcerts <- getDCerts network (C._poolDeposit params) (C._minPoolCost params) tx
-      txwdrls <- getWdrl network tx
+      txcerts <-
+        getDCerts
+          network
+          (C._poolDeposit params)
+          (C._minPoolCost params)
+          extra
+      txwdrls <- getWdrl network extra
       let txfee = getFee tx
           txvldt = getInterval tx
           txUpdates = C.SNothing
@@ -113,18 +119,15 @@ toBabbageTx scriptMap network params tx = do
       fmap Seq.fromList
         . mapM (toSizedTxOut scriptMap network)
         . Plutus.txOutputs
-        . P.tx'plutus
 
     getTotalCollateral =
       maybe C.SNothing (C.SJust . toCoin)
         . Plutus.txTotalCollateral
-        . P.tx'plutus
 
     getCollateralReturn =
       fmap toStrictMaybe
         . mapM (toSizedTxOut scriptMap network)
         . Plutus.txCollateralReturn
-        . P.tx'plutus
 
 toSizedTxOut ::
   Map P.ScriptHash (C.Versioned P.Script) ->
@@ -202,10 +205,20 @@ toOutputDatum = \case
 toDatum :: P.Datum -> C.Data Era
 toDatum (P.Datum (P.BuiltinData d)) = C.Data d
 
-toWits :: SafeHash StandardCrypto C.EraIndependentTxBody -> P.Tx -> Either ToCardanoError (C.TxWitness Era)
-toWits txBodyHash tx = do
+toWits ::
+  SafeHash StandardCrypto C.EraIndependentTxBody ->
+  P.Extra ->
+  Plutus.Tx ->
+  Either ToCardanoError (C.TxWitness Era)
+toWits txBodyHash extra tx = do
   let bootstrapWits = mempty
   datumWits <- toDatumWitness tx
-  let redeemerWits = toRedeemerWitness tx
-  scriptWits <- toScriptWitness tx
-  pure $ C.TxWitness (toKeyWitness txBodyHash tx) bootstrapWits scriptWits datumWits redeemerWits
+  let redeemerWits = toRedeemerWitness extra tx
+  scriptWits <- toScriptWitness extra tx
+  pure $
+    C.TxWitness
+      (toKeyWitness txBodyHash tx)
+      bootstrapWits
+      scriptWits
+      datumWits
+      redeemerWits

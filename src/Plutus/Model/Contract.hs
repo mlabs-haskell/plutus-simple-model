@@ -68,7 +68,7 @@ module Plutus.Model.Contract (
   mintValue,
   validateIn,
 
-  -- ** Staking valdiators primitives
+  -- ** Staking validators primitives
 
   --
 
@@ -230,7 +230,7 @@ waitUntil time = do
   slotCfg <- gets (mockConfigSlotConfig . mockConfig)
   waitNSlots $ posixTimeToEnclosingSlot slotCfg time - slot
 
--- | blockhain runs without errors, all submited transactions were accepted.
+-- | blockchain runs without errors, all submitted transactions were accepted.
 noErrors :: Run Bool
 noErrors = nullLog <$> gets mockFails
 
