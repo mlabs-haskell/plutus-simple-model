@@ -61,11 +61,11 @@ class HasLanguage a where
 
 class HasValidator a where
   toValidator :: a -> Validator
-  -- ^ Get internal avlidator
+  -- ^ Get internal validator
 
 class HasValidatorHash a where
   toValidatorHash :: a -> ValidatorHash
-  -- ^ Get internal avlidator
+  -- ^ Get internal validator
 ```
 
 We have constraints synonyms for validator and validator hash based entities:
@@ -100,7 +100,7 @@ or `Plutus.Model.V2`. We have constructors like `mkTypedValidator` or `mkTypedPo
 with the same names but internally they use corresponding language tag to
 annotate the version of the language properly.
 
-Let's imagine that we wokk with PlutusV1. Then we import:
+Let's imagine that we work with PlutusV1. Then we import:
 
 ```haskell
 import Plutus.Model.V1

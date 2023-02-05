@@ -9,7 +9,7 @@
  and is executed as simple state update. We can query all blockchain stats
  for the users.
 
- Also it estimates execution of the TXs accordig to cardano model.
+ Also it estimates execution of the TXs according to cardano model.
 -}
 module Plutus.Model.Mock (
   -- * Address helpers
@@ -466,7 +466,7 @@ logInfo msg = do
   slot <- gets mockCurrentSlot
   modify' $ \s -> s {mockInfo = appendLog slot msg (mockInfo s)}
 
--- | Igonres log of TXs and info messages during execution (but not errors)
+-- | Ignore log of TXs and info messages during execution (but not errors)
 noLog :: Run a -> Run a
 noLog act = do
   txLog <- gets mockTxs
@@ -475,7 +475,7 @@ noLog act = do
   modify' $ \st -> st {mockTxs = txLog, mockInfo = infoLog}
   pure res
 
--- | Igonres log of TXs during execution
+-- | Ignore log of TXs during execution
 noLogTx :: Run a -> Run a
 noLogTx act = do
   txLog <- gets mockTxs
@@ -483,7 +483,7 @@ noLogTx act = do
   modify' $ \st -> st {mockTxs = txLog}
   pure res
 
--- | Igonres log of info level messages during execution
+-- | Ignore log of info level messages during execution
 noLogInfo :: Run a -> Run a
 noLogInfo act = do
   infoLog <- gets mockInfo
@@ -498,7 +498,7 @@ sendBlock txs = do
   when (isRight res) bumpSlot
   pure res
 
--- | Sends block with single TX to blockchai
+-- | Sends block with single TX to blockchain
 sendTx :: Tx -> Run (Either FailReason Stat)
 sendTx tx = do
   res <- sendSingleTx tx
@@ -867,7 +867,7 @@ withMay msg act cont = do
     Just res -> cont res
     Nothing -> logError msg
 
-{- | Continuation based queries with effectful error messages.
+{- | Continuation based queries with effective error messages.
  It can be useful to read human readable names for addresses, TXs, currency symbols etc.
 -}
 withMayBy :: Run String -> Run (Maybe a) -> (a -> Run ()) -> Run ()
@@ -902,7 +902,7 @@ txOutDatumHash tout =
 rewardAt :: HasStakingCredential cred => cred -> Run Integer
 rewardAt cred = gets (fromMaybe 0 . lookupReward (toStakingCredential cred) . mockStake)
 
--- | Returns all stakes delegatged to a pool
+-- | Returns all stakes delegated to a pool
 stakesAt :: PoolId -> Run [StakingCredential]
 stakesAt (PoolId poolKey) = gets (lookupStakes (PoolId poolKey) . mockStake)
 

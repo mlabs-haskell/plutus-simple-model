@@ -7,7 +7,7 @@ by game validator:
 
 ```haskell
 initGame :: PubKeyHash -> Value -> BuiltinByteString -> Run ()
-initGame pkh prize answer = do   -- args: user, prize value , answer for puzzle
+initGame pkh prize answer = do   -- args: user, prize value , answer for puzzletpye
   sp <- spend pkh prize          -- read users UTXO that we should spend
   submitTx pkh $                 -- create TX, sign it and post to 
     initGameTx sp prize answer   -- ledger with user's secret key
@@ -83,13 +83,13 @@ payToScript ::
 
 So it uses address of the validator, datum for it (of proper type) and value to protect with the contract.
 As simple as that. Our type `Game` is `TypedValidator GameDatum GameRedeemer` and
-for typed valdiator first tpye argument corresponds to `DatumType`.
+for typed valdiator first type argument corresponds to `DatumType`.
 As input we can use `TypedValidator`, `TypedValidatorHash` and `AppendStaking`-wrappers.
 
 Note that in example we wrap it in `HashDatum`. Starting from Babbage era 
 we can store not only datum hashes in `TxOut` but also we can inline datum values
 stright into `TxOut`. To distinguish between two cases we use `DatumMode` wrapper.
-It's available from Babbage era. In Alonzo era wr can use only `HashDatum` mode.
+It's available from Babbage era. In Alonzo era we can use only `HashDatum` mode.
 
 Let's create another Tx to post solution to the puzzle. It seems to be more involved but don't be scary.
 We will take it bit by bit:
