@@ -18,14 +18,13 @@ import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import GHC.Natural
 import Plutus.Model.Fork.Ledger.Slot
 import Plutus.Model.Fork.Ledger.Tx qualified as P
-import Plutus.Model.Fork.TxExtra
 import Plutus.Model.Mock.Percent
 import PlutusLedgerApi.V2
 import Prelude
 
 -- | TX with stats of TX execution onchain.
 data TxStat = TxStat
-  { txStatTx :: !Tx
+  { txStatTx :: !P.Tx
   , txStatTime :: !Slot
   , txStat :: !Stat
   , txStatPercent :: !StatPercent
@@ -34,7 +33,7 @@ data TxStat = TxStat
 
 -- | Gets Tx's hash
 txStatId :: TxStat -> TxId
-txStatId = P.txId . tx'plutus . txStatTx
+txStatId = P.txId . txStatTx
 
 -- | Stats of TX execution onchain.
 data Stat = Stat

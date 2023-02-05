@@ -91,47 +91,46 @@ type ToCardanoError = String
 fromTxId :: C.TxId StandardCrypto -> P.TxId
 fromTxId = C.txInfoId
 
-getInputsBy :: (Plutus.Tx -> Set.Set Plutus.TxIn) -> P.Tx -> Either ToCardanoError (Set.Set (C.TxIn StandardCrypto))
+getInputsBy ::
+  (Plutus.Tx -> Set.Set Plutus.TxIn) ->
+  Plutus.Tx ->
+  Either ToCardanoError (Set.Set (C.TxIn StandardCrypto))
 getInputsBy extract =
   fmap Set.fromList
     . mapM toTxIn
     . fmap Plutus.txInRef
     . Set.toList
     . extract
-    . P.tx'plutus
 
 toCoin :: Ada.Ada -> C.Coin
 toCoin = C.Coin . Ada.getLovelace
 
-getFee :: P.Tx -> C.Coin
-getFee = toCoin . Plutus.txFee . P.tx'plutus
+getFee :: Plutus.Tx -> C.Coin
+getFee = toCoin . Plutus.txFee
 
-getInterval :: P.Tx -> C.ValidityInterval
-getInterval = toInterval . Plutus.txValidRange . P.tx'plutus
+getInterval :: Plutus.Tx -> C.ValidityInterval
+getInterval = toInterval . Plutus.txValidRange
 
-getMint :: P.Tx -> Either ToCardanoError (C.MaryValue StandardCrypto)
-getMint = toValue . Plutus.txMint . P.tx'plutus
+getMint :: Plutus.Tx -> Either ToCardanoError (C.MaryValue StandardCrypto)
+getMint = toValue . Plutus.txMint
 
-getDCerts :: Network -> C.Coin -> C.Coin -> P.Tx -> Either ToCardanoError (Seq.StrictSeq (C.DCert StandardCrypto))
+getDCerts :: Network -> C.Coin -> C.Coin -> P.Extra -> Either ToCardanoError (Seq.StrictSeq (C.DCert StandardCrypto))
 getDCerts network poolDeposit minPoolCost =
   fmap Seq.fromList
     . mapM (toDCert network poolDeposit minPoolCost . P.certificate'dcert)
     . P.extra'certificates
-    . P.tx'extra
 
-getWdrl :: Network -> P.Tx -> Either ToCardanoError (C.Wdrl StandardCrypto)
+getWdrl :: Network -> P.Extra -> Either ToCardanoError (C.Wdrl StandardCrypto)
 getWdrl network =
   toWdrl network
     . P.extra'withdraws
-    . P.tx'extra
 
-getSignatories :: P.Tx -> Set.Set (C.KeyHash 'C.Witness StandardCrypto)
+getSignatories :: Plutus.Tx -> Set.Set (C.KeyHash 'C.Witness StandardCrypto)
 getSignatories =
   Set.fromList
     . fmap (C.hashKey . C.vKey)
     . Map.elems
     . Plutus.txSignatures
-    . P.tx'plutus
 
 toValue :: P.Value -> Either ToCardanoError (C.MaryValue StandardCrypto)
 toValue val = C.valueFromList totalAda <$> traverse fromValue vs
@@ -280,29 +279,35 @@ toStakeAddressReference = \case
 
 toKeyWitness ::
   SafeHash StandardCrypto C.EraIndependentTxBody ->
-  P.Tx ->
+  Plutus.Tx ->
   Set (WitVKey 'C.Witness StandardCrypto)
 toKeyWitness txBodyHash tx =
-  Set.fromList $ fmap (C.makeWitnessVKey txBodyHash) $ Map.elems $ Plutus.txSignatures $ P.tx'plutus tx
+  Set.fromList $
+    fmap (C.makeWitnessVKey txBodyHash) $
+      Map.elems $
+        Plutus.txSignatures tx
 
-toDatumWitness :: (C.Era era, C.Crypto era ~ StandardCrypto) => P.Tx -> Either ToCardanoError (C.TxDats era)
+toDatumWitness :: (C.Era era, C.Crypto era ~ StandardCrypto) => Plutus.Tx -> Either ToCardanoError (C.TxDats era)
 toDatumWitness tx = do
   datumWits1 <- Map.fromList <$> mapM (\d -> (,toDatum d) <$> toDataHash (C.datumHash d)) validatorDatums1
   datumWits2 <- Map.fromList <$> mapM (\(dh, d) -> (,toDatum d) <$> toDataHash dh) validatorDatums2
   pure $ C.TxDats $ datumWits1 <> datumWits2
   where
     validatorDatums1 = fmap (\(_, _, datum) -> datum) validatorInfo
-    validatorDatums2 = Map.toList $ Plutus.txData $ P.tx'plutus tx
+    validatorDatums2 = Map.toList $ Plutus.txData tx
 
-    validatorInfo = mapMaybe (fromInType <=< Plutus.txInType) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
+    validatorInfo =
+      mapMaybe
+        (fromInType <=< Plutus.txInType)
+        (Set.toList $ Plutus.txInputs tx)
 
 fromInType :: Plutus.TxInType -> Maybe (Maybe (C.Versioned P.Script), P.Redeemer, P.Datum)
 fromInType = \case
   Plutus.ConsumeScriptAddress script redeemer datum -> Just (fmap P.getValidator <$> script, redeemer, datum)
   _ -> Nothing
 
-toRedeemerWitness :: (C.Era era) => P.Tx -> C.Redeemers era
-toRedeemerWitness tx =
+toRedeemerWitness :: (C.Era era) => P.Extra -> Plutus.Tx -> C.Redeemers era
+toRedeemerWitness extra tx =
   C.Redeemers $ mintRedeemers <> inputRedeemers <> certRedeemers <> withdrawRedeemers
   where
     mintRedeemers =
@@ -310,8 +315,8 @@ toRedeemerWitness tx =
         fmap (\(P.RedeemerPtr _tag n, redm) -> (C.RdmrPtr C.Mint (fromInteger n), addDefaultExUnits $ toRedeemer redm)) $
           filter (isMint . fst) $
             Map.toList $
-              Plutus.txRedeemers $
-                P.tx'plutus tx
+              Plutus.txRedeemers
+                tx
       where
         isMint = \case
           P.RedeemerPtr Plutus.Mint _ -> True
@@ -322,8 +327,8 @@ toRedeemerWitness tx =
         mapMaybe toInput $
           zip [0 ..] $
             Set.toList $
-              Plutus.txInputs $
-                P.tx'plutus tx
+              Plutus.txInputs
+                tx
       where
         toInput (n, tin) =
           case Plutus.txInType tin of
@@ -339,8 +344,8 @@ toRedeemerWitness tx =
       Map.fromList $
         mapMaybe toWithdraw $
           zip [0 ..] $
-            extract $
-              P.tx'extra tx
+            extract
+              extra
       where
         toWithdraw (n, ws) = flip fmap ws $ \(redeemer, _script) ->
           (C.RdmrPtr scriptTag (fromInteger n), addDefaultExUnits $ toRedeemer redeemer)
@@ -349,19 +354,32 @@ toRedeemerWitness tx =
 
 toScriptWitness ::
   (C.Crypto era ~ StandardCrypto) =>
-  P.Tx ->
+  P.Extra ->
+  Plutus.Tx ->
   Either ToCardanoError (Map (C.ScriptHash (C.Crypto era)) (C.AlonzoScript era))
-toScriptWitness tx =
+toScriptWitness extra tx =
   Map.fromList <$> mapM (\s -> (,C.toScript s) <$> toScriptHash (C.validatorHash (fmap P.Validator s))) allScripts
   where
     allScripts = mints <> withdraws <> validators <> certificates
       where
-        mints = fmap (fmap P.getMintingPolicy) $ Set.toList $ Plutus.txMintScripts $ P.tx'plutus tx
-        withdraws = mapMaybe (fmap (fmap P.getStakeValidator . snd) . P.withdraw'script) (P.extra'withdraws $ P.tx'extra tx)
-        certificates = mapMaybe (fmap (fmap P.getStakeValidator . snd) . P.certificate'script) (P.extra'certificates $ P.tx'extra tx)
+        mints =
+          fmap (fmap P.getMintingPolicy) $
+            Set.toList $
+              Plutus.txMintScripts tx
+        withdraws =
+          mapMaybe
+            (fmap (fmap P.getStakeValidator . snd) . P.withdraw'script)
+            (P.extra'withdraws extra)
+        certificates =
+          mapMaybe
+            (fmap (fmap P.getStakeValidator . snd) . P.certificate'script)
+            (P.extra'certificates extra)
         validators = mapMaybe (\(script, _, _) -> script) validatorInfo
 
-    validatorInfo = mapMaybe (fromInType <=< Plutus.txInType) (Set.toList $ Plutus.txInputs $ P.tx'plutus tx)
+    validatorInfo =
+      mapMaybe
+        (fromInType <=< Plutus.txInType)
+        (Set.toList $ Plutus.txInputs tx)
 
 toDatum :: P.Datum -> C.Data era
 toDatum (P.Datum (P.BuiltinData d)) = C.Data d

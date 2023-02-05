@@ -509,13 +509,13 @@ sendTx tx = do
  and produces performance stats if TX was ok.
 -}
 sendSingleTx :: Tx -> Run (Either FailReason Stat)
-sendSingleTx preTx =
+sendSingleTx preTx@(Tx extra _) =
   runValidate $
     liftEither (processMints preTx) >>= \tx -> do
       genParams <- gets (mockConfigProtocol . mockConfig)
       case genParams of
-        AlonzoParams params -> checkSingleTx @Alonzo.Era params tx
-        BabbageParams params -> checkSingleTx @Babbage.Era params tx
+        AlonzoParams params -> checkSingleTx @Alonzo.Era params extra tx
+        BabbageParams params -> checkSingleTx @Babbage.Era params extra tx
 
 -- | Confirms that single TX is valid. Works across several Eras (see @Plutus.Model.Fork.Cardano.Class@)
 checkSingleTx ::
@@ -531,9 +531,10 @@ checkSingleTx ::
   , C.AlonzoEraTx era
   ) =>
   Core.PParams era ->
-  Tx ->
+  Extra ->
+  P.Tx ->
   Validate Stat
-checkSingleTx params (Tx extra tx) = do
+checkSingleTx params extra tx = do
   checkStaking
   checkRange
   txBody <- getTxBody
@@ -544,7 +545,7 @@ checkSingleTx params (Tx extra tx) = do
   let txSize = fromIntegral $ BS.length $ CBOR.serialize' txBody
       stat = Stat txSize cost
   checkTxLimits stat
-  Validate . lift $ applyTx stat tid (Tx extra tx)
+  Validate . lift $ applyTx stat tid extra tx
   pure stat
   where
     pkhs = M.keys $ P.txSignatures tx
@@ -558,8 +559,10 @@ checkSingleTx params (Tx extra tx) = do
           localScriptMap
           (mockConfigNetworkId cfg)
           params
-          (Tx extra tx)
+          extra
+          tx
 
+    checkStaking :: Validate ()
     checkStaking = do
       checkWithdraws (extra'withdraws extra)
       checkCertificates (extra'certificates extra)
@@ -726,8 +729,8 @@ waitNSlots :: Slot -> Run ()
 waitNSlots n = modify' $ \s -> s {mockCurrentSlot = mockCurrentSlot s + n}
 
 -- | Applies valid TX to modify blockchain.
-applyTx :: Stat -> TxId -> Tx -> Run ()
-applyTx stat tid etx@(Tx extra P.Tx {..}) = do
+applyTx :: Stat -> TxId -> Extra -> P.Tx -> Run ()
+applyTx stat tid extra tx@P.Tx {..} = do
   updateUtxos
   updateRewards
   updateCertificates
@@ -740,7 +743,7 @@ applyTx stat tid etx@(Tx extra P.Tx {..}) = do
     saveTx = do
       t <- gets mockCurrentSlot
       statPercent <- getStatPercent
-      modify' $ \s -> s {mockTxs = appendLog t (TxStat etx t stat statPercent) $ mockTxs s}
+      modify' $ \s -> s {mockTxs = appendLog t (TxStat tx t stat statPercent) $ mockTxs s}
 
     getStatPercent = do
       maxLimits <- gets (mockConfigLimitStats . mockConfig)

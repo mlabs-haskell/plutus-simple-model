@@ -24,7 +24,8 @@ class (C.Crypto era ~ StandardCrypto) => IsCardanoTx era where
     Map P.ScriptHash (C.Versioned P.Script) ->
     Network ->
     C.PParams era ->
-    P.Tx ->
+    P.Extra ->
+    Plutus.Tx ->
     Either ToCardanoError (C.Tx era)
 
   toTxOut ::
