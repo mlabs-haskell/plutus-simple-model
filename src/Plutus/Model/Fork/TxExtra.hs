@@ -72,10 +72,10 @@ data Mint = Mint
   deriving (Show, Eq)
 
 -- | Converts mints from TxExtra to Plutus.Tx
-processMints :: Tx -> Either FailReason Tx
+processMints :: Tx -> Either FailReason P.Tx
 processMints tx =
   case getMissingMints =<< mints of
-    [] -> Right $ tx {tx'plutus = appendMints mints $ tx'plutus tx}
+    [] -> Right $ appendMints mints $ tx'plutus tx
     missingSymbols -> Left $ NoMintingPolicy missingSymbols
   where
     mints = extra'mints $ tx'extra tx

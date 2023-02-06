@@ -103,7 +103,7 @@ data TxStripped = TxStripped
   { txStrippedInputs :: Set.Set TxOutRef
   -- ^ The inputs to this transaction, as transaction output references only.
   , txStrippedOutputs :: [TxOut]
-  -- ^ The outputs of this transation.
+  -- ^ The outputs of this translation.
   , txStrippedMint :: !Value
   -- ^ The 'Value' minted by this transaction.
   , txStrippedFee :: !Ada
