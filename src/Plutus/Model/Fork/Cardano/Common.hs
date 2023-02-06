@@ -19,6 +19,7 @@ module Plutus.Model.Fork.Cardano.Common (
   toSlot,
   toCoin,
   toStrictMaybe,
+  toDCert,
   toDataHash,
   toAddr,
   toStakeAddressReference,
