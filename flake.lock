@@ -4211,11 +4211,11 @@
         "plutus": "plutus_2"
       },
       "locked": {
-        "lastModified": 1671582351,
-        "narHash": "sha256-SrNXbfheBuXTW8brxg//fHSbV249UlpWTQAg+3UPAHk=",
+        "lastModified": 1672153441,
+        "narHash": "sha256-uiMXQSr7XAbuA+2OIjlgITS+W0qVwZaMcUNco+gj148=",
         "owner": "mlabs-haskell",
         "repo": "mlabs-tooling.nix",
-        "rev": "2376c911c6f8b6dcf46f479afddd671b3d37de78",
+        "rev": "3367df5cffc9e6823e88a3b6ac2dae55682a4d15",
         "type": "github"
       },
       "original": {
