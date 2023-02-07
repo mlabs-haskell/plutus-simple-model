@@ -1,7 +1,6 @@
-packages: ./.
-
-package plutus-simple-model
-  haddock-options: "--optghc=-fplugin-opt PlutusTx.Plugin:defer-errors"
+packages:
+  ./psm
+  ./cardano-simple
 
 allow-newer:
     *:aeson
