@@ -60,7 +60,7 @@ defaultSlotConfig =
 defaultAlonzo :: MockConfig
 defaultAlonzo = defaultMockConfig defaultAlonzoParams
 
-{- | Default Babbage V2 era config. If we use this parameter
+{- | Default Babbage V1 era config. If we use this parameter
  then Babbage era TXs will be used for testing
 -}
 defaultBabbageV1 :: MockConfig
