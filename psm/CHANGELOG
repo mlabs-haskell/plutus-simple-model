@@ -8,12 +8,16 @@ and this project adheres to the [Haskell Package Versioning Policy](https://pvp.
 ## [0.6.0.0] - 2023-02-07
 
 ### Added
-- `defaultBabageV2`
-- `defaultBabageParamsV2`
+- `defaultBabbageV2`
+- `defaultBabbageParamsV2`
+
+These functions allow easy use of V2 scripts
 
 ### Changed
-- `defaultBabage` renamed `defaultBabageV1`
-- `defaultBabageParamsV2` renamed `defaultBabageV2`
+- `defaultBabbage` renamed `defaultBabbageV1`
+- `defaultBabbageParamsV2` renamed `defaultBabbageV2`
+
+These names are more clear that they only work with V1
 
 
 ## [0.5.2.1] - 2023-02-07
