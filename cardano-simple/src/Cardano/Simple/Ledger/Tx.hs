@@ -29,8 +29,8 @@ import PlutusTx.Lattice
 
 import Cardano.Simple.Ledger.Scripts (Versioned (..))
 import Cardano.Simple.Ledger.Slot
+import Cardano.Simple.Plutus.Model.Ada (Ada)
 import Cardano.Simple.PlutusLedgerApi.V1.Scripts
-import Plutus.Model.Ada (Ada)
 
 -- | A transaction, including witnesses for its inputs.
 data Tx = Tx

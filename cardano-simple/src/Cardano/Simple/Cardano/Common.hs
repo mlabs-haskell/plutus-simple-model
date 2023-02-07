@@ -77,9 +77,9 @@ import Cardano.Ledger.TxIn qualified as C
 import Cardano.Simple.Ledger.Scripts qualified as C
 import Cardano.Simple.Ledger.Slot qualified as P
 import Cardano.Simple.Ledger.Tx qualified as Plutus
+import Cardano.Simple.Plutus.Model.Ada qualified as Ada
 import Cardano.Simple.PlutusLedgerApi.V1.Scripts qualified as P
 import Cardano.Simple.TxExtra qualified as P
-import Plutus.Model.Ada qualified as Ada
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2 qualified as P
 import PlutusLedgerApi.V2.Tx qualified as P

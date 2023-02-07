@@ -1,4 +1,4 @@
-module Plutus.Model.Mock.Percent (
+module Cardano.Simple.Plutus.Model.Mock.Percent (
   Percent (..),
   toPercent,
   PercentExecutionUnits (..),

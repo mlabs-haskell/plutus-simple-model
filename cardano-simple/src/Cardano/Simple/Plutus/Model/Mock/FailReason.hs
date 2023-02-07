@@ -1,5 +1,5 @@
 -- | Errors for TX build and submit
-module Plutus.Model.Mock.FailReason (
+module Cardano.Simple.Plutus.Model.Mock.FailReason (
   FailReason (..),
   DCertError (..),
   WithdrawError (..),
@@ -7,7 +7,7 @@ module Plutus.Model.Mock.FailReason (
 ) where
 
 import Cardano.Simple.Ledger.Slot
-import Plutus.Model.Mock.Percent
+import Cardano.Simple.Plutus.Model.Mock.Percent
 import PlutusLedgerApi.V2
 import Prelude
 

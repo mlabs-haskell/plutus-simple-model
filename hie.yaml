@@ -1,8 +1,10 @@
 cradle:
   cabal:
-    - path: "./src"
+    - path: "./psm/src"
       component: "lib:plutus-simple-model"
-    - path: "./test"
+    - path: "./psm/test"
       component: "test:plutus-simple-model-test"
-    - path: "./examples"
+    - path: "./psm/examples"
       component: "lib:plutus-simple-model-examples"
+    - path: "./cardano-simple/src"
+      component: "lib:cardano-simple"

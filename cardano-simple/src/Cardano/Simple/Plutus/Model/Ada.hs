@@ -1,5 +1,5 @@
 -- | Functions for working with 'Ada'.
-module Plutus.Model.Ada (
+module Cardano.Simple.Plutus.Model.Ada (
   Ada (..),
   adaOf,
   ada,

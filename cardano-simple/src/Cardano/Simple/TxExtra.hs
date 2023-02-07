@@ -19,12 +19,12 @@ module Cardano.Simple.TxExtra (
 import Cardano.Simple.Ledger.Scripts (Versioned (..), scriptCurrencySymbol)
 import Cardano.Simple.Ledger.Scripts qualified as P
 import Cardano.Simple.Ledger.Tx qualified as P
+import Cardano.Simple.Plutus.Model.Mock.FailReason
 import Cardano.Simple.PlutusLedgerApi.V1.Scripts
 import Data.List qualified as L
 import Data.Map.Strict qualified as M
 import Data.Monoid
 import Data.Set qualified as S
-import Plutus.Model.Mock.FailReason
 import PlutusLedgerApi.V1.Tx qualified as P
 import PlutusLedgerApi.V1.Value qualified as Value
 import PlutusLedgerApi.V2

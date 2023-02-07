@@ -114,11 +114,11 @@ library
     Cardano.Simple.Ledger.Slot
     Cardano.Simple.Ledger.TimeSlot
     Cardano.Simple.Ledger.Tx
+    Cardano.Simple.Plutus.Model.Ada
+    Cardano.Simple.Plutus.Model.Mock.FailReason
+    Cardano.Simple.Plutus.Model.Mock.Percent
     Cardano.Simple.PlutusLedgerApi.V1.Scripts
     Cardano.Simple.TxExtra
-    Plutus.Model.Ada
-    Plutus.Model.Mock.FailReason
-    Plutus.Model.Mock.Percent
 
   build-depends:
     , tasty

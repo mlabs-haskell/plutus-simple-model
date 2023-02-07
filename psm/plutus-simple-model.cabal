@@ -115,12 +115,15 @@ library
   import:          deps
   exposed-modules:
     Plutus.Model
+    Plutus.Model.Ada
     Plutus.Model.Contract
     Plutus.Model.Mint
     Plutus.Model.Mock
     Plutus.Model.Mock.Address
+    Plutus.Model.Mock.FailReason
     Plutus.Model.Mock.Log
     Plutus.Model.Mock.MockConfig
+    Plutus.Model.Mock.Percent
     Plutus.Model.Mock.ProtocolParameters
     Plutus.Model.Mock.Stat
     Plutus.Model.Pretty
