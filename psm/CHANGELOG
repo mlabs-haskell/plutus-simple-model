@@ -7,9 +7,9 @@ and this project adheres to the [Haskell Package Versioning Policy](https://pvp.
 
 ## [0.5.2.1] - 2023-02-07
 
-### Removed
+### Changed
 
-Factor out hidden `Plutus.Model.Fork` modules into `cardano-simple`
+Nix import now needs to be "${plutus-simple-model}/psm"
 
 ## [0.5.2.0] - 2023-01-02
 
