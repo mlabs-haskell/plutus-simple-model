@@ -97,7 +97,8 @@ module Plutus.Model.Mock (
   -- * Blockchain config
   readMockConfig,
   defaultAlonzo,
-  defaultBabbage,
+  defaultBabbageV1,
+  defaultBabbageV2,
   defaultMockConfig,
   skipLimits,
   warnLimits,
