@@ -3724,11 +3724,11 @@
         "tooling": "tooling"
       },
       "locked": {
-        "lastModified": 1670045459,
-        "narHash": "sha256-WrOPEZ1s9Yuc2sLH6avqM8lBS8rVIQ6GOYCgZ+Azr4s=",
+        "lastModified": 1675688785,
+        "narHash": "sha256-wLVsGPoCmntA/2TMXaIU36YRHydY99g71PqjpDDMruE=",
         "owner": "plutonomicon",
         "repo": "plutarch-plutus",
-        "rev": "01a67f56b2bf428538e92ed9ada0ce88d90ab636",
+        "rev": "f535a6894a25e6d46d16958273769bffa8880090",
         "type": "github"
       },
       "original": {
@@ -4211,11 +4211,11 @@
         "plutus": "plutus_2"
       },
       "locked": {
-        "lastModified": 1672153441,
-        "narHash": "sha256-uiMXQSr7XAbuA+2OIjlgITS+W0qVwZaMcUNco+gj148=",
+        "lastModified": 1674642357,
+        "narHash": "sha256-PnS9hGvBGquddnY7x0Jjd69xI4Q3jHG2D0b4mSPFP/g=",
         "owner": "mlabs-haskell",
         "repo": "mlabs-tooling.nix",
-        "rev": "3367df5cffc9e6823e88a3b6ac2dae55682a4d15",
+        "rev": "f1e8e9def136b57f38be9c255e1c8228a5fafdea",
         "type": "github"
       },
       "original": {

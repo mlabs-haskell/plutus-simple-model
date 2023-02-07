@@ -1,4 +1,6 @@
-packages: ./.
+packages:
+  ./psm
+  ./cardano-simple
 
 allow-newer:
     *:aeson
