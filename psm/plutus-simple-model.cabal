@@ -1,6 +1,6 @@
 cabal-version:      3.0
 name:               plutus-simple-model
-version:            0.5.2.0
+version:            0.5.2.1
 synopsis:           Unit test library for plutus
 description:        Unit test library for plutus with resource estimation
 homepage:           https://github.com/mlabs-haskell/plutus-simple-model
