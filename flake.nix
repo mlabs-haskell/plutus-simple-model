@@ -22,6 +22,13 @@
           project.extraHackage = [
             "${plutarch}"
           ];
+          toHaddock = [
+            "plutarch"
+            "cardano-crypto"
+            "cardano-ledger-alonzo"
+            "cardano-ledger-babbage"
+            "cardano-ledger-core"
+          ];
 
         })
       ];
