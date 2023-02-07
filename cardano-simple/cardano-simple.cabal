@@ -110,6 +110,7 @@ library
     Cardano.Simple.Cardano.Babbage
     Cardano.Simple.Cardano.Class
     Cardano.Simple.Cardano.Common
+    Cardano.Simple.Eval
     Cardano.Simple.Ledger.Scripts
     Cardano.Simple.Ledger.Slot
     Cardano.Simple.Ledger.TimeSlot
