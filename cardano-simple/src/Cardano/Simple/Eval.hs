@@ -7,10 +7,13 @@ module Cardano.Simple.Eval (
 
 import Prelude
 
+import Data.Array qualified as Array
+import Data.Either (lefts, rights)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
+import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Records (HasField (getField))
 
 import Cardano.Ledger.Alonzo.Data qualified as Ledger
@@ -20,13 +23,17 @@ import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Language qualified as Ledger
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 
+import Cardano.Ledger.Slot (EpochSize (..))
+import Cardano.Slotting.EpochInfo.Impl (fixedEpochInfo)
+import Cardano.Slotting.Time (SystemStart (..), slotLengthFromMillisec)
+
 import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, TranslationError)
 import Cardano.Ledger.Shelley.API (CLI, evaluateTransactionBalance)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 
+import Cardano.Ledger.Alonzo.Language qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
-import Cardano.Simple.TxExtra qualified as P
 
 import Cardano.Simple.Cardano.Class (
   IsCardanoTx,
@@ -35,13 +42,16 @@ import Cardano.Simple.Cardano.Class (
   toUtxo,
  )
 import Cardano.Simple.Cardano.Common (ToCardanoError)
+import Cardano.Simple.Ledger.TimeSlot (SlotConfig, scSlotLength, scSlotZeroTime)
 import Cardano.Simple.Ledger.Tx (
   Tx (txCollateral, txInputs, txReferenceInputs, txScripts),
   TxIn (TxIn),
  )
-import PlutusLedgerApi.V2 (TxOut, TxOutRef)
+import Cardano.Simple.TxExtra (Extra)
 
 import PlutusLedgerApi.Common qualified as Plutus
+import PlutusLedgerApi.V1.Time (getPOSIXTime)
+import PlutusLedgerApi.V2 (TxOut, TxOutRef)
 
 evalScript ::
   (HasField "_protocolVersion" (Ledger.PParams era) Ledger.ProtVer) =>
@@ -97,7 +107,7 @@ txBalance ::
   Ledger.PParams era ->
   Ledger.Network ->
   Tx ->
-  P.Extra ->
+  Extra ->
   Either ToCardanoError (Ledger.Value era)
 txBalance utxos pparams network tx extra = do
   utxo <- utxoForTransaction @era utxos network tx
@@ -120,14 +130,16 @@ evaluateScriptsInTx ::
   , Ledger.Script era ~ Alonzo.AlonzoScript era
   , ExtendedUTxO era
   , IsCardanoTx era
+  , HasField "_costmdls" (Ledger.PParams era) Alonzo.CostModels
   ) =>
   Map TxOutRef TxOut ->
   Ledger.PParams era ->
   Ledger.Network ->
   Tx ->
-  P.Extra ->
+  Extra ->
+  SlotConfig ->
   Either (Either ToCardanoError (TranslationError (Ledger.Crypto era))) Alonzo.ExUnits
-evaluateScriptsInTx utxos pparams network tx extra = do
+evaluateScriptsInTx utxos pparams network tx extra slotCfg = do
   ltx <- leftMap Left $ toCardanoTx' @era network pparams extra tx
   utxo <- leftMap Left $ utxoForTransaction @era utxos network tx
   res <-
@@ -136,10 +148,26 @@ evaluateScriptsInTx utxos pparams network tx extra = do
         pparams
         ltx
         utxo
-        (error "TODO epoch info")
-        (error "Time SystemStart")
-        (error "TODO cost model")
-  pure $ undefined res
+        (fixedEpochInfo (EpochSize 1) (slotLengthFromMillisec $ scSlotLength slotCfg))
+        (SystemStart $ posixSecondsToUTCTime $ fromInteger $ (`div` 1000) $ getPOSIXTime $ scSlotZeroTime slotCfg)
+        (toAlonzoCostModels $ getField @"_costmdls" pparams)
+  let res' = (\(k, v) -> fmap (k,) v) <$> Map.toList res
+      errs = lefts res'
+      cost = foldMap snd . rights $ res'
+   in if null errs
+        then pure cost
+        else Left . Left $ show errs
+
+-- coppied from plutus model mock
+toAlonzoCostModels ::
+  Alonzo.CostModels ->
+  Array.Array Alonzo.Language Alonzo.CostModel
+toAlonzoCostModels (Alonzo.CostModels costmodels) =
+  Array.array
+    (minBound, maxBound)
+    [ (lang, costmodel)
+    | (lang, costmodel) <- Map.toList costmodels
+    ]
 
 leftMap :: (a -> b) -> Either a c -> Either b c
 leftMap f = either (Left . f) Right
