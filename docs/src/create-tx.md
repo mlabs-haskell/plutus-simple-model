@@ -9,14 +9,14 @@ submitTx :: PubKeyHash -> Tx -> Run ()
 submitTx pkh tx = void $ sendTx =<< signTx pkh tx
 ```
 
-It's combination ow two functions: `signTx` and `sendValue`.
+It's a combination of two functions: `signTx` and `sendTx`.
 
-When we use function `sendValue` it creates TX and submits it to blockchain.
+When we use function `sendTx` it creates TX and submits it to blockchain.
 TX defines which UTXOs are used as inputs and what UTXOs we want to produce as outputs.
 As a result (when TX is successful) we destroy input UTXOs and create output UTXOs.
 
 UTXO can belong to the user (protected by the private PubKey) and can belong to the script (protected by the contract).
-The function `spendValue` creates TX that uses sender's UTXO as input and signs it with sender's pub key
+The function `sendTx` creates TX that uses sender's UTXO as input and signs it with sender's pub key
 and creates receiver's UTXO as output sealed by receiver's pub key hash.
 
 To post TXs to blockchain we have function:

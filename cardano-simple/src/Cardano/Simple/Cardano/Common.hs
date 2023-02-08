@@ -19,6 +19,7 @@ module Cardano.Simple.Cardano.Common (
   toSlot,
   toCoin,
   toStrictMaybe,
+  toDCert,
   toDataHash,
   toAddr,
   toStakeAddressReference,
