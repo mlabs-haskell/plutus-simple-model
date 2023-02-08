@@ -16,23 +16,22 @@ import Cardano.Ledger.Alonzo.Data qualified as Ledger
 import Cardano.Ledger.Alonzo.Tx qualified as Ledger
 import Cardano.Ledger.BaseTypes qualified as Ledger
 import Cardano.Ledger.Core qualified as Ledger
-import Cardano.Ledger.Era qualified as Ledger
 import Cardano.Ledger.Language qualified as Ledger
-import Cardano.Ledger.SafeHash qualified as SafeHash
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
-import Cardano.Ledger.TxIn qualified as Ledger
 
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 
 import Cardano.Simple.Cardano.Class (
   IsCardanoTx,
-  getTxBody,
   toUtxo,
  )
 import Cardano.Simple.Cardano.Common (ToCardanoError)
 import Cardano.Simple.Ledger.Scripts qualified as C
-import Cardano.Simple.Ledger.Tx (TxIn (TxIn), TxInType (ConsumePublicKeyAddress, ConsumeScriptAddress))
-import PlutusLedgerApi.V2 (Address (Address), TxOut (TxOut), TxOutRef)
+import Cardano.Simple.Ledger.Tx (
+  Tx (txCollateral, txInputs, txReferenceInputs),
+  TxIn (TxIn),
+ )
+import PlutusLedgerApi.V2 (TxOut, TxOutRef)
 
 import Cardano.Simple.PlutusLedgerApi.V1.Scripts qualified as P
 import PlutusLedgerApi.V2 qualified as P
@@ -63,59 +62,31 @@ evalScript lang pparams cm script args =
 utxoForTransaction ::
   forall era.
   IsCardanoTx era =>
-  Ledger.EraTxBody era =>
   Map P.ScriptHash (C.Versioned P.Script) ->
   Map TxOutRef TxOut ->
-  Map P.DatumHash P.Datum ->
   Ledger.Network ->
-  Ledger.Tx era ->
+  Tx ->
   Either ToCardanoError (Ledger.UTxO era)
-utxoForTransaction scripts utxos datums network tx =
+utxoForTransaction scripts utxos network tx =
   toUtxo @era scripts network inOutList
   where
     inOutList :: [(TxIn, TxOut)]
     inOutList =
       [ (txin, out)
-      | Ledger.TxIn txid ix <-
+      | txin@(TxIn outRef _) <-
           Set.toList $
-            Ledger.getAllTxInputs @era $
-              getTxBody @era tx
-      , let outRef =
-              P.TxOutRef
-                ( P.TxId $
-                    P.toBuiltin $
-                      SafeHash.originalBytes $
-                        Ledger._unTxId txid
-                )
-                (toInteger $ Ledger.txIxToInt ix)
-            out@(TxOut (Address cred _) _ od _) =
+            txInputs tx
+              <> txCollateral tx
+              <> txReferenceInputs tx
+      , let out =
               fromMaybe (error "lookup failed") $
                 Map.lookup outRef utxos
-            txin = TxIn outRef $ case cred of
-              P.PubKeyCredential _ -> pure ConsumePublicKeyAddress
-              P.ScriptCredential sh ->
-                pure $
-                  ConsumeScriptAddress
-                    ( pure $
-                        fmap P.Validator $
-                          fromMaybe (error "script lookup failed") $
-                            Map.lookup sh scripts
-                    )
-                    (error "TODO how can I get the redeemer?")
-                    ( case od of
-                        P.OutputDatum d -> d
-                        P.OutputDatumHash dh ->
-                          fromMaybe (error "datum lookup failed") $
-                            Map.lookup dh datums
-                        P.NoOutputDatum ->
-                          error "Tried to spend a datumless utxo from a script address"
-                    )
       ]
 
 txBalance ::
   Ledger.PParams era ->
   Map P.ScriptHash (C.Versioned P.Script) ->
   Ledger.Network ->
-  Ledger.Tx era ->
+  Tx ->
   Ledger.Value era
 txBalance = error "TODO"
