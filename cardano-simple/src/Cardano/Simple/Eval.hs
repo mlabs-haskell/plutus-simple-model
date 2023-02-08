@@ -66,10 +66,11 @@ utxoForTransaction ::
   Ledger.EraTxBody era =>
   Map P.ScriptHash (C.Versioned P.Script) ->
   Map TxOutRef TxOut ->
+  Map P.DatumHash P.Datum ->
   Ledger.Network ->
   Ledger.Tx era ->
   Either ToCardanoError (Ledger.UTxO era)
-utxoForTransaction scripts utxos network tx =
+utxoForTransaction scripts utxos datums network tx =
   toUtxo @era scripts network inOutList
   where
     inOutList :: [(TxIn, TxOut)]
@@ -103,12 +104,11 @@ utxoForTransaction scripts utxos network tx =
                     (error "TODO how can I get the redeemer?")
                     ( case od of
                         P.OutputDatum d -> d
-                        P.OutputDatumHash _dh ->
-                          error "TODO lookup datum hash here"
-                        -- We probably need to take a datum hash table for this
-                        P.NoOutputDatum -> error "no output datum"
-                        -- TODO is this unreachable?
-                        -- or is there a default datum scripts recieve like ()
+                        P.OutputDatumHash dh ->
+                          fromMaybe (error "datum lookup failed") $
+                            Map.lookup dh datums
+                        P.NoOutputDatum -> error "Tx out had a script credential but no datum"
+                        -- TODO make sure this should be an error
                     )
       ]
 
