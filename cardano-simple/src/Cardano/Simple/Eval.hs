@@ -1,6 +1,7 @@
 module Cardano.Simple.Eval (
   evalScript,
   utxoForTransaction,
+  txBalance,
 ) where
 
 import Prelude
@@ -30,8 +31,8 @@ import Cardano.Simple.Cardano.Class (
  )
 import Cardano.Simple.Cardano.Common (ToCardanoError)
 import Cardano.Simple.Ledger.Scripts qualified as C
-import Cardano.Simple.Ledger.Tx (TxIn (TxIn))
-import PlutusLedgerApi.V2 (TxOut, TxOutRef)
+import Cardano.Simple.Ledger.Tx (TxIn (TxIn), TxInType (ConsumePublicKeyAddress, ConsumeScriptAddress))
+import PlutusLedgerApi.V2 (Address (Address), TxOut (TxOut), TxOutRef)
 
 import Cardano.Simple.PlutusLedgerApi.V1.Scripts qualified as P
 import PlutusLedgerApi.V2 qualified as P
@@ -64,10 +65,11 @@ utxoForTransaction ::
   IsCardanoTx era =>
   Ledger.EraTxBody era =>
   Map P.ScriptHash (C.Versioned P.Script) ->
+  Map TxOutRef TxOut ->
   Ledger.Network ->
   Ledger.Tx era ->
   Either ToCardanoError (Ledger.UTxO era)
-utxoForTransaction scripts network tx =
+utxoForTransaction scripts utxos network tx =
   toUtxo @era scripts network inOutList
   where
     inOutList :: [(TxIn, TxOut)]
@@ -85,11 +87,35 @@ utxoForTransaction scripts network tx =
                         Ledger._unTxId txid
                 )
                 (toInteger $ Ledger.txIxToInt ix)
-      , let out =
+            out@(TxOut (Address cred _) _ od _) =
               fromMaybe (error "lookup failed") $
                 Map.lookup outRef utxos
-      , let txin = TxIn outRef Nothing
-      -- TODO this Nothing is a placeholder
+            txin = TxIn outRef $ case cred of
+              P.PubKeyCredential _ -> pure ConsumePublicKeyAddress
+              P.ScriptCredential sh ->
+                pure $
+                  ConsumeScriptAddress
+                    ( pure $
+                        fmap P.Validator $
+                          fromMaybe (error "script lookup failed") $
+                            Map.lookup sh scripts
+                    )
+                    (error "TODO how can I get the redeemer?")
+                    ( case od of
+                        P.OutputDatum d -> d
+                        P.OutputDatumHash _dh ->
+                          error "TODO lookup datum hash here"
+                        -- We probably need to take a datum hash table for this
+                        P.NoOutputDatum -> error "no output datum"
+                        -- TODO is this unreachable?
+                        -- or is there a default datum scripts recieve like ()
+                    )
       ]
-    utxos :: Map TxOutRef TxOut
-    utxos = error "TODO" -- I think we need to take a mock to be able to do these lookups
+
+txBalance ::
+  Ledger.PParams era ->
+  Map P.ScriptHash (C.Versioned P.Script) ->
+  Ledger.Network ->
+  Ledger.Tx era ->
+  Ledger.Value era
+txBalance = error "TODO"
