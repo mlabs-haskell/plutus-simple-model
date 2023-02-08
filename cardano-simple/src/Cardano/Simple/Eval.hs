@@ -19,22 +19,23 @@ import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Language qualified as Ledger
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 
+import Cardano.Ledger.Shelley.API (CLI, evaluateTransactionBalance)
+import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
+
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 
 import Cardano.Simple.Cardano.Class (
   IsCardanoTx,
+  getTxBody,
+  toCardanoTx',
   toUtxo,
  )
 import Cardano.Simple.Cardano.Common (ToCardanoError)
-import Cardano.Simple.Ledger.Scripts qualified as C
 import Cardano.Simple.Ledger.Tx (
-  Tx (txCollateral, txInputs, txReferenceInputs),
+  Tx (txCollateral, txInputs, txReferenceInputs, txScripts),
   TxIn (TxIn),
  )
 import PlutusLedgerApi.V2 (TxOut, TxOutRef)
-
-import Cardano.Simple.PlutusLedgerApi.V1.Scripts qualified as P
-import PlutusLedgerApi.V2 qualified as P
 
 import PlutusLedgerApi.Common qualified as Plutus
 
@@ -62,13 +63,12 @@ evalScript lang pparams cm script args =
 utxoForTransaction ::
   forall era.
   IsCardanoTx era =>
-  Map P.ScriptHash (C.Versioned P.Script) ->
   Map TxOutRef TxOut ->
   Ledger.Network ->
   Tx ->
   Either ToCardanoError (Ledger.UTxO era)
-utxoForTransaction scripts utxos network tx =
-  toUtxo @era scripts network inOutList
+utxoForTransaction utxos network tx =
+  toUtxo @era (txScripts tx) network inOutList
   where
     inOutList :: [(TxIn, TxOut)]
     inOutList =
@@ -84,9 +84,25 @@ utxoForTransaction scripts utxos network tx =
       ]
 
 txBalance ::
+  forall era.
+  ( IsCardanoTx era
+  , CLI era
+  , ShelleyEraTxBody era
+  ) =>
+  Map TxOutRef TxOut ->
   Ledger.PParams era ->
-  Map P.ScriptHash (C.Versioned P.Script) ->
   Ledger.Network ->
   Tx ->
-  Ledger.Value era
-txBalance = error "TODO"
+  Either ToCardanoError (Ledger.Value era)
+txBalance utxos pparams network tx = do
+  utxo <- utxoForTransaction @era utxos network tx
+  ltx <- toCardanoTx' @era network pparams mempty tx
+  pure $
+    evaluateTransactionBalance @era
+      pparams
+      utxo
+      (const True)
+      -- TODO this is sort of wrong
+      -- if psm starts supporting staking
+      -- this would need to be fixed
+      (getTxBody @era ltx)

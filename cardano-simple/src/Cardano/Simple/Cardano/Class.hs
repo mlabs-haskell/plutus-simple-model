@@ -2,6 +2,7 @@
 module Cardano.Simple.Cardano.Class (
   IsCardanoTx (..),
   toUtxo,
+  toCardanoTx',
 ) where
 
 import Prelude
@@ -35,6 +36,17 @@ class (C.Crypto era ~ StandardCrypto) => IsCardanoTx era where
     Either ToCardanoError (C.TxOut era)
 
   getTxBody :: C.Tx era -> C.TxBody era
+
+-- TODO better name
+toCardanoTx' ::
+  IsCardanoTx era =>
+  Network ->
+  C.PParams era ->
+  P.Extra ->
+  Plutus.Tx ->
+  Either ToCardanoError (C.Tx era)
+toCardanoTx' n p e tx =
+  toCardanoTx (Plutus.txScripts tx) n p e tx
 
 toUtxo ::
   (IsCardanoTx era) =>
