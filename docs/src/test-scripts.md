@@ -1,18 +1,18 @@
 # Testing scripts
 
 In this chapter we will learn how to work with scripts.
-As example we are going to test the hash game script.
+As an example we are going to test the hash game script.
 Let's initialise the game. For that we spend a prize to the UTXO guarded
 by game validator:
 
 ```haskell
 initGame :: PubKeyHash -> Value -> BuiltinByteString -> Run ()
-initGame pkh prize answer = do   -- args: user, prize value , answer for puzzletpye
+initGame pkh prize answer = do   -- args: user, prize value , answer for puzzletype
   sp <- spend pkh prize          -- read users UTXO that we should spend
   submitTx pkh $                 -- create TX, sign it and post to 
     initGameTx sp prize answer   -- ledger with user's secret key
 
--- pure function ot create TX
+-- pure function to create TX
 initGameTx :: UserSpend -> Value -> BuiltinByteString -> Tx
 ```
 
@@ -119,7 +119,7 @@ datumAt :: TxOutRef -> Run (Maybe a)
 Note that `datumAt` reads both hashed and inlined datums with the same interface.
 
 With `logError` we can report custom errors. It will save the error to the log
-end the whole test will fail with `testNoErrors` function or `noErrors` function.
+and the whole test will fail with `testNoErrors` function or `noErrors` function.
 
 Our `gameScript` has instance of `HasAddress`. It is an address of underlying script.
 We should query the datum separately because `TxOut` contains only hash of it.

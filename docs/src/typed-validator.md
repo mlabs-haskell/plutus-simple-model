@@ -77,7 +77,7 @@ type IsValidatorHash a = (HasAddress a, HasDatum a, HasRedeemer a, HasLanguage a
 ```
 
 In `plutus-ledger` we created a special tag for example `Game` and we 
-instanciated similiar type class called `ValidatorTypes` to specify datum and redeemer tpyes.
+instanciated similiar type class called `ValidatorTypes` to specify datum and redeemer types.
 
 In `plutus-simple-model` we have instances of type class `IsValidator` for all typed scripts:
 `TypedValidator`, `TypedPolciy` and `TypedStake`. Instead of defining a type tag we
@@ -164,7 +164,7 @@ newtype GameDatum = GuessHash Plutus.BuiltinByteString
 newtype GameAct = Guess Plutus.BuiltinByteString
 
 PlutusTx.unstableMakeIsData ''GameDatum
-PlutusTx.unstableMakeIsData ''GameAct```
+PlutusTx.unstableMakeIsData ''GameAct
 ```
 
 We have some secret bytestring that is hashed with SHA256 and result of hashing
