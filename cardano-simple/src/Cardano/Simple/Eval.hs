@@ -2,6 +2,7 @@ module Cardano.Simple.Eval (
   evalScript,
   utxoForTransaction,
   txBalance,
+  evaluateScriptsInTx,
 ) where
 
 import Prelude
@@ -19,6 +20,8 @@ import Cardano.Ledger.Core qualified as Ledger
 import Cardano.Ledger.Language qualified as Ledger
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 
+import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
+import Cardano.Ledger.Alonzo.TxInfo (ExtendedUTxO, TranslationError)
 import Cardano.Ledger.Shelley.API (CLI, evaluateTransactionBalance)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 
@@ -108,3 +111,35 @@ txBalance utxos pparams network tx extra = do
       -- if psm starts supporting staking
       -- this would need to be fixed
       (getTxBody @era ltx)
+
+evaluateScriptsInTx ::
+  forall era.
+  ( Ledger.AlonzoEraTx era
+  , HasField "_protocolVersion" (Ledger.PParams era) Ledger.ProtVer
+  , HasField "_maxTxExUnits" (Ledger.PParams era) Alonzo.ExUnits
+  , Ledger.Script era ~ Alonzo.AlonzoScript era
+  , ExtendedUTxO era
+  , IsCardanoTx era
+  ) =>
+  Map TxOutRef TxOut ->
+  Ledger.PParams era ->
+  Ledger.Network ->
+  Tx ->
+  P.Extra ->
+  Either (Either ToCardanoError (TranslationError (Ledger.Crypto era))) Alonzo.ExUnits
+evaluateScriptsInTx utxos pparams network tx extra = do
+  ltx <- leftMap Left $ toCardanoTx' @era network pparams extra tx
+  utxo <- leftMap Left $ utxoForTransaction @era utxos network tx
+  res <-
+    leftMap Right $
+      evaluateTransactionExecutionUnits @era
+        pparams
+        ltx
+        utxo
+        (error "TODO epoch info")
+        (error "Time SystemStart")
+        (error "TODO cost model")
+  pure $ undefined res
+
+leftMap :: (a -> b) -> Either a c -> Either b c
+leftMap f = either (Left . f) Right
