@@ -107,8 +107,8 @@ utxoForTransaction scripts utxos datums network tx =
                         P.OutputDatumHash dh ->
                           fromMaybe (error "datum lookup failed") $
                             Map.lookup dh datums
-                        P.NoOutputDatum -> error "Tx out had a script credential but no datum"
-                        -- TODO make sure this should be an error
+                        P.NoOutputDatum ->
+                          error "Tried to spend a datumless utxo from a script address"
                     )
       ]
 
