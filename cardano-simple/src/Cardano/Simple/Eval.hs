@@ -3,6 +3,7 @@ module Cardano.Simple.Eval (
   utxoForTransaction,
   txBalance,
   evaluateScriptsInTx,
+  toAlonzoCostModels,
 ) where
 
 import Prelude
@@ -124,13 +125,13 @@ txBalance utxos pparams network tx extra = do
 
 evaluateScriptsInTx ::
   forall era.
-  ( Ledger.AlonzoEraTx era
-  , HasField "_protocolVersion" (Ledger.PParams era) Ledger.ProtVer
+  ( HasField "_protocolVersion" (Ledger.PParams era) Ledger.ProtVer
   , HasField "_maxTxExUnits" (Ledger.PParams era) Alonzo.ExUnits
+  , HasField "_costmdls" (Ledger.PParams era) Alonzo.CostModels
+  , Ledger.AlonzoEraTx era
   , Ledger.Script era ~ Alonzo.AlonzoScript era
   , ExtendedUTxO era
   , IsCardanoTx era
-  , HasField "_costmdls" (Ledger.PParams era) Alonzo.CostModels
   ) =>
   Map TxOutRef TxOut ->
   Ledger.PParams era ->
@@ -138,7 +139,9 @@ evaluateScriptsInTx ::
   Tx ->
   Extra ->
   SlotConfig ->
-  Either (Either ToCardanoError (TranslationError (Ledger.Crypto era))) Alonzo.ExUnits
+  Either
+    (Either ToCardanoError (TranslationError (Ledger.Crypto era)))
+    Alonzo.ExUnits
 evaluateScriptsInTx utxos pparams network tx extra slotCfg = do
   ltx <- leftMap Left $ toCardanoTx' @era network pparams extra tx
   utxo <- leftMap Left $ utxoForTransaction @era utxos network tx
@@ -148,8 +151,17 @@ evaluateScriptsInTx utxos pparams network tx extra slotCfg = do
         pparams
         ltx
         utxo
-        (fixedEpochInfo (EpochSize 1) (slotLengthFromMillisec $ scSlotLength slotCfg))
-        (SystemStart $ posixSecondsToUTCTime $ fromInteger $ (`div` 1000) $ getPOSIXTime $ scSlotZeroTime slotCfg)
+        ( fixedEpochInfo
+            (EpochSize 1)
+            (slotLengthFromMillisec $ scSlotLength slotCfg)
+        )
+        ( SystemStart $
+            posixSecondsToUTCTime $
+              fromInteger $
+                (`div` 1000) $
+                  getPOSIXTime $
+                    scSlotZeroTime slotCfg
+        )
         (toAlonzoCostModels $ getField @"_costmdls" pparams)
   let res' = (\(k, v) -> fmap (k,) v) <$> Map.toList res
       errs = lefts res'
@@ -158,16 +170,11 @@ evaluateScriptsInTx utxos pparams network tx extra slotCfg = do
         then pure cost
         else Left . Left $ show errs
 
--- coppied from plutus model mock
 toAlonzoCostModels ::
   Alonzo.CostModels ->
   Array.Array Alonzo.Language Alonzo.CostModel
 toAlonzoCostModels (Alonzo.CostModels costmodels) =
-  Array.array
-    (minBound, maxBound)
-    [ (lang, costmodel)
-    | (lang, costmodel) <- Map.toList costmodels
-    ]
+  Array.array (minBound, maxBound) $ Map.toList costmodels
 
 leftMap :: (a -> b) -> Either a c -> Either b c
 leftMap f = either (Left . f) Right

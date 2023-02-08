@@ -178,7 +178,6 @@ import Cardano.Simple.TxExtra
 import Plutus.Model.Mock.ProtocolParameters
 import Plutus.Model.Stake
 
-import Cardano.Ledger.Alonzo.Language qualified as Alonzo
 import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
@@ -196,6 +195,7 @@ import Cardano.Simple.Cardano.Babbage ()
 import Cardano.Simple.Cardano.Babbage qualified as Babbage
 import Cardano.Simple.Cardano.Class qualified as Class
 import Cardano.Simple.Cardano.Common (fromCardanoValue, fromTxId)
+import Cardano.Simple.Eval (toAlonzoCostModels)
 import Control.Monad.Except (ExceptT (ExceptT), MonadError (catchError, throwError), liftEither, runExceptT)
 import Plutus.Model.Ada (Ada (..))
 import Plutus.Model.Mock.Address
@@ -640,16 +640,6 @@ checkSingleTx params extra tx = do
              in if null errs
                   then pure cost
                   else throwError $ GenericFail $ unlines $ fmap show errs
-
-        toAlonzoCostModels ::
-          Alonzo.CostModels ->
-          Array.Array Alonzo.Language Alonzo.CostModel
-        toAlonzoCostModels (Alonzo.CostModels costmodels) =
-          Array.array
-            (minBound, maxBound)
-            [ (lang, costmodel)
-            | (lang, costmodel) <- Map.toList costmodels
-            ]
 
     checkTxLimits :: Stat -> Validate ()
     checkTxLimits stat = do
