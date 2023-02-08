@@ -510,12 +510,12 @@ sendTx tx = do
 -}
 sendSingleTx :: Tx -> Run (Either FailReason Stat)
 sendSingleTx preTx@(Tx extra _) =
-  runValidate $
-    liftEither (processMints preTx) >>= \tx -> do
-      genParams <- gets (mockConfigProtocol . mockConfig)
-      case genParams of
-        AlonzoParams params -> checkSingleTx @Alonzo.Era params extra tx
-        BabbageParams params -> checkSingleTx @Babbage.Era params extra tx
+  runValidate $ do
+    tx <- liftEither (processMints preTx)
+    genParams <- gets (mockConfigProtocol . mockConfig)
+    case genParams of
+      AlonzoParams params -> checkSingleTx @Alonzo.Era params extra tx
+      BabbageParams params -> checkSingleTx @Babbage.Era params extra tx
 
 -- | Confirms that single TX is valid. Works across several Eras (see @Cardano.Simple.Cardano.Class@)
 checkSingleTx ::

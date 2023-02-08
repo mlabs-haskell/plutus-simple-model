@@ -23,6 +23,7 @@ import Cardano.Ledger.Shelley.API (CLI, evaluateTransactionBalance)
 import Cardano.Ledger.Shelley.TxBody (ShelleyEraTxBody)
 
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
+import Cardano.Simple.TxExtra qualified as P
 
 import Cardano.Simple.Cardano.Class (
   IsCardanoTx,
@@ -93,10 +94,11 @@ txBalance ::
   Ledger.PParams era ->
   Ledger.Network ->
   Tx ->
+  P.Extra ->
   Either ToCardanoError (Ledger.Value era)
-txBalance utxos pparams network tx = do
+txBalance utxos pparams network tx extra = do
   utxo <- utxoForTransaction @era utxos network tx
-  ltx <- toCardanoTx' @era network pparams mempty tx
+  ltx <- toCardanoTx' @era network pparams extra tx
   pure $
     evaluateTransactionBalance @era
       pparams
