@@ -195,7 +195,7 @@ import Cardano.Simple.Cardano.Babbage ()
 import Cardano.Simple.Cardano.Babbage qualified as Babbage
 import Cardano.Simple.Cardano.Class qualified as Class
 import Cardano.Simple.Cardano.Common (fromCardanoValue, fromTxId)
-import Cardano.Simple.Eval (toAlonzoCostModels)
+import Cardano.Simple.Eval (toAlonzoCostModels, utxoForTransaction)
 import Control.Monad.Except (ExceptT (ExceptT), MonadError (catchError, throwError), liftEither, runExceptT)
 import Plutus.Model.Ada (Ada (..))
 import Plutus.Model.Mock.Address
@@ -683,28 +683,17 @@ compareLimits maxLimits stat =
         overflow = getter stat - getter maxLimits
 
 -- | Read UTxO relevant to transaction
-getUTxO :: (Class.IsCardanoTx era) => P.Tx -> Validate (Ledger.UTxO era)
+getUTxO ::
+  forall era.
+  (Class.IsCardanoTx era) =>
+  P.Tx ->
+  Validate (Ledger.UTxO era)
 getUTxO tx = do
   networkId <- mockConfigNetworkId <$> gets mockConfig
-  mOuts <-
-    mapM
-      ( Validate
-          . ExceptT
-          . fmap (maybe (throwError FailToReadUtxo) pure)
-          . getTxOut
-          . Plutus.txInRef
-      )
-      ins
-  orFailValidate FailToCardano $ (Class.toUtxo localScriptMap networkId . zip ins) mOuts
-  where
-    ins =
-      mconcat
-        [ S.toList $ P.txInputs tx
-        , S.toList $ P.txCollateral tx
-        , S.toList $ P.txReferenceInputs tx
-        ]
-
-    localScriptMap = P.txScripts tx
+  utxos <- gets mockUtxos
+  case utxoForTransaction @era utxos networkId tx of
+    Left _err -> throwError FailToReadUtxo
+    Right utxo -> pure utxo
 
 -- | Reads TxOut by its reference.
 getTxOut :: TxOutRef -> Run (Maybe TxOut)
