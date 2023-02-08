@@ -1,7 +1,7 @@
 # Testing with tasty
 
 In real unit test suite we are likely to use `tasty` to create tests. For that we have
-helper funtion that checks that no errors has happened during execution:
+helper function that checks that no errors has happened during execution:
 
 ```haskell
 testNoErrors :: Value -> MockConfig -> String -> Run a -> TestTree
@@ -68,7 +68,7 @@ We can check relative transitions:
 ```
 
 This check seems to be obvious but in real test cases we can check 
-transitions of values from users to scripts and beetween scripts.
+transitions of values from users to scripts and between scripts.
 Also we can check that user or script has not changed the value by `owns u1 mempty`.
 In this way we enforce that certain actions preserve the value for user `u1`.
 
