@@ -12,7 +12,6 @@ import Data.Array qualified as Array
 import Data.Either (lefts, rights)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
-import Data.Maybe (fromMaybe)
 import Data.Set qualified as Set
 import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import GHC.Records (HasField (getField))
@@ -83,20 +82,21 @@ utxoForTransaction ::
   Tx ->
   Either ToCardanoError (Ledger.UTxO era)
 utxoForTransaction utxos network tx =
-  toUtxo @era (txScripts tx) network inOutList
+  case inOutList of
+    Nothing -> Left "lookup failure"
+    Just list -> toUtxo @era (txScripts tx) network list
   where
-    inOutList :: [(TxIn, TxOut)]
+    inOutList :: Maybe [(TxIn, TxOut)]
     inOutList =
-      [ (txin, out)
-      | txin@(TxIn outRef _) <-
-          Set.toList $
-            txInputs tx
-              <> txCollateral tx
-              <> txReferenceInputs tx
-      , let out =
-              fromMaybe (error "lookup failed") $
-                Map.lookup outRef utxos
-      ]
+      sequence
+        [ (txin,) <$> out
+        | txin@(TxIn outRef _) <-
+            Set.toList $
+              txInputs tx
+                <> txCollateral tx
+                <> txReferenceInputs tx
+        , let out = Map.lookup outRef utxos
+        ]
 
 txBalance ::
   forall era.

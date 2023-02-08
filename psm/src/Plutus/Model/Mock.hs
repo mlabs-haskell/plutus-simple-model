@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
 {- | Simple test model for plutus scripts.
 
  We can create blockchain with main user that holds all the value
@@ -133,7 +131,6 @@ import GHC.Records
 import Prelude
 
 import Control.Monad.Identity
-import Data.Array qualified as Array
 import Data.ByteString qualified as BS
 import Data.Either
 import Data.Map qualified as Map
@@ -185,7 +182,6 @@ import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Block qualified as Ledger
 import Cardano.Ledger.Mary.Value qualified as Mary
-import Cardano.Ledger.Shelley.API.Wallet (evaluateTransactionBalance)
 import Cardano.Ledger.Shelley.API.Wallet qualified as C
 import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.TxIn qualified as Ledger
@@ -195,7 +191,7 @@ import Cardano.Simple.Cardano.Babbage ()
 import Cardano.Simple.Cardano.Babbage qualified as Babbage
 import Cardano.Simple.Cardano.Class qualified as Class
 import Cardano.Simple.Cardano.Common (fromCardanoValue, fromTxId)
-import Cardano.Simple.Eval (toAlonzoCostModels, utxoForTransaction)
+import Cardano.Simple.Eval (toAlonzoCostModels, txBalance, utxoForTransaction)
 import Control.Monad.Except (ExceptT (ExceptT), MonadError (catchError, throwError), liftEither, runExceptT)
 import Plutus.Model.Ada (Ada (..))
 import Plutus.Model.Mock.Address
@@ -540,7 +536,7 @@ checkSingleTx params extra tx = do
   txBody <- getTxBody
   let tid = fromTxId $ Ledger.txid (Class.getTxBody txBody)
   utxo <- getUTxO tx
-  checkBalance utxo txBody
+  checkBalance
   cost <- checkUnits utxo txBody
   let txSize = fromIntegral $ BS.length $ CBOR.serialize' txBody
       stat = Stat txSize cost
@@ -598,17 +594,17 @@ checkSingleTx params extra tx = do
             Nothing -> go (reactDCert c st) cs
             Just err -> throwError (TxInvalidCertificate err)
 
-    checkBalance :: Ledger.UTxO era -> Core.Tx era -> Validate ()
-    checkBalance utxo txBody =
+    checkBalance :: Validate ()
+    checkBalance = do
+      utxos <- gets mockUtxos
+      network <- gets $ mockConfigNetworkId . mockConfig
+      balance <- case txBalance @era utxos params network tx extra of
+        Left err -> throwError $ FailToCardano err
+        Right bal -> pure bal
       when
         (balance /= mempty)
         (throwError $ NotBalancedTx $ fromCardanoValue balance)
-      where
-        balance = evaluateTransactionBalance params utxo isNewPool (Class.getTxBody txBody)
 
-        -- \| TODO: use pool ids info
-        -- isNewPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
-        isNewPool _kh = True -- StakePoolKeyHash kh `S.notMember` poolids
     checkUnits ::
       Ledger.UTxO era ->
       Core.Tx era ->
