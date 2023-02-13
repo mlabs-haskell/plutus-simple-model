@@ -527,16 +527,23 @@ checkSingleTx ::
   P.Tx ->
   Validate Stat
 checkSingleTx params extra tx = do
+  traceM "enter checkSingleTx"
   checkStaking
+  traceM "pass checkStaking"
   checkRange
+  traceM "pass checkRange"
   txBody <- getTxBody
+  traceM "pass getTxBody"
   let tid = fromTxId $ Ledger.txid (Class.getTxBody txBody)
   checkBalance
+  traceM "pass checkBalance"
   cost <- evalScripts
   let txSize = fromIntegral $ BS.length $ CBOR.serialize' txBody
       stat = Stat txSize cost
   checkTxLimits stat
+  traceM "pass checkTxLimits"
   Validate . lift $ applyTx stat tid extra tx
+  traceM "pass applyTx"
   pure stat
   where
     pkhs = M.keys $ P.txSignatures tx
