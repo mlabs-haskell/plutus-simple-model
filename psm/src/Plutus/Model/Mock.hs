@@ -192,6 +192,8 @@ import Plutus.Model.Mock.Log
 import Plutus.Model.Mock.MockConfig
 import Plutus.Model.Mock.Stat
 
+import Debug.Trace
+
 newtype User = User
   { userSignKey :: C.KeyPair 'C.Witness C.StandardCrypto
   }
@@ -490,6 +492,7 @@ sendBlock txs = do
 sendTx :: Tx -> Run (Either FailReason Stat)
 sendTx tx = do
   res <- sendSingleTx tx
+  traceM $ show res
   when (isRight res) bumpSlot
   pure res
 
@@ -500,6 +503,7 @@ sendSingleTx :: Tx -> Run (Either FailReason Stat)
 sendSingleTx preTx@(Tx extra _) =
   runValidate $ do
     tx <- liftEither (processMints preTx)
+    traceM $ show tx
     genParams <- gets (mockConfigProtocol . mockConfig)
     case genParams of
       AlonzoParams params -> checkSingleTx @Alonzo.Era params extra tx

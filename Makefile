@@ -46,14 +46,14 @@ endif
 ci:
 	nix-build ./nix/ci.nix
 
-build: requires_nix_shell plutus-simple-model.cabal
-	cabal v2-build $(GHC_FLAGS)
+build: requires_nix_shell psm/plutus-simple-model.cabal
+	cabal v2-build $(GHC_FLAGS) all
 
 watch: requires_nix_shell plutus-simple-model.cabal
 	while sleep 1; do find plutus-simple-model.cabal src test | entr -cd make build; done
 
-test: requires_nix_shell plutus-simple-model.cabal
-	cabal new-test --test-show-details=always --test-options="--color always"
+test: requires_nix_shell psm/plutus-simple-model.cabal
+	cabal new-test --test-show-details=always --test-options="--color always" all
 
 ghci: requires_nix_shell plutus-simple-model.cabal
 	cabal v2-repl $(GHC_FLAGS) plutus-simple-model
