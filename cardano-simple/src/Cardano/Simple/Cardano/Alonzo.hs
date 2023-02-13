@@ -53,7 +53,7 @@ type ToCardanoError = String
 instance IsCardanoTx Era where
   getTxBody = C.body
 
-  toCardanoTx = const toAlonzoTx
+  toCardanoTx = toAlonzoTx
 
   toTxOut _ network (P.TxOut addr value mdh _) = do
     caddr <- toAddr network addr

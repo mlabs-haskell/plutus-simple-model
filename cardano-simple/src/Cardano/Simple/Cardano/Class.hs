@@ -21,7 +21,6 @@ import PlutusLedgerApi.V2 qualified as P
 
 class (C.Crypto era ~ StandardCrypto) => IsCardanoTx era where
   toCardanoTx ::
-    Map P.ScriptHash (C.Versioned P.Script) ->
     Network ->
     C.PParams era ->
     P.Extra ->

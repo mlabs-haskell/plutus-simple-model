@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -fno-warn-orphans #-}
-
 {- | Simple test model for plutus scripts.
 
  We can create blockchain with main user that holds all the value
@@ -133,19 +131,16 @@ import GHC.Records
 import Prelude
 
 import Control.Monad.Identity
-import Data.Array qualified as Array
 import Data.ByteString qualified as BS
 import Data.Either
 import Data.Map qualified as Map
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as M
-import Data.Text (Text)
 
 import Data.List qualified as L
 import Data.Maybe
 import Data.Set (Set)
 import Data.Set qualified as S
-import Data.Time.Clock.POSIX (posixSecondsToUTCTime)
 import Data.Vector qualified as V
 
 import Cardano.Crypto.DSIGN.Class qualified as C
@@ -158,8 +153,6 @@ import Cardano.Ledger.Crypto qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as C
 import Cardano.Simple.Ledger.Tx qualified as P
 import Cardano.Simple.Ledger.Tx qualified as Plutus
-import Cardano.Slotting.EpochInfo.Impl (fixedEpochInfo)
-import Cardano.Slotting.Time (SystemStart (..), slotLengthFromMillisec)
 import Control.Monad.State.Strict
 import GHC.Natural
 import PlutusLedgerApi.V1.Address (pubKeyHashAddress, toPubKeyHash)
@@ -171,24 +164,18 @@ import Cardano.Binary qualified as CBOR
 import Cardano.Crypto.Hash qualified as Crypto
 import Cardano.Ledger.Hashes as Ledger (EraIndependentTxBody)
 import Cardano.Ledger.SafeHash qualified as Ledger (unsafeMakeSafeHash)
-import Cardano.Ledger.Slot (EpochInfo, EpochSize (..))
 import Cardano.Simple.Ledger.Slot
-import Cardano.Simple.Ledger.TimeSlot (SlotConfig (..))
 import Cardano.Simple.TxExtra
 import Plutus.Model.Mock.ProtocolParameters
 import Plutus.Model.Stake
 
-import Cardano.Ledger.Alonzo.Language qualified as Alonzo
 import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
-import Cardano.Ledger.Alonzo.Tools (evaluateTransactionExecutionUnits)
 import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Block qualified as Ledger
 import Cardano.Ledger.Mary.Value qualified as Mary
-import Cardano.Ledger.Shelley.API.Wallet (evaluateTransactionBalance)
 import Cardano.Ledger.Shelley.API.Wallet qualified as C
-import Cardano.Ledger.Shelley.UTxO qualified as Ledger
 import Cardano.Ledger.TxIn qualified as Ledger
 import Cardano.Simple.Cardano.Alonzo ()
 import Cardano.Simple.Cardano.Alonzo qualified as Alonzo
@@ -196,6 +183,7 @@ import Cardano.Simple.Cardano.Babbage ()
 import Cardano.Simple.Cardano.Babbage qualified as Babbage
 import Cardano.Simple.Cardano.Class qualified as Class
 import Cardano.Simple.Cardano.Common (fromCardanoValue, fromTxId)
+import Cardano.Simple.Eval (evaluateScriptsInTx, txBalance)
 import Control.Monad.Except (ExceptT (ExceptT), MonadError (catchError, throwError), liftEither, runExceptT)
 import Plutus.Model.Ada (Ada (..))
 import Plutus.Model.Mock.Address
@@ -510,12 +498,12 @@ sendTx tx = do
 -}
 sendSingleTx :: Tx -> Run (Either FailReason Stat)
 sendSingleTx preTx@(Tx extra _) =
-  runValidate $
-    liftEither (processMints preTx) >>= \tx -> do
-      genParams <- gets (mockConfigProtocol . mockConfig)
-      case genParams of
-        AlonzoParams params -> checkSingleTx @Alonzo.Era params extra tx
-        BabbageParams params -> checkSingleTx @Babbage.Era params extra tx
+  runValidate $ do
+    tx <- liftEither (processMints preTx)
+    genParams <- gets (mockConfigProtocol . mockConfig)
+    case genParams of
+      AlonzoParams params -> checkSingleTx @Alonzo.Era params extra tx
+      BabbageParams params -> checkSingleTx @Babbage.Era params extra tx
 
 -- | Confirms that single TX is valid. Works across several Eras (see @Cardano.Simple.Cardano.Class@)
 checkSingleTx ::
@@ -539,9 +527,8 @@ checkSingleTx params extra tx = do
   checkRange
   txBody <- getTxBody
   let tid = fromTxId $ Ledger.txid (Class.getTxBody txBody)
-  utxo <- getUTxO tx
-  checkBalance utxo txBody
-  cost <- checkUnits utxo txBody
+  checkBalance
+  cost <- evalScripts
   let txSize = fromIntegral $ BS.length $ CBOR.serialize' txBody
       stat = Stat txSize cost
   checkTxLimits stat
@@ -553,10 +540,8 @@ checkSingleTx params extra tx = do
     getTxBody :: Validate (Core.Tx era)
     getTxBody = do
       cfg <- gets mockConfig
-      let localScriptMap = P.txScripts tx
       orFailValidate GenericFail $
         Class.toCardanoTx
-          localScriptMap
           (mockConfigNetworkId cfg)
           params
           extra
@@ -598,58 +583,26 @@ checkSingleTx params extra tx = do
             Nothing -> go (reactDCert c st) cs
             Just err -> throwError (TxInvalidCertificate err)
 
-    checkBalance :: Ledger.UTxO era -> Core.Tx era -> Validate ()
-    checkBalance utxo txBody =
-      when
-        (balance /= mempty)
-        (throwError $ NotBalancedTx $ fromCardanoValue balance)
-      where
-        balance = evaluateTransactionBalance params utxo isNewPool (Class.getTxBody txBody)
+    checkBalance :: Validate ()
+    checkBalance = do
+      utxos <- gets mockUtxos
+      network <- gets $ mockConfigNetworkId . mockConfig
+      case txBalance @era utxos params network tx extra of
+        Left err -> throwError $ FailToCardano err
+        Right bal ->
+          when
+            (bal /= mempty)
+            (throwError $ NotBalancedTx $ fromCardanoValue bal)
 
-        -- \| TODO: use pool ids info
-        -- isNewPool :: Ledger.KeyHash Ledger.StakePool Ledger.StandardCrypto -> Bool
-        isNewPool _kh = True -- StakePoolKeyHash kh `S.notMember` poolids
-    checkUnits ::
-      Ledger.UTxO era ->
-      Core.Tx era ->
-      Validate Alonzo.ExUnits
-    checkUnits utxo txBody = do
+    evalScripts :: Validate Alonzo.ExUnits
+    evalScripts = do
+      utxos <- gets mockUtxos
+      network <- gets $ mockConfigNetworkId . mockConfig
       slotCfg <- gets (mockConfigSlotConfig . mockConfig)
-      let cardanoSystemStart = SystemStart $ posixSecondsToUTCTime $ fromInteger $ (`div` 1000) $ getPOSIXTime $ scSlotZeroTime slotCfg
-          epochSize = EpochSize 1
-          slotLength = slotLengthFromMillisec $ scSlotLength slotCfg
-          history = fixedEpochInfo @(Either Text) epochSize slotLength
-      evalAlonzo cardanoSystemStart history
-      where
-        foldErrors = lefts
-        foldCost = foldMap snd . rights
-
-        evalAlonzo :: SystemStart -> EpochInfo (Either Text) -> Validate Alonzo.ExUnits
-        evalAlonzo systemStart history = case evaluateTransactionExecutionUnits
-          params
-          txBody
-          utxo
-          history
-          systemStart
-          (toAlonzoCostModels $ getField @"_costmdls" params) of
-          Left err -> throwError $ GenericFail $ show err
-          Right res ->
-            let res' = (\(k, v) -> fmap (k,) v) <$> M.toList res
-                errs = foldErrors res'
-                cost = foldCost res'
-             in if null errs
-                  then pure cost
-                  else throwError $ GenericFail $ unlines $ fmap show errs
-
-        toAlonzoCostModels ::
-          Alonzo.CostModels ->
-          Array.Array Alonzo.Language Alonzo.CostModel
-        toAlonzoCostModels (Alonzo.CostModels costmodels) =
-          Array.array
-            (minBound, maxBound)
-            [ (lang, costmodel)
-            | (lang, costmodel) <- Map.toList costmodels
-            ]
+      case evaluateScriptsInTx @era utxos params network tx extra slotCfg of
+        Right units -> pure units
+        Left (Left err) -> throwError $ GenericFail err
+        Left (Right err) -> throwError $ FailToCardano $ show err
 
     checkTxLimits :: Stat -> Validate ()
     checkTxLimits stat = do
@@ -691,30 +644,6 @@ compareLimits maxLimits stat =
       | otherwise = Nothing
       where
         overflow = getter stat - getter maxLimits
-
--- | Read UTxO relevant to transaction
-getUTxO :: (Class.IsCardanoTx era) => P.Tx -> Validate (Ledger.UTxO era)
-getUTxO tx = do
-  networkId <- mockConfigNetworkId <$> gets mockConfig
-  mOuts <-
-    mapM
-      ( Validate
-          . ExceptT
-          . fmap (maybe (throwError FailToReadUtxo) pure)
-          . getTxOut
-          . Plutus.txInRef
-      )
-      ins
-  orFailValidate FailToCardano $ (Class.toUtxo localScriptMap networkId . zip ins) mOuts
-  where
-    ins =
-      mconcat
-        [ S.toList $ P.txInputs tx
-        , S.toList $ P.txCollateral tx
-        , S.toList $ P.txReferenceInputs tx
-        ]
-
-    localScriptMap = P.txScripts tx
 
 -- | Reads TxOut by its reference.
 getTxOut :: TxOutRef -> Run (Maybe TxOut)
