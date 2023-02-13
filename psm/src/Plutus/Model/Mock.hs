@@ -589,7 +589,11 @@ checkSingleTx params extra tx = do
       network <- gets $ mockConfigNetworkId . mockConfig
       balance <- case txBalance @era utxos params network tx extra of
         Left err -> throwError $ FailToCardano err
-        Right bal -> pure bal
+        case txBalance @era utxos params network tx extra of
+          Left err -> throwError $ FailToCardano err
+          Right bal -> when
+            (bal /= mempty)
+            (throwError $ NotBalancedTx $ fromCardanoValue bal)
       when
         (balance /= mempty)
         (throwError $ NotBalancedTx $ fromCardanoValue balance)
