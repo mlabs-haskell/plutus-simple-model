@@ -57,7 +57,7 @@ type Era = BabbageEra StandardCrypto
 
 instance IsCardanoTx Era where
   getTxBody = C.body
-  toCardanoTx = toBabbageTx
+  toCardanoTx n p e tx = toBabbageTx (Plutus.txScripts tx) n p e tx
   toTxOut = toBabbageTxOut
 
 toBabbageTx ::

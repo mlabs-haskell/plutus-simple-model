@@ -540,10 +540,8 @@ checkSingleTx params extra tx = do
     getTxBody :: Validate (Core.Tx era)
     getTxBody = do
       cfg <- gets mockConfig
-      let localScriptMap = P.txScripts tx
       orFailValidate GenericFail $
         Class.toCardanoTx
-          localScriptMap
           (mockConfigNetworkId cfg)
           params
           extra

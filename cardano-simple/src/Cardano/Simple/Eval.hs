@@ -38,7 +38,7 @@ import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Simple.Cardano.Class (
   IsCardanoTx,
   getTxBody,
-  toCardanoTx',
+  toCardanoTx,
   toUtxo,
  )
 import Cardano.Simple.Cardano.Common (ToCardanoError)
@@ -112,7 +112,7 @@ txBalance ::
   Either ToCardanoError (Ledger.Value era)
 txBalance utxos pparams network tx extra = do
   utxo <- utxoForTransaction @era utxos network tx
-  ltx <- toCardanoTx' @era network pparams extra tx
+  ltx <- toCardanoTx @era network pparams extra tx
   pure $
     evaluateTransactionBalance @era
       pparams
@@ -143,7 +143,7 @@ evaluateScriptsInTx ::
     (Either ToCardanoError (TranslationError (Ledger.Crypto era)))
     Alonzo.ExUnits
 evaluateScriptsInTx utxos pparams network tx extra slotCfg = do
-  ltx <- leftMap Left $ toCardanoTx' @era network pparams extra tx
+  ltx <- leftMap Left $ toCardanoTx @era network pparams extra tx
   utxo <- leftMap Left $ utxoForTransaction @era utxos network tx
   res <-
     leftMap Right $
