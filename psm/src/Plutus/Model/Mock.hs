@@ -528,7 +528,7 @@ checkSingleTx params extra tx = do
   txBody <- getTxBody
   let tid = fromTxId $ Ledger.txid (Class.getTxBody txBody)
   checkBalance
-  cost <- checkUnits
+  cost <- evalScripts
   let txSize = fromIntegral $ BS.length $ CBOR.serialize' txBody
       stat = Stat txSize cost
   checkTxLimits stat
@@ -594,8 +594,8 @@ checkSingleTx params extra tx = do
         (balance /= mempty)
         (throwError $ NotBalancedTx $ fromCardanoValue balance)
 
-    checkUnits :: Validate Alonzo.ExUnits
-    checkUnits = do
+    evalScripts :: Validate Alonzo.ExUnits
+    evalScripts = do
       utxos <- gets mockUtxos
       network <- gets $ mockConfigNetworkId . mockConfig
       slotCfg <- gets (mockConfigSlotConfig . mockConfig)
