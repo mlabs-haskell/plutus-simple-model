@@ -587,16 +587,12 @@ checkSingleTx params extra tx = do
     checkBalance = do
       utxos <- gets mockUtxos
       network <- gets $ mockConfigNetworkId . mockConfig
-      balance <- case txBalance @era utxos params network tx extra of
+      case txBalance @era utxos params network tx extra of
         Left err -> throwError $ FailToCardano err
-        case txBalance @era utxos params network tx extra of
-          Left err -> throwError $ FailToCardano err
-          Right bal -> when
+        Right bal ->
+          when
             (bal /= mempty)
             (throwError $ NotBalancedTx $ fromCardanoValue bal)
-      when
-        (balance /= mempty)
-        (throwError $ NotBalancedTx $ fromCardanoValue balance)
 
     evalScripts :: Validate Alonzo.ExUnits
     evalScripts = do

@@ -57,23 +57,23 @@ type Era = BabbageEra StandardCrypto
 
 instance IsCardanoTx Era where
   getTxBody = C.body
-  toCardanoTx n p e tx = toBabbageTx (Plutus.txScripts tx) n p e tx
+  toCardanoTx = toBabbageTx
   toTxOut = toBabbageTxOut
 
 toBabbageTx ::
-  Map P.ScriptHash (C.Versioned P.Script) ->
   Network ->
   C.BabbagePParams Era ->
   P.Extra ->
   Plutus.Tx ->
   Either ToCardanoError (C.AlonzoTx Era)
-toBabbageTx scriptMap network params extra tx = do
+toBabbageTx network params extra tx = do
   body <- getBody
   wits <- toWits (hashAnnotated body) extra tx
   let isValid = C.IsValid True -- TODO or maybe False
       auxData = C.SNothing
   pure $ C.AlonzoTx body wits isValid auxData
   where
+    scriptMap = Plutus.txScripts tx
     getBody = do
       spendInputs <- getInputsBy Plutus.txInputs tx
       collateralInputs <- getInputsBy Plutus.txCollateral tx
