@@ -534,6 +534,7 @@ checkSingleTx params extra tx = do
   traceM "pass checkRange"
   txBody <- getTxBody
   traceM "pass getTxBody"
+  traceM (show txBody)
   let tid = fromTxId $ Ledger.txid (Class.getTxBody txBody)
   checkBalance
   traceM "pass checkBalance"
@@ -671,11 +672,17 @@ waitNSlots n = modify' $ \s -> s {mockCurrentSlot = mockCurrentSlot s + n}
 -- | Applies valid TX to modify blockchain.
 applyTx :: Stat -> TxId -> Extra -> P.Tx -> Run ()
 applyTx stat tid extra tx@P.Tx {..} = do
+  logInfo "enter applyTx"
   updateUtxos
+  logInfo "applyTx: updateUtxos"
   updateRewards
+  logInfo "applyTx: updateRewards"
   updateCertificates
+  logInfo "applyTx: updateCertificates"
   updateFees
+  logInfo "applyTx: updateFees"
   saveTx
+  logInfo "applyTx: saveTx"
   saveDatums
   where
     saveDatums = modify' $ \s -> s {mockDatums = txData <> mockDatums s}
