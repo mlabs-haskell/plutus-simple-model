@@ -507,7 +507,7 @@ sendSingleTx preTx@(Tx extra _) = do
     let val = case genParams of
           AlonzoParams params -> checkSingleTx @Alonzo.Era params extra tx
           BabbageParams params -> checkSingleTx @Babbage.Era params extra tx
-    catchError val $ \_ -> (traceM $ show tx) >> val
+    catchError val $ \_ -> (traceM $ "sendSingleTx: tx: " <> show tx) >> val
 
 -- | Confirms that single TX is valid. Works across several Eras (see @Cardano.Simple.Cardano.Class@)
 checkSingleTx ::
@@ -534,7 +534,7 @@ checkSingleTx params extra tx = do
   traceM "pass checkRange"
   txBody <- getTxBody
   traceM "pass getTxBody"
-  traceM (show txBody)
+  traceM ("txBody: " <> show txBody)
   let tid = fromTxId $ Ledger.txid (Class.getTxBody txBody)
   checkBalance
   traceM "pass checkBalance"
@@ -552,12 +552,14 @@ checkSingleTx params extra tx = do
     getTxBody :: Validate (Core.Tx era)
     getTxBody = do
       cfg <- gets mockConfig
-      orFailValidate GenericFail $
-        Class.toCardanoTx
-          (mockConfigNetworkId cfg)
-          params
-          extra
-          tx
+      let cTx =
+            Class.toCardanoTx
+              (mockConfigNetworkId cfg)
+              params
+              extra
+              tx
+      traceM ("getTxBody: " <> show cTx)
+      orFailValidate GenericFail cTx
 
     checkStaking :: Validate ()
     checkStaking = do
