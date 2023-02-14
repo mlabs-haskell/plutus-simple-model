@@ -492,7 +492,7 @@ sendBlock txs = do
 sendTx :: Tx -> Run (Either FailReason Stat)
 sendTx tx = do
   res <- sendSingleTx tx
-  traceM $ show res
+  -- traceM $ show res
   when (isRight res) bumpSlot
   pure res
 
@@ -500,14 +500,14 @@ sendTx tx = do
  and produces performance stats if TX was ok.
 -}
 sendSingleTx :: Tx -> Run (Either FailReason Stat)
-sendSingleTx preTx@(Tx extra _) =
+sendSingleTx preTx@(Tx extra _) = do
   runValidate $ do
     tx <- liftEither (processMints preTx)
-    traceM $ show tx
     genParams <- gets (mockConfigProtocol . mockConfig)
-    case genParams of
-      AlonzoParams params -> checkSingleTx @Alonzo.Era params extra tx
-      BabbageParams params -> checkSingleTx @Babbage.Era params extra tx
+    let val = case genParams of
+          AlonzoParams params -> checkSingleTx @Alonzo.Era params extra tx
+          BabbageParams params -> checkSingleTx @Babbage.Era params extra tx
+    catchError val $ \_ -> (traceM $ show tx) >> val
 
 -- | Confirms that single TX is valid. Works across several Eras (see @Cardano.Simple.Cardano.Class@)
 checkSingleTx ::
