@@ -10,27 +10,39 @@
   };
 
   inputs = {
-    tooling.url = "github:mlabs-haskell/mlabs-tooling.nix";
+    tooling.url = "github:mlabs-haskell/mlabs-tooling.nix?ref=cf5410635e8eed4443bb061096491957ee508272";
     plutarch.url = "github:plutonomicon/plutarch-plutus";
+    nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
   };
 
-  outputs = inputs@{ self, tooling, plutarch, ... }: tooling.lib.mkFlake { inherit self; }
-    {
-      imports = [
-        (tooling.lib.mkHaskellFlakeModule1 {
-          project.src = ./.;
-          project.extraHackage = [
-            "${plutarch}"
-          ];
-          toHaddock = [
-            "plutarch"
-            "cardano-crypto"
-            "cardano-ledger-alonzo"
-            "cardano-ledger-babbage"
-            "cardano-ledger-core"
-          ];
+  outputs = inputs@{ self, tooling, plutarch, nixpkgs, ... }:
+    tooling.lib.mkFlake { inherit self; }
+      {
+        imports = [
+          (tooling.lib.mkHaskellFlakeModule1 {
+            project.src = ./.;
+            project.extraHackage = [
+              "${plutarch}"
+            ];
+            toHaddock = [
+              "plutarch"
+              "cardano-crypto"
+              "cardano-ledger-alonzo"
+              "cardano-ledger-babbage"
+              "cardano-ledger-core"
+            ];
 
-        })
-      ];
+          })
+        ];
+      } //
+    {
+      apps.x86_64-linux.docs = {
+        type = "app";
+        program = "${
+          tooling.lib.mkDocs
+          self.packages.x86_64-linux.haddock
+          nixpkgs.legacyPackages.x86_64-linux
+        }";
+      };
     };
 }
