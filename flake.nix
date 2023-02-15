@@ -34,15 +34,12 @@
 
           })
         ];
-      } //
-    {
-      apps.x86_64-linux.docs = {
-        type = "app";
-        program = "${
-          tooling.lib.mkDocs
-          self.packages.x86_64-linux.haddock
-          nixpkgs.legacyPackages.x86_64-linux
-        }";
+        perSystem = { self', system, pkgs, ... }: {
+          apps.docs = {
+            type = "app";
+            program = "${tooling.lib.mkDocs self'.packages.haddock pkgs}";
+          };
+        };
+
       };
-    };
 }
