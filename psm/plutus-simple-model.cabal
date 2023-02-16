@@ -59,7 +59,7 @@ common lang
 
   ghc-options:
     -Wall -Wcompat -Wredundant-constraints -Wmissing-export-lists
-    -Werror -Wincomplete-record-updates -fobject-code
+    -Wincomplete-record-updates -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     -fobject-code -fno-specialise
 

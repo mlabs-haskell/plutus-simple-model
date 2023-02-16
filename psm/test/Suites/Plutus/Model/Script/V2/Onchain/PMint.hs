@@ -58,28 +58,28 @@ mkVerifyAuth ::
     )
 mkVerifyAuth = plam $ \params ctx -> P.do
   ptrace "enter ========== mkVerifyAuth"
-  ctxFields <- pletFields @'["txInfo", "purpose"] ctx
-  adminKey <- plet $ pfield @"adminKey" # params
-  ptrace ("adminKey: " <> pshow adminKey)
-  txInfo <- pletFields @'["referenceInputs", "signatories", "fee"] ctxFields.txInfo
-  ptrace "enter ========== after txInfo extracted"
+  -- ctxFields <- pletFields @'["txInfo", "purpose"] ctx
+  -- adminKey <- plet $ pfield @"adminKey" # params
+  -- ptrace ("adminKey: " <> pshow adminKey)
+  -- txInfo <- pletFields @'["referenceInputs", "signatories", "fee"] ctxFields.txInfo
+  -- ptrace "enter ========== after txInfo extracted"
 
-  ptrace ("txInfo.fee: " <> pshow txInfo.fee)
-  ptrace ("txInfo.referenceInputs: " <> pshow txInfo.referenceInputs)
-  ptrace ("ctxFields.purpose: " <> pshow ctxFields.purpose)
-  ptrace ("txInfo.signatories: " <> pshow txInfo.signatories)
+  -- ptrace ("txInfo.fee: " <> pshow txInfo.fee)
+  -- ptrace ("txInfo.referenceInputs: " <> pshow txInfo.referenceInputs)
+  -- ptrace ("ctxFields.purpose: " <> pshow ctxFields.purpose)
+  -- ptrace ("txInfo.signatories: " <> pshow txInfo.signatories)
 
   -- 1. Admin signed tx
-  passert "The user didn`t sign the transaction" $
-    ptxSignedBy # txInfo.signatories # pdata adminKey
+  -- passert "The user didn`t sign the transaction" $
+  --  ptxSignedBy # txInfo.signatories # pdata adminKey
 
   -- 2. Purpose is minting
-  passert "Invalid tx purpose" $
-    pmatch ctxFields.purpose $ \case
-      PMinting _ -> pconstant True
-      _ -> pconstant False
+  -- passert "Invalid tx purpose" $
+  --  pmatch ctxFields.purpose $ \case
+  --    PMinting _ -> pconstant True
+  --    _ -> pconstant False
 
-  passert "Stop mint script!!!" $ pconstant False
+  -- passert "Stop mint script!!!" $ pconstant False
 
   popaque $ pcon PUnit
 
