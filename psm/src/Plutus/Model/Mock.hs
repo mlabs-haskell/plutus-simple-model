@@ -492,7 +492,7 @@ sendBlock txs = do
 sendTx :: Tx -> Run (Either FailReason Stat)
 sendTx tx = do
   res <- sendSingleTx tx
-  -- traceM $ show res
+  traceM $ "sendTx: " <> show res
   when (isRight res) bumpSlot
   pure res
 
@@ -534,7 +534,7 @@ checkSingleTx params extra tx = do
   traceM "pass checkRange"
   txBody <- getTxBody
   traceM "pass getTxBody"
-  traceM ("txBody: " <> show txBody)
+  -- traceM ("checkSingleTx: txBody: " <> show txBody)
   let tid = fromTxId $ Ledger.txid (Class.getTxBody txBody)
   checkBalance
   traceM "pass checkBalance"
@@ -552,14 +552,12 @@ checkSingleTx params extra tx = do
     getTxBody :: Validate (Core.Tx era)
     getTxBody = do
       cfg <- gets mockConfig
-      let cTx =
+      orFailValidate GenericFail $
             Class.toCardanoTx
               (mockConfigNetworkId cfg)
               params
               extra
               tx
-      traceM ("getTxBody: " <> show cTx)
-      orFailValidate GenericFail cTx
 
     checkStaking :: Validate ()
     checkStaking = do
@@ -615,7 +613,10 @@ checkSingleTx params extra tx = do
       slotCfg <- gets (mockConfigSlotConfig . mockConfig)
       case evaluateScriptsInTx @era utxos params network tx extra slotCfg of
         Right units -> pure units
-        Left (Left err) -> throwError $ GenericFail err
+        Left (Left err) -> do
+          traceM "evalScripts Left =========="
+          traceM $ "evalScripts Left ==========" <> show err
+          throwError $ GenericFail err
         Left (Right err) -> throwError $ FailToCardano $ show err
 
     checkTxLimits :: Stat -> Validate ()

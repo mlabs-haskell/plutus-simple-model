@@ -143,8 +143,11 @@ evaluateScriptsInTx ::
     (Either ToCardanoError (TranslationError (Ledger.Crypto era)))
     Alonzo.ExUnits
 evaluateScriptsInTx utxos pparams network tx extra slotCfg = do
+  traceM "=====evaluateScriptsInTx========"
   ltx <- leftMap Left $ toCardanoTx @era network pparams extra tx
+  traceM $ "++++++ ltx ++++++" <> show ltx
   utxo <- leftMap Left $ utxoForTransaction @era utxos network tx
+  traceM $ "++++++ utxo ++++++" <> show utxo
   res <-
     leftMap Right $
       evaluateTransactionExecutionUnits @era
@@ -163,6 +166,7 @@ evaluateScriptsInTx utxos pparams network tx extra slotCfg = do
                     scSlotZeroTime slotCfg
         )
         (toAlonzoCostModels $ getField @"_costmdls" pparams)
+  traceM "========== evaluateScriptsInTx"
   let res' = (\(k, v) -> fmap (k,) v) <$> Map.toList res
       errs = lefts res'
       cost = foldMap snd . rights $ res'

@@ -22,7 +22,9 @@ import Plutus.Model.Validator (TypedPolicy (..), TypedStake (..), TypedValidator
 
 import Data.Text (Text)
 import Plutarch (ClosedTerm, Config)
-import Prelude (Either, (<$>))
+import Prelude (Either(..), (<$>), ($))
+
+import Debug.Trace
 
 -- | Create Plutus V2 typed validator
 mkTypedValidator :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> TypedValidator datum redeemer
@@ -42,7 +44,20 @@ mkTypedValidatorPlutarch conf term = TypedValidator . toV2 <$> mkValidatorScript
 
 -- | Create Plutus V2 typed minting policy from a plutarch term
 mkTypedPolicyPlutarch :: Config -> ClosedTerm p -> Either Text (TypedPolicy redeemer)
-mkTypedPolicyPlutarch conf term = TypedPolicy . toV2 <$> mkMintingPolicyScriptPlutarch conf term
+mkTypedPolicyPlutarch conf term = do
+  case mkMintingPolicyScriptPlutarch conf term of
+    Right res -> do
+      traceM "RRRRRRRR: mkTypedPolicyPlutarch"
+      case toV2 <$> Right res of
+        Right r -> do
+          traceM "----------- RRRRRRrrrrrr"
+          Right $ TypedPolicy r
+        Left e -> do
+          traceM "----------- LLLLLLLLLlllll"
+          Left e
+    Left err -> do
+      traceM "LLLLLLLL: mkTypedPolicyPlutarch"
+      TypedPolicy . toV2 <$> Left err
 
 -- | Create Plutus V2 typed stake validator from a plutarch term
 mkTypedStakePlutarch :: Config -> ClosedTerm p -> Either Text (TypedStake redeemer)
