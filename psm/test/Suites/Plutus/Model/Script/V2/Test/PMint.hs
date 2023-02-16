@@ -4,10 +4,11 @@ module Suites.Plutus.Model.Script.V2.Test.PMint (
 
 import Data.Text (unpack)
 import Plutarch (Config (..), TracingMode (..))
+import Plutarch.Builtin (pforgetData)
 import Plutarch.Prelude
 import Plutus.Model.V2
 import PlutusLedgerApi.V2 (PubKeyHash (..), singleton)
-import Suites.Plutus.Model.Script.V2.Onchain.PMint (MintParams (..), mkVerifyAuth)
+import Suites.Plutus.Model.Script.V2.Onchain.PMint (MintParams (..), mkVerifyAuth, mkVerifyAuthUntyped)
 import Test.Tasty (TestTree, testGroup)
 import Prelude
 
@@ -93,7 +94,7 @@ mkAuthPsmScript params =
   where
     eValidator =
       mkTypedPolicyPlutarch (Config DoTracing) $
-        mkVerifyAuth # pconstant params
+        mkVerifyAuthUntyped # pforgetData (pdata (pconstant params))
 
 logOk :: String -> Run ()
 logOk mes = do
