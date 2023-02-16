@@ -3,7 +3,8 @@ module Plutus.Model.Mock.ProtocolParameters (
   readAlonzoParams,
   readBabbageParams,
   defaultAlonzoParams,
-  defaultBabbageParams,
+  defaultBabbageParamsV1,
+  defaultBabbageParamsV2,
   customAlonzoParams,
   customBabbageParams,
 ) where
@@ -121,6 +122,15 @@ defaultCostModels =
 
 -- Babbage
 
--- | Default Babbage era parameters
-defaultBabbageParams :: PParams
-defaultBabbageParams = BabbageParams defaultBabbageParams'
+-- | Default Babbage V1 era parameters
+defaultBabbageParamsV1 :: PParams
+defaultBabbageParamsV1 = BabbageParams defaultBabbageParams'
+
+-- | Default Babbage V2 era parameters
+defaultBabbageParamsV2 :: PParams
+defaultBabbageParamsV2 =
+  BabbageParams
+    defaultBabbageParams'
+      { Babbage._protocolVersion =
+          Alonzo.ProtVer {pvMajor = 7, pvMinor = 0}
+      }
