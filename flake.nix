@@ -10,7 +10,7 @@
   };
 
   inputs = {
-    tooling.url = "github:mlabs-haskell/mlabs-tooling.nix?ref=cf5410635e8eed4443bb061096491957ee508272";
+    tooling.url = "github:mlabs-haskell/mlabs-tooling.nix?ref=fbbe4470660724a7fd7e3542610685b7344dd0a3";
     plutarch.url = "github:plutonomicon/plutarch-plutus";
     nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
   };
@@ -37,7 +37,7 @@
         perSystem = { self', system, pkgs, ... }: {
           apps.docs = {
             type = "app";
-            program = "${tooling.lib.mkDocs self'.packages.haddock pkgs}";
+            program = "${tooling.lib.mkDocs self'.packages.haddock pkgs}/bin/serve-docs";
           };
         };
 

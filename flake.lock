@@ -4228,16 +4228,16 @@
         "plutus": "plutus_2"
       },
       "locked": {
-        "lastModified": 1676472886,
-        "narHash": "sha256-RE0cGv4mvMjY0fIiN3qMHS64lcFh4RzQPPC4Aa6JBk0=",
+        "lastModified": 1676555928,
+        "narHash": "sha256-vObTlCX/Ztf1ZVxA81vrPfz91vonU3lXynB+b5sCQ/E=",
         "owner": "mlabs-haskell",
         "repo": "mlabs-tooling.nix",
-        "rev": "cf5410635e8eed4443bb061096491957ee508272",
+        "rev": "fbbe4470660724a7fd7e3542610685b7344dd0a3",
         "type": "github"
       },
       "original": {
         "owner": "mlabs-haskell",
-        "ref": "cf5410635e8eed4443bb061096491957ee508272",
+        "ref": "fbbe4470660724a7fd7e3542610685b7344dd0a3",
         "repo": "mlabs-tooling.nix",
         "type": "github"
       }
