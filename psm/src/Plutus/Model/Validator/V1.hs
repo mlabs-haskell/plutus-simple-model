@@ -18,6 +18,7 @@ import PlutusTx.Prelude qualified as Plutus
 
 import Cardano.Simple.Ledger.Scripts (toV1)
 import Cardano.Simple.PlutusLedgerApi.V1.Scripts
+import Plutarch.Api.V1 (PMintingPolicy, PStakeValidator, PValidator)
 import Plutus.Model.Validator (TypedPolicy (..), TypedStake (..), TypedValidator (..))
 
 import Data.Text (Text)
@@ -37,15 +38,15 @@ mkTypedStake :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedStake re
 mkTypedStake = TypedStake . toV1 . mkStakeValidatorScript
 
 -- | Create Plutus V1 typed validator from a plutarch term
-mkTypedValidatorPlutarch :: Config -> ClosedTerm p -> Either Text (TypedValidator datum redeemer)
+mkTypedValidatorPlutarch :: Config -> ClosedTerm PValidator -> Either Text (TypedValidator datum redeemer)
 mkTypedValidatorPlutarch conf term = TypedValidator . toV1 <$> mkValidatorScriptPlutarch conf term
 
 -- | Create Plutus V1 typed minting policy from a plutarch term
-mkTypedPolicyPlutarch :: Config -> ClosedTerm p -> Either Text (TypedPolicy redeemer)
+mkTypedPolicyPlutarch :: Config -> ClosedTerm PMintingPolicy -> Either Text (TypedPolicy redeemer)
 mkTypedPolicyPlutarch conf term = TypedPolicy . toV1 <$> mkMintingPolicyScriptPlutarch conf term
 
 -- | Create Plutus V1 typed stake validator from a plutarch term
-mkTypedStakePlutarch :: Config -> ClosedTerm p -> Either Text (TypedStake redeemer)
+mkTypedStakePlutarch :: Config -> ClosedTerm PStakeValidator -> Either Text (TypedStake redeemer)
 mkTypedStakePlutarch conf term = TypedStake . toV1 <$> mkStakeValidatorScriptPlutarch conf term
 
 -- | Coverts to low-level validator representation
