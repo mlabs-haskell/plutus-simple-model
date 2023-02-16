@@ -6,9 +6,11 @@ module Plutus.Model.Mock.MockConfig (
   defaultSlotConfig,
   defaultMockConfig,
   defaultAlonzo,
-  defaultBabbage,
+  defaultBabbageV1,
+  defaultBabbageV2,
   defaultAlonzoParams,
-  defaultBabbageParams,
+  defaultBabbageParamsV1,
+  defaultBabbageParamsV2,
   skipLimits,
   warnLimits,
   forceLimits,
@@ -58,11 +60,17 @@ defaultSlotConfig =
 defaultAlonzo :: MockConfig
 defaultAlonzo = defaultMockConfig defaultAlonzoParams
 
-{- | Default Babbage era config. If we use this parameter
+{- | Default Babbage V1 era config. If we use this parameter
  then Babbage era TXs will be used for testing
 -}
-defaultBabbage :: MockConfig
-defaultBabbage = defaultMockConfig defaultBabbageParams
+defaultBabbageV1 :: MockConfig
+defaultBabbageV1 = defaultMockConfig defaultBabbageParamsV1
+
+{- | Default Babbage V2 era config. If we use this parameter
+ then Babbage era TXs will be used for testing
+-}
+defaultBabbageV2 :: MockConfig
+defaultBabbageV2 = defaultMockConfig defaultBabbageParamsV2
 
 -- | Default blockchain config.
 defaultMockConfig :: PParams -> MockConfig
