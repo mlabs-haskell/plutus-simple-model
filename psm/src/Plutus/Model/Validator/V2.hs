@@ -22,7 +22,7 @@ import Plutus.Model.Validator (TypedPolicy (..), TypedStake (..), TypedValidator
 
 import Data.Text (Text)
 import Plutarch (ClosedTerm, Config)
-import Prelude (Either(..), (<$>), ($))
+import Prelude (Either (..), ($), (<$>))
 
 import Debug.Trace
 

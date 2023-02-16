@@ -553,11 +553,11 @@ checkSingleTx params extra tx = do
     getTxBody = do
       cfg <- gets mockConfig
       orFailValidate GenericFail $
-            Class.toCardanoTx
-              (mockConfigNetworkId cfg)
-              params
-              extra
-              tx
+        Class.toCardanoTx
+          (mockConfigNetworkId cfg)
+          params
+          extra
+          tx
 
     checkStaking :: Validate ()
     checkStaking = do
