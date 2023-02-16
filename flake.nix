@@ -12,7 +12,6 @@
   inputs = {
     tooling.url = "github:mlabs-haskell/mlabs-tooling.nix";
     plutarch.url = "github:plutonomicon/plutarch-plutus";
-    nixpkgs.url = "github:NixOS/nixpkgs?ref=nixos-unstable";
   };
 
   outputs = inputs@{ self, tooling, plutarch, nixpkgs, ... }:
