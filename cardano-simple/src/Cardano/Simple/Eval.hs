@@ -53,6 +53,8 @@ import PlutusLedgerApi.Common qualified as Plutus
 import PlutusLedgerApi.V1.Time (getPOSIXTime)
 import PlutusLedgerApi.V2 (TxOut, TxOutRef)
 
+import Debug.Trace
+
 evalScript ::
   (HasField "_protocolVersion" (Ledger.PParams era) Ledger.ProtVer) =>
   Ledger.Language ->

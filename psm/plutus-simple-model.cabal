@@ -174,15 +174,18 @@ test-suite plutus-simple-model-test
     Suites.Plutus.Model.Script.V2.Onchain.Oracle
     Suites.Plutus.Model.Script.V2.Onchain.Oracle.Hashed
     Suites.Plutus.Model.Script.V2.Onchain.Oracle.Inlined
+    Suites.Plutus.Model.Script.V2.Onchain.PMint
     Suites.Plutus.Model.Script.V2.Test.Game
     Suites.Plutus.Model.Script.V2.Test.GameRef
     Suites.Plutus.Model.Script.V2.Test.Lend
     Suites.Plutus.Model.Script.V2.Test.Oracle.Hashed
     Suites.Plutus.Model.Script.V2.Test.Oracle.Inlined
+    Suites.Plutus.Model.Script.V2.Test.PMint
     Suites.Plutus.Model.User
     Suites.Plutus.Model.Util
 
   build-depends:
+    , liqwid-plutarch-extra
     , plutus-simple-model
     , plutus-tx-plugin
 

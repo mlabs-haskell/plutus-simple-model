@@ -508,7 +508,7 @@ sendSingleTx preTx@(Tx extra _) = do
     let val = case genParams of
           AlonzoParams params -> checkSingleTx @Alonzo.Era params extra tx
           BabbageParams params -> checkSingleTx @Babbage.Era params extra tx
-    catchError val $ \_ -> (traceM $ "sendSingleTx: tx: " <> show tx) >> val
+    catchError val $ \_ -> traceM ("sendSingleTx: tx: " <> show tx) >> val
 
 -- | Confirms that single TX is valid. Works across several Eras (see @Cardano.Simple.Cardano.Class@)
 checkSingleTx ::
