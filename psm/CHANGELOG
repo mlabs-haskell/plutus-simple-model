@@ -1,0 +1,93 @@
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to the [Haskell Package Versioning Policy](https://pvp.haskell.org/).
+
+## [0.6.0.0] - 2023-02-07
+
+### Added
+- `defaultBabbageV2`
+- `defaultBabbageParamsV2`
+
+These functions allow easy use of V2 scripts
+
+### Changed
+- `defaultBabbage` renamed `defaultBabbageV1`
+- `defaultBabbageParamsV2` renamed `defaultBabbageV2`
+
+These names are more clear that they only work with V1
+
+
+## [0.5.2.1] - 2023-02-07
+
+### Changed
+
+Nix import now needs to be "${plutus-simple-model}/psm"
+
+## [0.5.2.0] - 2023-01-02
+
+
+### Added
+
+
+- `Plutus.Model.Validator.V1.mkTypedValidatorPlutarch`
+  `Plutus.Model.Validator.V2.mkTypedValidatorPlutarch`
+  `Plutus.Model.Validator.V1.mkTypedPolicyPlutarch`
+  `Plutus.Model.Validator.V2.mkTypedPolicyPlutarch`
+  `Plutus.Model.Validator.V1.mkStakePlutarch`
+  `Plutus.Model.Validator.V2.mkStakePlutarch`
+
+These functions turn plutarch terms into the native validator types to make testing plutarch with PSM easier/possible.
+
+## [0.5.1.0] - 2023-01-02
+
+### Added
+
+- `ProtocolParameters.readBabbageParams`,
+  `ProtocolParameters.customAlonzoParams`,
+  `ProtocolParameters.customBabbageParams`
+
+### Fixed
+
+- Test suite is now enabled, with all tests passing. This was disabled for GHC 9
+  upgrade work.
+
+- `Mint.fakeMintingPolicy` now works instead of erroring.
+## [0.5.0.0] - 2022-12-18
+
+### Changed
+
+- `Contract.spend'`,`Contract.sendValue`, `Contract.withSpend`, `Contract.spend` wil now not spend UTxOs that have a datum.
+
+- A `HasCallStack` constraint has been added to `spend`.
+
+## [0.4.1.0] - 2022-12-13
+
+### Fixed
+
+- A bug which caused the blockchain to go into an infinite loop upon thowing an
+  error
+
+## [0.4.0.0] - 2022-12-13
+
+### Changed
+
+- The behaviour of various functions with regard to reference scripts has
+  changed.
+
+  Mainly, the special treatment given to UTxOs with reference scripts has been
+  removed. This enables using UTxOs that hold both value/datums and a reference
+  script.
+
+  - `Mock.mockUtxos` now includes UTxOs with reference scripts
+
+  - `Mock.mockRefScripts` is now a function rather than a record
+    field
+
+  - `Contract.valueAt`, `Contract.checkBalance`, `Contract.checkBalanceBy`, `Contract.utxoAt`, `Contract.boxAt`, `Contract.withUtxo`, `Pretty.ppBalanceSheet` and the `Pretty` instance for `Mock` will now include outputs that have reference scripts.
+
+  - `Contract.spend'`,`Contract.sendValue`, `Contract.withSpend`, `Contract.spend` will not spend a UTxO that has a reference script.
+
+  - The behaviour of `Mock.getTxOut`, `Mock.getUTxO`, `Mock.datumAt`, `Mock.getHashDatum`, `Mock.submitTx` and similar is unchanged.

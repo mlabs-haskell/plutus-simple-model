@@ -11,14 +11,27 @@
 
   inputs = {
     tooling.url = "github:mlabs-haskell/mlabs-tooling.nix";
+    plutarch.url = "github:plutonomicon/plutarch-plutus";
   };
 
-  outputs = inputs@{ self, tooling, ... }: tooling.lib.mkFlake { inherit self; }
-    {
-      imports = [
-        (tooling.lib.mkHaskellFlakeModule1 {
-          project.src = ./.;
-        })
-      ];
-    };
+  outputs = inputs@{ self, tooling, plutarch, nixpkgs, ... }:
+    tooling.lib.mkFlake { inherit self; }
+      {
+        imports = [
+          (tooling.lib.mkHaskellFlakeModule1 {
+            project.src = ./.;
+            project.extraHackage = [
+              "${plutarch}"
+            ];
+            toHaddock = [
+              "plutarch"
+              "cardano-crypto"
+              "cardano-ledger-alonzo"
+              "cardano-ledger-babbage"
+              "cardano-ledger-core"
+            ];
+
+          })
+        ];
+      };
 }

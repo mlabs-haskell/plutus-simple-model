@@ -95,7 +95,7 @@ To check for TX errors we use:
 noErrors :: Run Bool
 ```
 
-Blockchain logs all failed transactions to te list `mockFails`. We check that this list is empty.
+Blockchain logs all failed transactions to the list `mockFails`. We check that this list is empty.
 
 To read total value for the user we use:
 

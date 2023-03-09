@@ -49,4 +49,3 @@ They are auto-deployed with Git actions on push to main. To run docs locally use
 cd docs
 mdbook serve
 ```
-
