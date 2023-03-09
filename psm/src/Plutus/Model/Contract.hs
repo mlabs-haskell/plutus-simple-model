@@ -466,6 +466,7 @@ spendScript tv ref red dat =
     (toRedeemer red)
     (toDatum dat)
 
+-- | Spend script input - untyped version
 spendScriptUntyped :: Versioned Validator -> TxOutRef -> Redeemer -> Datum -> Tx
 spendScriptUntyped val ref red dat =
   toExtra $
