@@ -28,7 +28,7 @@ module Plutus.Model.Validator (
 
   -- * Hashes
   StakeValidator,
-  ValidatorHash,
+  ScriptHash,
   MintingPolicyHash,
   validatorHash,
   scriptHash,
@@ -104,6 +104,20 @@ instance HasValidator (TypedValidator datum redeemer) where
 instance HasAddress (TypedValidator datum redeemer) where
   toAddress = toAddress . toValidatorHash
 
+-- untyped validator
+
+instance HasDatum (Versioned Validator) where
+  type DatumType (Versioned Validator) = Datum
+
+instance HasRedeemer (Versioned Validator) where
+  type RedeemerType (Versioned Validator) = Redeemer
+
+instance HasValidator (Versioned Validator) where
+  toValidator = versioned'content
+
+instance HasAddress (Versioned Validator) where
+  toAddress = toAddress . toValidatorHash
+
 ---------------------------------------------------------------------
 -- typed validator hash
 
@@ -123,20 +137,39 @@ instance HasValidatorHash (TypedValidatorHash datum redeemer) where
 instance HasAddress (TypedValidatorHash datum redeemer) where
   toAddress (TypedValidatorHash (Versioned _lang vh)) = toAddress vh
 
+-- untyped validator hash
+
+instance HasDatum (Versioned ScriptHash) where
+  type DatumType (Versioned ScriptHash) = Datum
+
+instance HasRedeemer (Versioned ScriptHash) where
+  type RedeemerType (Versioned ScriptHash) = Redeemer
+
+instance HasValidatorHash (Versioned ScriptHash) where
+  toValidatorHash = versioned'content
+
 ---------------------------------------------------------------------
 -- typed policy
 
 -- | Typed minting policy. It's phantom type to annotate types for minting policies
 newtype TypedPolicy redeemer = TypedPolicy {unTypedPolicy :: Versioned MintingPolicy}
-  deriving newtype (HasLanguage)
+  deriving newtype (HasLanguage, HasValidator)
 
 instance IsData redeemer => HasRedeemer (TypedPolicy redeemer) where
   type RedeemerType (TypedPolicy redeemer) = redeemer
 
-instance HasValidator (TypedPolicy redeemer) where
-  toValidator (TypedPolicy (Versioned _lang (MintingPolicy script))) = Validator script
-
 instance HasAddress (TypedPolicy redeemer) where
+  toAddress = toAddress . toValidatorHash
+
+-- untyped policy
+
+instance HasRedeemer (Versioned MintingPolicy) where
+  type RedeemerType (Versioned MintingPolicy) = Redeemer
+
+instance HasValidator (Versioned MintingPolicy) where
+  toValidator (Versioned _lang (MintingPolicy script)) = Validator script
+
+instance HasAddress (Versioned MintingPolicy) where
   toAddress = toAddress . toValidatorHash
 
 ---------------------------------------------------------------------
@@ -144,18 +177,26 @@ instance HasAddress (TypedPolicy redeemer) where
 
 -- | Typed stake valdiators. It's phantom type to annotate types for stake valdiators
 newtype TypedStake redeemer = TypedStake {unTypedStake :: Versioned StakeValidator}
-  deriving newtype (HasLanguage)
+  deriving newtype (HasLanguage, HasValidator)
 
 instance IsData redeemer => HasRedeemer (TypedStake redeemer) where
   type RedeemerType (TypedStake redeemer) = redeemer
-
-instance HasValidator (TypedStake redeemer) where
-  toValidator (TypedStake (Versioned _lang (StakeValidator script))) = Validator script
 
 instance HasStakingCredential (TypedStake redeemer) where
   toStakingCredential (TypedStake script) = Fork.scriptToStaking script
 
 instance HasAddress (TypedStake redeemer) where
+  toAddress = toAddress . toValidatorHash
+
+-- untyped stake
+
+instance HasRedeemer (Versioned StakeValidator) where
+  type RedeemerType (Versioned StakeValidator) = Redeemer
+
+instance HasValidator (Versioned StakeValidator) where
+  toValidator (Versioned _lang (StakeValidator script)) = Validator script
+
+instance HasAddress (Versioned StakeValidator) where
   toAddress = toAddress . toValidatorHash
 
 ---------------------------------------------------------------------
