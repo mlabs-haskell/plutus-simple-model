@@ -460,9 +460,26 @@ spendScript ::
   DatumType script ->
   Tx
 spendScript tv ref red dat =
+  spendScriptUntyped
+    (Versioned (getLanguage tv) (toValidator tv))
+    ref
+    (toRedeemer red)
+    (toDatum dat)
+
+spendScriptUntyped :: Versioned Validator -> TxOutRef -> Redeemer -> Datum -> Tx
+spendScriptUntyped val ref red dat =
   toExtra $
     mempty
-      { P.txInputs = S.singleton $ Fork.TxIn ref (Just $ Fork.ConsumeScriptAddress (Just $ Versioned (getLanguage tv) (toValidator tv)) (toRedeemer red) (toDatum dat))
+      { P.txInputs =
+          S.singleton $
+            Fork.TxIn
+              ref
+              ( Just $
+                  Fork.ConsumeScriptAddress
+                    (Just val)
+                    red
+                    dat
+              )
       }
 
 -- | Spends script that references other script
