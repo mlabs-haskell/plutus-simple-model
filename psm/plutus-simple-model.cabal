@@ -16,7 +16,6 @@ tested-with:        GHC ==9.2.4
 extra-source-files:
   data/alonzo-params.json
   data/protocol-params.json
-  README.md
 
 common lang
   default-language:   GHC2021
