@@ -45,6 +45,7 @@ common lang
     MultiParamTypeClasses
     NumericUnderscores
     OverloadedStrings
+    RankNTypes
     RecordWildCards
     ScopedTypeVariables
     StandaloneDeriving

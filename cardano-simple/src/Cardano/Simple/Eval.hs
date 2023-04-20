@@ -65,7 +65,7 @@ evalScript lang pparams cm script args =
   either Just (const Nothing) . snd $
     Plutus.evaluateScriptCounting
       (toPlutusLang lang)
-      (Alonzo.transProtocolVersion pparams._protocolVersion)
+      (Alonzo.transProtocolVersion $ getField @"_protocolVersion" pparams)
       Plutus.Verbose
       (Alonzo.getEvaluationContext cm)
       script

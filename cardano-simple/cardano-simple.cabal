@@ -44,8 +44,8 @@ common lang
     LambdaCase
     MultiParamTypeClasses
     NumericUnderscores
-    OverloadedRecordDot
     OverloadedStrings
+    RankNTypes
     RecordWildCards
     ScopedTypeVariables
     StandaloneDeriving
