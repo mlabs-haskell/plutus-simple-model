@@ -18,7 +18,7 @@ extra-source-files:
   data/protocol-params.json
 
 common lang
-  default-language:   GHC2021
+  -- default-language:   GHC2021
   default-extensions:
     NoImplicitPrelude
     BangPatterns
