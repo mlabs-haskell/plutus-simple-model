@@ -17,7 +17,6 @@ module Plutus.Model (
 
 import Plutus.Model.Ada as X
 import Plutus.Model.Contract as X
-import Plutus.Model.Mint as X
 import Plutus.Model.Mock as X
 import Plutus.Model.Pretty as X
 import Plutus.Model.Validator as X
