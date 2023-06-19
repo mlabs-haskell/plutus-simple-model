@@ -9,7 +9,7 @@ import Plutus.Model (
   defaultBabbageV2,
  )
 
-import Plutarch as Plutarch
+import Suites.Plutarch as Plutarch
 import Suites.Plutus.Model.Script.V1 qualified as Script.V1
 import Suites.Plutus.Model.Script.V2 qualified as Script.V2
 import Suites.Plutus.Model.User qualified as User
