@@ -22,9 +22,11 @@
             project.src = ./.;
             project.extraHackage = [
               "${plutarch}"
+              "${plutarch}/plutarch-extra"
             ];
             toHaddock = [
               "plutarch"
+              "plutarch-extra"
               "cardano-crypto"
               "cardano-ledger-alonzo"
               "cardano-ledger-babbage"

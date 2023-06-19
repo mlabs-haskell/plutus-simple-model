@@ -92,6 +92,7 @@ common deps
     , memory
     , mtl
     , plutarch
+    , plutarch-extra
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
@@ -151,6 +152,7 @@ test-suite plutus-simple-model-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   other-modules:
+    Suites.Plutarch
     Suites.Plutus.Model.FakeCoin
     Suites.Plutus.Model.Script.V1
     Suites.Plutus.Model.Script.V1.Onchain.Counter
