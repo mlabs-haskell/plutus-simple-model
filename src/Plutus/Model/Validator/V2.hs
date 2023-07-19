@@ -1,6 +1,7 @@
 -- | Creation of typed validators for Plutus V2
 module Plutus.Model.Validator.V2(
   mkTypedValidator,
+  mkTypedValidator',
   mkUntypedValidator,
   mkTypedPolicy,
   mkTypedStake,
@@ -16,6 +17,9 @@ import PlutusTx.Code (CompiledCode)
 
 import Plutus.Model.Validator (TypedValidator(..), TypedPolicy(..), TypedStake(..), UntypedValidator (UntypedValidator))
 import Plutus.Model.Fork.Ledger.Scripts (toV2)
+
+mkTypedValidator' :: Validator -> TypedValidator datum redeemer
+mkTypedValidator' = TypedValidator . toV2
 
 -- | Create Plutus V2 typed validator
 mkTypedValidator :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> TypedValidator datum redeemer
