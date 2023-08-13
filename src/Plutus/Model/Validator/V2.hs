@@ -4,6 +4,7 @@ module Plutus.Model.Validator.V2(
   mkTypedValidator',
   mkUntypedValidator,
   mkTypedPolicy,
+  mkTypedPolicy',
   mkTypedStake,
   toBuiltinValidator,
   toBuiltinPolicy,
@@ -28,6 +29,9 @@ mkTypedValidator = TypedValidator . toV2 . mkValidatorScript
 -- | Create Plutus V2 untyped validator
 mkUntypedValidator :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> UntypedValidator
 mkUntypedValidator = UntypedValidator . toV2 . mkValidatorScript
+
+mkTypedPolicy' :: MintingPolicy -> TypedPolicy redeemer
+mkTypedPolicy' = TypedPolicy . toV2
 
 -- | Create Plutus V2 typed minting policy
 mkTypedPolicy :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> TypedPolicy redeemer
