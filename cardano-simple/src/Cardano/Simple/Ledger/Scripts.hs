@@ -20,14 +20,11 @@ import Data.Coerce
 import GHC.Generics
 import Prelude
 
-import Codec.Serialise (serialise)
-import Data.ByteString.Lazy qualified as BSL
-import Data.ByteString.Short qualified as SBS
 
 import Cardano.Crypto.Hash.Class qualified as C
 import Cardano.Ledger.Alonzo (AlonzoEra)
 import Cardano.Ledger.Alonzo qualified as C
-import Cardano.Ledger.Alonzo.Data qualified as C
+import Cardano.Ledger.Alonzo.Scripts.Data qualified as C
 import Cardano.Ledger.Alonzo.Language qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as C
 import Cardano.Ledger.Alonzo.TxInfo qualified as C
@@ -106,4 +103,4 @@ scriptCurrencySymbol policy =
 
 toScript :: Versioned P.Script -> C.AlonzoScript era
 toScript (Versioned lang script) =
-  C.PlutusScript lang $ SBS.toShort $ BSL.toStrict $ serialise script
+  C.PlutusScript lang $ coerce $ script

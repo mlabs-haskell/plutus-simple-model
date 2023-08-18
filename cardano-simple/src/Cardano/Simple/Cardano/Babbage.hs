@@ -6,13 +6,14 @@ module Cardano.Simple.Cardano.Babbage (
   toBabbageTx,
 ) where
 
+import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Sequence.Strict qualified as Seq
 import Prelude
 
 import Cardano.Ledger.Alonzo.Data qualified as C
-import Cardano.Ledger.Alonzo.TxWitness qualified as C
+import Cardano.Ledger.Alonzo.TxWits qualified as C
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams qualified as C
 import Cardano.Ledger.Babbage.Tx qualified as C
@@ -62,7 +63,7 @@ instance IsCardanoTx Era where
 
 toBabbageTx ::
   Network ->
-  C.BabbagePParams Era ->
+  C.BabbagePParams Identity Era ->
   P.Extra ->
   Plutus.Tx ->
   Either ToCardanoError (C.AlonzoTx Era)
@@ -84,8 +85,8 @@ toBabbageTx network params extra tx = do
       txcerts <-
         getDCerts
           network
-          (C._poolDeposit params)
-          (C._minPoolCost params)
+          (C.bppPoolDeposit params)
+          (C.bppMinPoolCost params)
           extra
       txwdrls <- getWdrl network extra
       let txfee = getFee tx
@@ -209,14 +210,14 @@ toWits ::
   SafeHash StandardCrypto C.EraIndependentTxBody ->
   P.Extra ->
   Plutus.Tx ->
-  Either ToCardanoError (C.TxWitness Era)
+  Either ToCardanoError (C.AlonzoTxWits Era)
 toWits txBodyHash extra tx = do
   let bootstrapWits = mempty
   datumWits <- toDatumWitness tx
   let redeemerWits = toRedeemerWitness extra tx
   scriptWits <- toScriptWitness extra tx
   pure $
-    C.TxWitness
+    C.AlonzoTxWits
       (toKeyWitness txBodyHash tx)
       bootstrapWits
       scriptWits

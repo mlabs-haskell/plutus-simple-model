@@ -71,6 +71,7 @@ common deps
     , base16-bytestring
     , base58-bytestring
     , bytestring
+    , cardano-api
     , cardano-binary
     , cardano-crypto
     , cardano-crypto-class
@@ -91,8 +92,6 @@ common deps
     , http-api-data
     , memory
     , mtl
-    , plutarch
-    , plutarch-extra
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
@@ -152,7 +151,6 @@ test-suite plutus-simple-model-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   other-modules:
-    Suites.Plutarch
     Suites.Plutus.Model.FakeCoin
     Suites.Plutus.Model.Script.V1
     Suites.Plutus.Model.Script.V1.Onchain.Counter

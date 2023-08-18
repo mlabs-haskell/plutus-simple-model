@@ -9,7 +9,6 @@ import Plutus.Model (
   defaultBabbageV2,
  )
 
-import Suites.Plutarch as Plutarch
 import Suites.Plutus.Model.Script.V1 qualified as Script.V1
 import Suites.Plutus.Model.Script.V2 qualified as Script.V2
 import Suites.Plutus.Model.User qualified as User
@@ -22,7 +21,6 @@ main = do
       [ plutusV1 "Alonzo" defaultAlonzo
       , plutusV1 "Babbage" defaultBabbageV1
       , plutusV2 "Babbage" defaultBabbageV2
-      , Plutarch.tests
       ]
 
 plutusV1 :: String -> MockConfig -> TestTree

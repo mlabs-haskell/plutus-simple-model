@@ -75,9 +75,13 @@ common deps
     , cardano-binary
     , cardano-crypto
     , cardano-crypto-class
+    , cardano-ledger-api
+    , cardano-ledger-allegra
+    , cardano-ledger-mary
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-core
+    , cardano-ledger-core:testlib
     , cardano-ledger-shelley
     , cardano-ledger-shelley-ma
     , cardano-slotting
@@ -92,7 +96,6 @@ common deps
     , http-api-data
     , memory
     , mtl
-    , plutarch
     , plutus-core
     , plutus-ledger-api
     , plutus-tx

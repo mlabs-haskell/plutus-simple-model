@@ -71,22 +71,22 @@ width (Interval (LowerBound (Finite (Slot s1)) in1) (UpperBound (Finite (Slot s2
 -- Infinity is involved!
 width _ = Nothing
 
-deriving anyclass instance (Hashable a) => Hashable (Interval a)
+deriving anyclass instance (Hashable a, Enum a, Ord a) => Hashable (Interval a)
 deriving anyclass instance (Serialise a) => Serialise (Interval a)
 deriving anyclass instance (ToJSON a) => ToJSON (Interval a)
 deriving anyclass instance (FromJSON a) => FromJSON (Interval a)
 
-deriving anyclass instance (Hashable a) => Hashable (LowerBound a)
+deriving anyclass instance (Hashable a, Enum a, Ord a) => Hashable (LowerBound a)
 deriving anyclass instance (Serialise a) => Serialise (LowerBound a)
 deriving anyclass instance (ToJSON a) => ToJSON (LowerBound a)
 deriving anyclass instance (FromJSON a) => FromJSON (LowerBound a)
 
-deriving anyclass instance (Hashable a) => Hashable (UpperBound a)
+deriving anyclass instance (Hashable a, Enum a, Ord a) => Hashable (UpperBound a)
 deriving anyclass instance (Serialise a) => Serialise (UpperBound a)
 deriving anyclass instance (ToJSON a) => ToJSON (UpperBound a)
 deriving anyclass instance (FromJSON a) => FromJSON (UpperBound a)
 
-deriving anyclass instance (Hashable a) => Hashable (Extended a)
+deriving anyclass instance (Hashable a, Enum a, Ord a) => Hashable (Extended a)
 deriving anyclass instance (Serialise a) => Serialise (Extended a)
 deriving anyclass instance (ToJSON a) => ToJSON (Extended a)
 deriving anyclass instance (FromJSON a) => FromJSON (Extended a)
