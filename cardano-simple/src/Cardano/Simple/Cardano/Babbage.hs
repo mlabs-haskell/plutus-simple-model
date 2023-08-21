@@ -6,6 +6,7 @@ module Cardano.Simple.Cardano.Babbage (
   toBabbageTx,
 ) where
 
+import Control.Lens (view)
 import Data.Functor.Identity (Identity)
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
@@ -18,6 +19,7 @@ import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams qualified as C
 import Cardano.Ledger.Babbage.Tx qualified as C
 import Cardano.Ledger.Babbage.TxBody qualified as C
+import Cardano.Ledger.Core qualified as C
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.CompactAddress qualified as C
 import Cardano.Ledger.Compactible qualified as C
@@ -63,7 +65,7 @@ instance IsCardanoTx Era where
 
 toBabbageTx ::
   Network ->
-  C.BabbagePParams Identity Era ->
+  C.PParams Era ->
   P.Extra ->
   Plutus.Tx ->
   Either ToCardanoError (C.AlonzoTx Era)
@@ -85,8 +87,8 @@ toBabbageTx network params extra tx = do
       txcerts <-
         getDCerts
           network
-          (C.bppPoolDeposit params)
-          (C.bppMinPoolCost params)
+          (view C.hkdPoolDepositL params)
+          (view C.hkdMinPoolCostL params)
           extra
       txwdrls <- getWdrl network extra
       let txfee = getFee tx

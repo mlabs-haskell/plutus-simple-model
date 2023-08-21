@@ -94,6 +94,7 @@ common deps
     , flat
     , hashable
     , http-api-data
+    , lens
     , memory
     , mtl
     , plutus-core
