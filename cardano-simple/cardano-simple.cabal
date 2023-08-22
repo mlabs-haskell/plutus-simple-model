@@ -77,6 +77,7 @@ common deps
     , cardano-crypto-class
     , cardano-ledger-api
     , cardano-ledger-allegra
+    , cardano-ledger-binary
     , cardano-ledger-mary
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
