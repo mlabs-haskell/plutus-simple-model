@@ -22,32 +22,35 @@ import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
 import Cardano.Ledger.Babbage (BabbageEra)
 import Cardano.Ledger.Babbage.PParams qualified as Babbage
-import Cardano.Ledger.Babbage.Translation qualified as B
 import Cardano.Ledger.BaseTypes qualified as Alonzo
 import Cardano.Ledger.Coin
 import Cardano.Ledger.Crypto (StandardCrypto)
+import qualified Cardano.Ledger.Core as C
 
 import PlutusCore.Evaluation.Machine.ExBudgetingDefaults (defaultCostModelParams)
+import Data.Functor.Identity (Identity)
+import Cardano.Ledger.Alonzo.Core (CoinPerWord(CoinPerWord))
+import Data.Coerce (coerce)
 
 -- | Type that unifies protocol parameters across eras.
 data PParams
   = -- | alonzo era protocol parameters
-    AlonzoParams (Alonzo.AlonzoPParams (AlonzoEra StandardCrypto))
+    AlonzoParams (C.PParams (AlonzoEra StandardCrypto))
   | -- | babbage era protocol parameters
-    BabbageParams (Babbage.BabbagePParams (BabbageEra StandardCrypto))
+    BabbageParams (C.PParams (BabbageEra StandardCrypto))
 
 -- | Mutate the default params
 customAlonzoParams ::
-  ( Alonzo.AlonzoPParams (AlonzoEra StandardCrypto) ->
-    Alonzo.AlonzoPParams (AlonzoEra StandardCrypto)
+  ( C.PParams (AlonzoEra StandardCrypto) ->
+    C.PParams (AlonzoEra StandardCrypto)
   ) ->
   PParams
-customAlonzoParams f = AlonzoParams (f defaultAlonzoParams')
+customAlonzoParams f = AlonzoParams $ f defaultAlonzoParams'
 
 -- | Mutate the default params
 customBabbageParams ::
-  ( Babbage.BabbagePParams (BabbageEra StandardCrypto) ->
-    Babbage.BabbagePParams (BabbageEra StandardCrypto)
+  ( C.PParams (BabbageEra StandardCrypto) ->
+    C.PParams (BabbageEra StandardCrypto)
   ) ->
   PParams
 customBabbageParams f = BabbageParams (f defaultBabbageParams')
@@ -57,8 +60,8 @@ readAlonzoParams :: FilePath -> IO PParams
 readAlonzoParams = fmap AlonzoParams . readJson
 
 -- | Reads protocol parameters from file.
-readBabbageParams :: FilePath -> IO PParams
-readBabbageParams = fmap (BabbageParams . B.translatePParams) . readJson
+readBabbageParams :: FilePath -> IO PParams 
+readBabbageParams = fmap (BabbageParams . C.upgradePParams ()) . readJson
 
 readJson :: (FromJSON a) => FilePath -> IO a
 readJson = fmap fromJust . decodeFileStrict'
@@ -75,41 +78,44 @@ rational = fromJust . Alonzo.boundRational
 defaultAlonzoParams :: PParams
 defaultAlonzoParams = AlonzoParams defaultAlonzoParams'
 
-defaultAlonzoParams' :: Alonzo.AlonzoPParams (AlonzoEra StandardCrypto)
+defaultAlonzoParams' :: C.PParams (AlonzoEra StandardCrypto)
 defaultAlonzoParams' =
-  Alonzo.AlonzoPParams
-    { Alonzo._minfeeA = 44
-    , Alonzo._minfeeB = 155381
-    , Alonzo._maxBBSize = 65536
-    , Alonzo._maxTxSize = 20000
-    , Alonzo._maxBHSize = 1100
-    , Alonzo._keyDeposit = Coin 0
-    , Alonzo._poolDeposit = Coin 0
-    , Alonzo._eMax = 18
-    , Alonzo._nOpt = 100
-    , Alonzo._a0 = rational 0
-    , Alonzo._rho = rational 0
-    , Alonzo._tau = rational 0
-    , Alonzo._d = rational 0.7
-    , Alonzo._extraEntropy = Alonzo.NeutralNonce
-    , Alonzo._protocolVersion = Alonzo.ProtVer {Alonzo.pvMajor = 6, Alonzo.pvMinor = 0}
-    , Alonzo._minPoolCost = Coin 0
-    , Alonzo._coinsPerUTxOWord = Coin 34482
-    , Alonzo._costmdls = defaultCostModels
-    , Alonzo._prices =
-        Alonzo.Prices
-          { Alonzo.prMem = rational 0.0577
-          , Alonzo.prSteps = rational 7.21e-05
-          }
-    , Alonzo._maxTxExUnits = Alonzo.ExUnits 30000000 10000000000
-    , Alonzo._maxBlockExUnits = Alonzo.ExUnits 50000000 40000000000
-    , Alonzo._maxValSize = 5000
-    , Alonzo._collateralPercentage = 150
-    , Alonzo._maxCollateralInputs = 3
-    }
+  let 
+    app :: Alonzo.AlonzoPParams Identity (AlonzoEra StandardCrypto) =
+      Alonzo.AlonzoPParams
+        { Alonzo.appMinFeeA = 44
+        , Alonzo.appMinFeeB = 155381
+        , Alonzo.appMaxBBSize = 65536
+        , Alonzo.appMaxTxSize = 20000
+        , Alonzo.appMaxBHSize = 1100
+        , Alonzo.appKeyDeposit = Coin 0
+        , Alonzo.appPoolDeposit = Coin 0
+        , Alonzo.appEMax = 18
+        , Alonzo.appNOpt = 100
+        , Alonzo.appA0 = rational 0
+        , Alonzo.appRho = rational 0
+        , Alonzo.appTau = rational 0
+        , Alonzo.appD = rational 0.7
+        , Alonzo.appExtraEntropy = Alonzo.NeutralNonce
+        , Alonzo.appProtocolVersion = Alonzo.ProtVer {Alonzo.pvMajor = 6, Alonzo.pvMinor = 0}
+        , Alonzo.appMinPoolCost = Coin 0
+        , Alonzo.appCoinsPerUTxOWord = CoinPerWord (Coin 34482)
+        , Alonzo.appCostModels = defaultCostModels
+        , Alonzo.appPrices =
+            Alonzo.Prices
+              { Alonzo.prMem = rational 0.0577
+              , Alonzo.prSteps = rational 7.21e-05
+              }
+        , Alonzo.appMaxTxExUnits = Alonzo.OrdExUnits $ Alonzo.ExUnits 30000000 10000000000
+        , Alonzo.appMaxBlockExUnits = Alonzo.OrdExUnits $ Alonzo.ExUnits 50000000 40000000000
+        , Alonzo.appMaxValSize = 5000
+        , Alonzo.appCollateralPercentage = 150
+        , Alonzo.appMaxCollateralInputs = 3
+        }
+  in coerce app
 
-defaultBabbageParams' :: Babbage.BabbagePParams (BabbageEra StandardCrypto)
-defaultBabbageParams' = B.translatePParams defaultAlonzoParams'
+defaultBabbageParams' :: C.PParams (BabbageEra StandardCrypto)
+defaultBabbageParams' = C.upgradePParams () defaultAlonzoParams'
 
 defaultCostModels :: Alonzo.CostModels
 defaultCostModels =
@@ -129,8 +135,10 @@ defaultBabbageParamsV1 = BabbageParams defaultBabbageParams'
 -- | Default Babbage V2 era parameters
 defaultBabbageParamsV2 :: PParams
 defaultBabbageParamsV2 =
-  BabbageParams
-    defaultBabbageParams'
-      { Babbage._protocolVersion =
-          Alonzo.ProtVer {pvMajor = 7, pvMinor = 0}
-      }
+  let old = coerce defaultBabbageParams'
+  in 
+    BabbageParams
+      $ coerce $ old
+        { Babbage.bppProtocolVersion =
+            Alonzo.ProtVer {pvMajor = 7, pvMinor = 0}
+        }

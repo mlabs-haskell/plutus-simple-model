@@ -95,6 +95,7 @@ common deps
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
+    , plutus-tx-plugin
     , prettyprinter
     , serialise
     , tagged
