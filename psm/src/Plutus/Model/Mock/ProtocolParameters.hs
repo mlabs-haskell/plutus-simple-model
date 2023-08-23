@@ -60,7 +60,7 @@ readAlonzoParams :: FilePath -> IO PParams
 readAlonzoParams = fmap AlonzoParams . readJson
 
 -- | Reads protocol parameters from file.
-readBabbageParams :: FilePath -> IO PParams 
+readBabbageParams :: FilePath -> IO PParams
 readBabbageParams = fmap (BabbageParams . C.upgradePParams ()) . readJson
 
 readJson :: (FromJSON a) => FilePath -> IO a
@@ -80,11 +80,11 @@ defaultAlonzoParams = AlonzoParams defaultAlonzoParams'
 
 defaultAlonzoParams' :: C.PParams (AlonzoEra StandardCrypto)
 defaultAlonzoParams' =
-  let 
+  let
     app :: Alonzo.AlonzoPParams Identity (AlonzoEra StandardCrypto) =
       Alonzo.AlonzoPParams
-        { Alonzo.appMinFeeA = 44
-        , Alonzo.appMinFeeB = 155381
+        { Alonzo.appMinFeeA = Coin 44
+        , Alonzo.appMinFeeB = Coin 155381
         , Alonzo.appMaxBBSize = 65536
         , Alonzo.appMaxTxSize = 20000
         , Alonzo.appMaxBHSize = 1100
@@ -97,7 +97,7 @@ defaultAlonzoParams' =
         , Alonzo.appTau = rational 0
         , Alonzo.appD = rational 0.7
         , Alonzo.appExtraEntropy = Alonzo.NeutralNonce
-        , Alonzo.appProtocolVersion = Alonzo.ProtVer {Alonzo.pvMajor = 6, Alonzo.pvMinor = 0}
+        , Alonzo.appProtocolVersion = Alonzo.ProtVer {Alonzo.pvMajor = C.eraProtVerHigh @(AlonzoEra StandardCrypto), Alonzo.pvMinor = 0}
         , Alonzo.appMinPoolCost = Coin 0
         , Alonzo.appCoinsPerUTxOWord = CoinPerWord (Coin 34482)
         , Alonzo.appCostModels = defaultCostModels
@@ -119,11 +119,11 @@ defaultBabbageParams' = C.upgradePParams () defaultAlonzoParams'
 
 defaultCostModels :: Alonzo.CostModels
 defaultCostModels =
-  Alonzo.CostModels $
+  (\validCM -> Alonzo.CostModels validCM mempty mempty) $
     Map.fromList $
       fmap toCostModel [PlutusV1, PlutusV2]
   where
-    toCostModel lang = (lang, fromRight (error "Cost model apply fail") $ Alonzo.mkCostModel lang cost)
+    toCostModel lang = (lang, fromRight (error "Cost model apply fail") $ Alonzo.mkCostModel lang $ Map.elems cost)
     cost = fromJust defaultCostModelParams
 
 -- Babbage
@@ -136,9 +136,9 @@ defaultBabbageParamsV1 = BabbageParams defaultBabbageParams'
 defaultBabbageParamsV2 :: PParams
 defaultBabbageParamsV2 =
   let old = coerce defaultBabbageParams'
-  in 
+  in
     BabbageParams
       $ coerce $ old
         { Babbage.bppProtocolVersion =
-            Alonzo.ProtVer {pvMajor = 7, pvMinor = 0}
+            Alonzo.ProtVer {pvMajor = C.eraProtVerHigh @(BabbageEra StandardCrypto), pvMinor = 0}
         }

@@ -128,7 +128,6 @@ module Plutus.Model.Mock (
 ) where
 
 import Control.Applicative (Alternative (..))
-import GHC.Records
 import Prelude
 
 import Control.Monad.Identity
@@ -170,13 +169,11 @@ import Cardano.Simple.TxExtra
 import Plutus.Model.Mock.ProtocolParameters
 import Plutus.Model.Stake
 
-import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
-import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Block qualified as Ledger
 import Cardano.Ledger.Mary.Value qualified as Mary
-import Cardano.Ledger.Shelley.API.Wallet qualified as C
+import qualified Test.Cardano.Ledger.Core.KeyPair as TC
 import Cardano.Ledger.TxIn qualified as Ledger
 import Cardano.Simple.Cardano.Alonzo ()
 import Cardano.Simple.Cardano.Alonzo qualified as Alonzo
@@ -192,9 +189,11 @@ import Plutus.Model.Mock.FailReason
 import Plutus.Model.Mock.Log
 import Plutus.Model.Mock.MockConfig
 import Plutus.Model.Mock.Stat
+import qualified Cardano.Ledger.UTxO as Ledger
+import qualified Cardano.Ledger.Alonzo.UTxO as Alonzo
 
 newtype User = User
-  { userSignKey :: C.KeyPair 'C.Witness C.StandardCrypto
+  { userSignKey :: TC.KeyPair 'C.Witness C.StandardCrypto
   }
   deriving (Show)
 
@@ -405,18 +404,18 @@ genesisTxId = fromTxId . Ledger.TxId $ Ledger.unsafeMakeSafeHash dummyHash
 
 -- | Get public key hash for a user
 userPubKeyHash :: User -> PubKeyHash
-userPubKeyHash (User (C.KeyPair vk _sk)) =
+userPubKeyHash (User (TC.KeyPair vk _sk)) =
   case C.hashKey vk of
     C.KeyHash h -> PubKeyHash $ toBuiltin $ C.hashToBytes h
 
 -- | Create User out of integer
 intToUser :: Integer -> User
-intToUser n = User $ C.KeyPair vk sk
+intToUser n = User $ TC.KeyPair vk sk
   where
     sk = C.genKeyDSIGN $ mkSeedFromInteger $ RawSeed n
     vk = C.VKey $ C.deriveVerKeyDSIGN sk
 
-getUserSignKey :: PubKeyHash -> Run (Maybe (C.KeyPair 'C.Witness C.StandardCrypto))
+getUserSignKey :: PubKeyHash -> Run (Maybe (TC.KeyPair 'C.Witness C.StandardCrypto))
 getUserSignKey pkh =
   fmap userSignKey . M.lookup pkh <$> gets mockUsers
 
@@ -510,13 +509,11 @@ sendSingleTx preTx@(Tx extra _) =
 checkSingleTx ::
   forall era.
   ( ExtendedUTxO era
-  , HasField "_costmdls" (Core.PParams era) Alonzo.CostModels
-  , HasField "_maxTxExUnits" (Core.PParams era) Alonzo.ExUnits
-  , HasField "_protocolVersion" (Core.PParams era) C.ProtVer
   , Core.Script era ~ Alonzo.AlonzoScript era
   , Class.IsCardanoTx era
   , Core.Value era ~ Mary.MaryValue C.StandardCrypto
-  , C.CLI era
+  , Ledger.EraUTxO era
+  , Ledger.ScriptsNeeded era ~ Alonzo.AlonzoScriptsNeeded era
   , C.AlonzoEraTx era
   ) =>
   Core.PParams era ->

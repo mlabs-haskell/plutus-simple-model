@@ -74,7 +74,9 @@ common deps
     , cardano-api
     , cardano-binary
     , cardano-crypto
+    , cardano-ledger-core:testlib
     , cardano-crypto-class
+    , cardano-ledger-mary
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-core
