@@ -21,4 +21,4 @@ betScript :: BetParams -> Bet
 betScript betParams =
   mkTypedValidator $
     $$(PlutusTx.compile [||\param -> toBuiltinValidator (betContract (const inlinedDatum) param)||])
-      `PlutusTx.applyCode` PlutusTx.liftCode betParams
+      `PlutusTx.unsafeApplyCode` PlutusTx.liftCode betParams

@@ -62,6 +62,12 @@ common lang
     -Werror -Wincomplete-record-updates -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
     -fobject-code -fno-specialise
+    -Wno-partial-type-signatures
+
+  -- expose all unfoldings, so plutustx compiler can do its job
+  ghc-options:
+    -fexpose-all-unfoldings -fobject-code -fplugin-opt
+    PlutusTx.Plugin:defer-errors
 
 common deps
   build-depends:

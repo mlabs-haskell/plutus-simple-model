@@ -42,4 +42,4 @@ stakeValidator :: Address -> TypedStake ()
 stakeValidator addr =
   mkTypedStake $
     $$(PlutusTx.compile [||\param -> toBuiltinStake (mkStakingValidator param)||])
-      `PlutusTx.applyCode` PlutusTx.liftCode addr
+      `PlutusTx.unsafeApplyCode` PlutusTx.liftCode addr

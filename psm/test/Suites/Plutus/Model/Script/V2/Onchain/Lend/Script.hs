@@ -33,4 +33,4 @@ lendPolicy :: LendMintParams -> LendMint
 lendPolicy lendMintParams =
   mkTypedPolicy $
     $$(PlutusTx.compile [||\param -> toBuiltinPolicy (lendPolicyContract param)||])
-      `PlutusTx.applyCode` PlutusTx.liftCode lendMintParams
+      `PlutusTx.unsafeApplyCode` PlutusTx.liftCode lendMintParams

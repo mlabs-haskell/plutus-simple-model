@@ -18,5 +18,5 @@ safeScript :: SafeParams -> Safe
 safeScript params =
   mkTypedValidator
     ( $$(PlutusTx.compile [||\ps -> toBuiltinValidator (safeContract ps)||])
-        `PlutusTx.applyCode` PlutusTx.liftCode params
+        `PlutusTx.unsafeApplyCode` PlutusTx.liftCode params
     )
