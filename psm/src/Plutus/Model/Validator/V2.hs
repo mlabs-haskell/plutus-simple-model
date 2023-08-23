@@ -17,9 +17,6 @@ import Cardano.Simple.Ledger.Scripts (toV2)
 import Cardano.Simple.PlutusLedgerApi.V1.Scripts
 import Plutus.Model.Validator (TypedPolicy (..), TypedStake (..), TypedValidator (..))
 
-import Data.Text (Text)
-import Prelude (Either, (<$>))
-
 -- | Create Plutus V2 typed validator
 mkTypedValidator :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> TypedValidator datum redeemer
 mkTypedValidator = TypedValidator . toV2 . mkValidatorScript
