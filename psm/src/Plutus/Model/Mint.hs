@@ -1,3 +1,8 @@
+{-# LANGUAGE DataKinds         #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell   #-}
+{-# OPTIONS_GHC -fplugin-opt PlutusTx.Plugin:target-version=1.0.0 #-}
+
 -- | Fake coins for testing
 module Plutus.Model.Mint (
   FakeCoin (..),
@@ -16,6 +21,7 @@ import PlutusTx
 import PlutusTx.Builtins
 import PlutusTx.Bool
 import PlutusTx.Prelude qualified as PlutusTx
+import PlutusCore.Version (plcVersion100)
 
 newtype FakeCoin = FakeCoin {fakeCoin'tag :: BuiltinByteString}
 
@@ -34,7 +40,7 @@ fakeCoin (FakeCoin tag) = assetClass sym tok
 
 fakeMintingPolicy :: TokenName -> PlutusTx.CompiledCode (PlutusTx.BuiltinData -> PlutusTx.BuiltinData -> ())
 fakeMintingPolicy mintParam =
-  $$(PlutusTx.compile [|| fakeMintingPolicyUntypedContract ||]) `PlutusTx.unsafeApplyCode` PlutusTx.liftCode mintParam
+  $$(PlutusTx.compile [|| fakeMintingPolicyUntypedContract ||]) `PlutusTx.unsafeApplyCode` PlutusTx.liftCode plcVersion100 mintParam
 
 -- | Can mint new coins if token name equals to fixed tag.
 {-# INLINEABLE fakeMintingPolicyContract #-}

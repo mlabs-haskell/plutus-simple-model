@@ -12,7 +12,7 @@ maintainer:         <anton@mlabs.city>
 copyright:          TODO
 category:           TODO
 build-type:         Simple
-tested-with:        GHC ==9.2.4
+tested-with:        GHC ==9.2.8
 extra-source-files:
   data/alonzo-params.json
   data/protocol-params.json
@@ -68,6 +68,7 @@ common lang
   ghc-options:
     -fexpose-all-unfoldings -fobject-code -fplugin-opt
     PlutusTx.Plugin:defer-errors
+  ghc-options: -fplugin-opt PlutusTx.Plugin:target-version=1.0.0
 
 common deps
   build-depends:
@@ -194,5 +195,6 @@ test-suite plutus-simple-model-test
   build-depends:
     , plutus-simple-model
     , plutus-tx-plugin
+    , cardano-simple
 
   hs-source-dirs: test

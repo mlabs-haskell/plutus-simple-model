@@ -50,6 +50,25 @@ source-repository-package
   tag: deb1e133cd7de989e9e85c2b44e9361f52e93776
   --sha256: sha256-k4OoAAUFdYkKDSTDeM2dwC/DrJrPotiz0EIeU0xccXY=
 
+-- Unfortunately, cardano-node 8.1.2 is constrained with plutus-ledger-api 1.5.0.0 and we would like at least 1.6.0.0
+-- This is done in accordance with https://github.com/input-output-hk/cardano-ledger/pull/3430/files.
+constraints:
+    plutus-ledger-api == 1.6.0.0
+  , plutus-core == 1.6.0.0
+
+allow-newer:
+  , cardano-ledger-alonzo:plutus-ledger-api
+  , cardano-ledger-alonzo:plutus-core
+  , cardano-ledger-alonzo-test:plutus-ledger-api
+  , cardano-ledger-alonzo-test:plutus-ledger-api-testlib
+  , cardano-ledger-babbage:plutus-ledger-api
+  , cardano-ledger-conway:plutus-ledger-api
+  , cardano-ledger-binary:plutus-ledger-api
+  , cardano-api:plutus-ledger-api
+  , cardano-api:plutus-ledger-api-testlib
+  , cardano-api:prettyprinter-configurable
+
+
 -- Everything below is essentially copied from cardano-wallet's cabal.project.
 
 source-repository-package

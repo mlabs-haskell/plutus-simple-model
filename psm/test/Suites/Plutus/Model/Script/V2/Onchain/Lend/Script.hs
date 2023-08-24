@@ -19,6 +19,7 @@ import PlutusTx qualified
 import Suites.Plutus.Model.Script.V2.Onchain.Lend
 
 import Prelude (($))
+import PlutusCore.Version (plcVersion100)
 
 type Lend = TypedValidator LendDatum LendAct
 
@@ -33,4 +34,4 @@ lendPolicy :: LendMintParams -> LendMint
 lendPolicy lendMintParams =
   mkTypedPolicy $
     $$(PlutusTx.compile [||\param -> toBuiltinPolicy (lendPolicyContract param)||])
-      `PlutusTx.unsafeApplyCode` PlutusTx.liftCode lendMintParams
+      `PlutusTx.unsafeApplyCode` PlutusTx.liftCode plcVersion100 lendMintParams
