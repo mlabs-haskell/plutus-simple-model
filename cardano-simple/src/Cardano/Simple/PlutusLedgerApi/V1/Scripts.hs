@@ -16,11 +16,14 @@ import Prelude qualified as Haskell
 
 import Codec.Serialise (Serialise (..))
 import Control.DeepSeq (NFData)
+import Control.Lens (over)
 import GHC.Generics (Generic)
-import PlutusTx (CompiledCode)
+import PlutusTx (CompiledCode, getPlcNoAnn)
 import PlutusTx.Builtins as Builtins
 import PlutusTx.Prelude
-import PlutusLedgerApi.Common (serialiseCompiledCode, SerialisedScript)
+import PlutusLedgerApi.Common (SerialisedScript, serialiseUPLC)
+import qualified UntypedPlutusCore           as UPLC
+import PlutusCore.Version (plcVersion100)
 
 -- | A script on the chain. This is an opaque type as far as the chain is concerned.
 newtype Script = Script {unScript :: SerialisedScript}
@@ -31,9 +34,16 @@ newtype Script = Script {unScript :: SerialisedScript}
 instance Haskell.Show Script where
   showsPrec _ _ = Haskell.showString "<Script>"
 
+modifyPLCVersion :: UPLC.Program name uni fun ann -> UPLC.Program name uni fun ann
+modifyPLCVersion (UPLC.Program ann _v t) = UPLC.Program ann plcVersion100 t
+
 -- | Turn a 'CompiledCode' (usually produced by 'compile') into a 'Script' for use with this package.
 fromCompiledCode :: CompiledCode a -> Script
-fromCompiledCode = Script . serialiseCompiledCode
+fromCompiledCode = Script . serialiseUPLC . modifyPLCVersion . toNameless . getPlcNoAnn
+  where
+    toNameless :: UPLC.Program UPLC.NamedDeBruijn UPLC.DefaultUni UPLC.DefaultFun ()
+            -> UPLC.Program UPLC.DeBruijn UPLC.DefaultUni UPLC.DefaultFun ()
+    toNameless = over UPLC.progTerm $ UPLC.termMapNames UPLC.unNameDeBruijn
 
 mkValidatorScript :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> Validator
 mkValidatorScript = Validator . fromCompiledCode
