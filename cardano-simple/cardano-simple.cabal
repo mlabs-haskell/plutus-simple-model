@@ -62,17 +62,13 @@ common lang
     -Wall -Wcompat -Wredundant-constraints -Wmissing-export-lists
     -Werror -Wincomplete-record-updates -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
-    -fobject-code -fno-specialise
-  ghc-options:
-    -Wall -Wcompat -Wredundant-constraints -Wmissing-export-lists
-    -Werror -Wincomplete-record-updates -fobject-code
-    -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
-    -fobject-code -fno-specialise
-    -Wno-partial-type-signatures
+    -fno-specialise -Wno-partial-type-signatures
+
   -- expose all unfoldings, so plutustx compiler can do its job
   ghc-options:
-    -fexpose-all-unfoldings -fobject-code -fplugin-opt
-    PlutusTx.Plugin:defer-errors
+    -fexpose-all-unfoldings -fobject-code
+    -fplugin-opt PlutusTx.Plugin:defer-errors
+  -- set target plutus-core version
   ghc-options: -fplugin-opt PlutusTx.Plugin:target-version=1.0.0
 
 common deps

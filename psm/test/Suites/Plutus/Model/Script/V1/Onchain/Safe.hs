@@ -38,12 +38,10 @@ newtype SafeParams = SafeParams POSIXTime
 {-# INLINEABLE safeContract #-}
 safeContract :: SafeParams -> SafeDatum -> SafeAct -> ScriptContext -> Bool
 safeContract (SafeParams _spendTime) (Safe pkh) act ctx =
-  txSignedBy (scriptContextTxInfo ctx) pkh
-    && keyIsSame
-    && ( case act of
-          Spend -> onSpend
-          Deposit -> onDeposit
-       )
+  txSignedBy (scriptContextTxInfo ctx) pkh &&
+  case act of
+    Spend -> onSpend
+    Deposit -> keyIsSame && onDeposit
   where
     info :: TxInfo
     info = scriptContextTxInfo ctx

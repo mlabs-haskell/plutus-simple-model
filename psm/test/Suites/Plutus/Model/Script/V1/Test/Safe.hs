@@ -67,6 +67,7 @@ badSpendSafe = waitAndSpendSafe 1_635_180_185_000
 badDepositSafe :: Run Bool
 badDepositSafe = waitAndDepositSafe 1_635_180_186_000
 
+-- | Basically lock funds by given value @dep@ from user @pkh@.
 initSafe' :: PubKeyHash -> Value -> Run ()
 initSafe' pkh dep = do
   sp <- spend pkh dep

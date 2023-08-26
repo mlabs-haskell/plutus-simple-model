@@ -77,6 +77,7 @@ module Plutus.Model.Mock (
   refScriptAt,
   withUtxo,
   withFirstUtxo,
+  withFirstUtxoWithoutRefScript,
   withRefScript,
   withFirstRefScript,
   utxoAtStateBy,
@@ -95,8 +96,7 @@ module Plutus.Model.Mock (
   -- * Blockchain config
   readMockConfig,
   defaultAlonzo,
-  defaultBabbageV1,
-  defaultBabbageV2,
+  defaultBabbage,
   defaultMockConfig,
   skipLimits,
   warnLimits,
@@ -734,6 +734,9 @@ refScriptAt addr = gets (utxoAtStateBy mockRefScripts addr)
 -- | Reads the first UTXO by address
 withFirstUtxo :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
 withFirstUtxo = withUtxo (const True)
+
+withFirstUtxoWithoutRefScript :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
+withFirstUtxoWithoutRefScript = withUtxo (\(_oref, out) -> isNothing $ txOutReferenceScript out)
 
 {- | Reads list of UTXOs that belong to address and applies predicate to search for
  certain UTXO in that list. It proceeds with continuation if UTXO is present
