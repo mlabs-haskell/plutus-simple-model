@@ -59,6 +59,7 @@ module Plutus.Model.Mock (
 
   -- * core blockchain functions
   getMainUser,
+  getUserSignKey,
   signTx,
   sendBlock,
   sendTx,
