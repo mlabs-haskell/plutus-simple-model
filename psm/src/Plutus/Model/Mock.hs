@@ -26,7 +26,6 @@ module Plutus.Model.Mock (
   MockNames (..),
   User (..),
   TxStat (..),
-  txStatId,
   PoolId (..),
   ExUnits (..),
   Result (..),
@@ -678,7 +677,7 @@ applyTx stat tid extra tx@P.Tx {..} = do
     saveTx = do
       t <- gets mockCurrentSlot
       statPercent <- getStatPercent
-      modify' $ \s -> s {mockTxs = appendLog t (TxStat tx t stat statPercent) $ mockTxs s}
+      modify' $ \s -> s {mockTxs = appendLog t (TxStat tx t stat statPercent tid) $ mockTxs s}
 
     getStatPercent = do
       maxLimits <- gets (mockConfigLimitStats . mockConfig)

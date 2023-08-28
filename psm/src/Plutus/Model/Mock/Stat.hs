@@ -1,7 +1,6 @@
 -- | Tx execution statistics (execution units budget)
 module Plutus.Model.Mock.Stat (
   TxStat (..),
-  txStatId,
   Stat (..),
   mainnetTxLimits,
   testnetTxLimits,
@@ -28,12 +27,9 @@ data TxStat = TxStat
   , txStatTime :: !Slot
   , txStat :: !Stat
   , txStatPercent :: !StatPercent
+  , txStatId :: !TxId
   }
   deriving (Show)
-
--- | Gets Tx's hash
-txStatId :: TxStat -> TxId
-txStatId = P.txId . txStatTx
 
 -- | Stats of TX execution onchain.
 data Stat = Stat
