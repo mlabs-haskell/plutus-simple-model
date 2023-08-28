@@ -13,10 +13,6 @@ copyright:          TODO
 category:           TODO
 build-type:         Simple
 tested-with:        GHC ==9.2.8
-extra-source-files:
-  data/alonzo-params.json
-  data/protocol-params.json
-  README.md
 
 common lang
   default-language:   GHC2021
