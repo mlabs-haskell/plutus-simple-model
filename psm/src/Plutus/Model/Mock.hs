@@ -191,6 +191,8 @@ import Plutus.Model.Mock.MockConfig
 import Plutus.Model.Mock.Stat
 import qualified Cardano.Ledger.UTxO as Ledger
 import qualified Cardano.Ledger.Alonzo.UTxO as Alonzo
+import Cardano.Simple.Ledger.Scripts (Versioned)
+import Cardano.Simple.PlutusLedgerApi.V1.Scripts (Script)
 
 newtype User = User
   { userSignKey :: TC.KeyPair 'C.Witness C.StandardCrypto
@@ -211,6 +213,7 @@ data Mock = Mock
   , mockUtxos :: !(Map TxOutRef TxOut)
   -- ^ Since 0.4, reference script UTxOs are also included.
   , mockDatums :: !(Map DatumHash Datum)
+  , mockScripts :: !(Map ScriptHash (Versioned Script))
   , mockStake :: !Stake
   , mockTxs :: !(Log TxStat)
   , mockConfig :: !MockConfig
@@ -357,6 +360,7 @@ initMock cfg initVal =
     { mockUsers = M.singleton genesisUserId genesisUser
     , mockUtxos = M.singleton genesisTxOutRef genesisTxOut
     , mockDatums = M.empty
+    , mockScripts = M.empty
     , mockAddresses = M.singleton genesisAddress (S.singleton genesisTxOutRef)
     , mockStake = initStake
     , mockTxs = mempty
@@ -664,8 +668,11 @@ applyTx stat tid extra tx@P.Tx {..} = do
   updateFees
   saveTx
   saveDatums
+  saveScripts
   where
     saveDatums = modify' $ \s -> s {mockDatums = txData <> mockDatums s}
+
+    saveScripts = modify' $ \s -> s {mockScripts = txScripts <> mockScripts s}
 
     saveTx = do
       t <- gets mockCurrentSlot
