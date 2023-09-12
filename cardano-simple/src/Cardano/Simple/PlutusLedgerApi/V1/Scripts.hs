@@ -106,7 +106,7 @@ applyPlutarchTypedScript
           UPLC.Program () v1 $
             UPLC.Apply () t1 t2
 
--- | 'PlutarchTypedScript' represents compiled a plutarch script while preserving type of the script
+-- | 'PlutarchTypedScript' represents a compiled plutarch script while preserving type of the script
 newtype PlutarchTypedScript s = PlutarchTypedScript {getPlutarchTypedScript :: Script}
 
 -- | 'Validator' is a wrapper around 'Script's which are used as validators in transaction outputs.
