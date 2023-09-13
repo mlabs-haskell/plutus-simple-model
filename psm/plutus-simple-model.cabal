@@ -1,4 +1,4 @@
-cabal-version:      3.0
+cabal-version:      3.8
 name:               plutus-simple-model
 version:            0.6.0.0
 synopsis:           Unit test library for plutus
@@ -12,11 +12,11 @@ maintainer:         <anton@mlabs.city>
 copyright:          TODO
 category:           TODO
 build-type:         Simple
-tested-with:        GHC ==9.2.4
+tested-with:        GHC ==9.2.8
 extra-source-files:
   data/alonzo-params.json
+  data/babbage-params.json
   data/protocol-params.json
-  README.md
 
 common lang
   default-language:   GHC2021
@@ -61,7 +61,14 @@ common lang
     -Wall -Wcompat -Wredundant-constraints -Wmissing-export-lists
     -Werror -Wincomplete-record-updates -fobject-code
     -fno-ignore-interface-pragmas -fno-omit-interface-pragmas
-    -fobject-code -fno-specialise
+    -fno-specialise -Wno-partial-type-signatures
+
+  -- expose all unfoldings, so plutustx compiler can do its job
+  ghc-options:
+    -fexpose-all-unfoldings -fobject-code
+    -fplugin-opt PlutusTx.Plugin:defer-errors
+  -- set target plutus-core version
+  ghc-options: -fplugin-opt PlutusTx.Plugin:target-version=1.0.0
 
 common deps
   build-depends:
@@ -71,9 +78,12 @@ common deps
     , base16-bytestring
     , base58-bytestring
     , bytestring
+    , cardano-api
     , cardano-binary
     , cardano-crypto
+    , cardano-ledger-core:testlib
     , cardano-crypto-class
+    , cardano-ledger-mary
     , cardano-ledger-alonzo
     , cardano-ledger-babbage
     , cardano-ledger-core
@@ -91,11 +101,10 @@ common deps
     , http-api-data
     , memory
     , mtl
-    , plutarch
-    , plutarch-extra
     , plutus-core
     , plutus-ledger-api
     , plutus-tx
+    , plutus-tx-plugin
     , prettyprinter
     , serialise
     , tagged
@@ -152,7 +161,6 @@ test-suite plutus-simple-model-test
   type:           exitcode-stdio-1.0
   main-is:        Spec.hs
   other-modules:
-    Suites.Plutarch
     Suites.Plutus.Model.FakeCoin
     Suites.Plutus.Model.Script.V1
     Suites.Plutus.Model.Script.V1.Onchain.Counter
@@ -187,5 +195,6 @@ test-suite plutus-simple-model-test
   build-depends:
     , plutus-simple-model
     , plutus-tx-plugin
+    , cardano-simple
 
   hs-source-dirs: test

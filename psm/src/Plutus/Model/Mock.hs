@@ -26,7 +26,6 @@ module Plutus.Model.Mock (
   MockNames (..),
   User (..),
   TxStat (..),
-  txStatId,
   PoolId (..),
   ExUnits (..),
   Result (..),
@@ -59,6 +58,7 @@ module Plutus.Model.Mock (
 
   -- * core blockchain functions
   getMainUser,
+  getUserSignKey,
   signTx,
   sendBlock,
   sendTx,
@@ -70,6 +70,7 @@ module Plutus.Model.Mock (
   noLogInfo,
   pureFail,
   txOutRefAt,
+  txOutRefAtPaymentCred,
   getTxOut,
   withMay,
   withMayBy,
@@ -77,6 +78,7 @@ module Plutus.Model.Mock (
   refScriptAt,
   withUtxo,
   withFirstUtxo,
+  withFirstUtxoWithoutRefScript,
   withRefScript,
   withFirstRefScript,
   utxoAtStateBy,
@@ -95,8 +97,7 @@ module Plutus.Model.Mock (
   -- * Blockchain config
   readMockConfig,
   defaultAlonzo,
-  defaultBabbageV1,
-  defaultBabbageV2,
+  defaultBabbage,
   defaultMockConfig,
   skipLimits,
   warnLimits,
@@ -128,7 +129,6 @@ module Plutus.Model.Mock (
 ) where
 
 import Control.Applicative (Alternative (..))
-import GHC.Records
 import Prelude
 
 import Control.Monad.Identity
@@ -170,13 +170,11 @@ import Cardano.Simple.TxExtra
 import Plutus.Model.Mock.ProtocolParameters
 import Plutus.Model.Stake
 
-import Cardano.Ledger.Alonzo.PParams qualified as Alonzo
 import Cardano.Ledger.Alonzo.Scripts (ExUnits (..))
 import Cardano.Ledger.Alonzo.Scripts qualified as Alonzo
-import Cardano.Ledger.Babbage.PParams
 import Cardano.Ledger.Block qualified as Ledger
 import Cardano.Ledger.Mary.Value qualified as Mary
-import Cardano.Ledger.Shelley.API.Wallet qualified as C
+import qualified Test.Cardano.Ledger.Core.KeyPair as TC
 import Cardano.Ledger.TxIn qualified as Ledger
 import Cardano.Simple.Cardano.Alonzo ()
 import Cardano.Simple.Cardano.Alonzo qualified as Alonzo
@@ -192,9 +190,13 @@ import Plutus.Model.Mock.FailReason
 import Plutus.Model.Mock.Log
 import Plutus.Model.Mock.MockConfig
 import Plutus.Model.Mock.Stat
+import qualified Cardano.Ledger.UTxO as Ledger
+import qualified Cardano.Ledger.Alonzo.UTxO as Alonzo
+import Cardano.Simple.Ledger.Scripts (Versioned)
+import Cardano.Simple.PlutusLedgerApi.V1.Scripts (Script)
 
 newtype User = User
-  { userSignKey :: C.KeyPair 'C.Witness C.StandardCrypto
+  { userSignKey :: TC.KeyPair 'C.Witness C.StandardCrypto
   }
   deriving (Show)
 
@@ -212,6 +214,7 @@ data Mock = Mock
   , mockUtxos :: !(Map TxOutRef TxOut)
   -- ^ Since 0.4, reference script UTxOs are also included.
   , mockDatums :: !(Map DatumHash Datum)
+  , mockScripts :: !(Map ScriptHash (Versioned Script))
   , mockStake :: !Stake
   , mockTxs :: !(Log TxStat)
   , mockConfig :: !MockConfig
@@ -358,6 +361,7 @@ initMock cfg initVal =
     { mockUsers = M.singleton genesisUserId genesisUser
     , mockUtxos = M.singleton genesisTxOutRef genesisTxOut
     , mockDatums = M.empty
+    , mockScripts = M.empty
     , mockAddresses = M.singleton genesisAddress (S.singleton genesisTxOutRef)
     , mockStake = initStake
     , mockTxs = mempty
@@ -405,18 +409,18 @@ genesisTxId = fromTxId . Ledger.TxId $ Ledger.unsafeMakeSafeHash dummyHash
 
 -- | Get public key hash for a user
 userPubKeyHash :: User -> PubKeyHash
-userPubKeyHash (User (C.KeyPair vk _sk)) =
+userPubKeyHash (User (TC.KeyPair vk _sk)) =
   case C.hashKey vk of
     C.KeyHash h -> PubKeyHash $ toBuiltin $ C.hashToBytes h
 
 -- | Create User out of integer
 intToUser :: Integer -> User
-intToUser n = User $ C.KeyPair vk sk
+intToUser n = User $ TC.KeyPair vk sk
   where
     sk = C.genKeyDSIGN $ mkSeedFromInteger $ RawSeed n
     vk = C.VKey $ C.deriveVerKeyDSIGN sk
 
-getUserSignKey :: PubKeyHash -> Run (Maybe (C.KeyPair 'C.Witness C.StandardCrypto))
+getUserSignKey :: PubKeyHash -> Run (Maybe (TC.KeyPair 'C.Witness C.StandardCrypto))
 getUserSignKey pkh =
   fmap userSignKey . M.lookup pkh <$> gets mockUsers
 
@@ -510,13 +514,11 @@ sendSingleTx preTx@(Tx extra _) =
 checkSingleTx ::
   forall era.
   ( ExtendedUTxO era
-  , HasField "_costmdls" (Core.PParams era) Alonzo.CostModels
-  , HasField "_maxTxExUnits" (Core.PParams era) Alonzo.ExUnits
-  , HasField "_protocolVersion" (Core.PParams era) C.ProtVer
   , Core.Script era ~ Alonzo.AlonzoScript era
   , Class.IsCardanoTx era
   , Core.Value era ~ Mary.MaryValue C.StandardCrypto
-  , C.CLI era
+  , Ledger.EraUTxO era
+  , Ledger.ScriptsNeeded era ~ Alonzo.AlonzoScriptsNeeded era
   , C.AlonzoEraTx era
   ) =>
   Core.PParams era ->
@@ -667,13 +669,16 @@ applyTx stat tid extra tx@P.Tx {..} = do
   updateFees
   saveTx
   saveDatums
+  saveScripts
   where
     saveDatums = modify' $ \s -> s {mockDatums = txData <> mockDatums s}
+
+    saveScripts = modify' $ \s -> s {mockScripts = txScripts <> mockScripts s}
 
     saveTx = do
       t <- gets mockCurrentSlot
       statPercent <- getStatPercent
-      modify' $ \s -> s {mockTxs = appendLog t (TxStat tx t stat statPercent) $ mockTxs s}
+      modify' $ \s -> s {mockTxs = appendLog t (TxStat tx t stat statPercent tid) $ mockTxs s}
 
     getStatPercent = do
       maxLimits <- gets (mockConfigLimitStats . mockConfig)
@@ -719,9 +724,18 @@ applyTx stat tid extra tx@P.Tx {..} = do
 txOutRefAt :: Address -> Run [TxOutRef]
 txOutRefAt addr = txOutRefAtState addr <$> get
 
+-- | Read all TxOutRefs that belong to given payment credential.
+txOutRefAtPaymentCred :: Credential -> Run [TxOutRef]
+txOutRefAtPaymentCred cred = txOutRefAtPaymentCredState cred <$> get
+
 -- | Read all TxOutRefs that belong to given address.
 txOutRefAtState :: Address -> Mock -> [TxOutRef]
 txOutRefAtState addr st = foldMap S.toList . M.lookup addr $ mockAddresses st
+
+-- | Read all TxOutRefs that belong to given payment credential.
+txOutRefAtPaymentCredState :: Credential -> Mock -> [TxOutRef]
+txOutRefAtPaymentCredState cred st =
+  S.toList $ M.foldrWithKey (\addr s acc -> if addressCredential addr == cred then s <> acc else acc) S.empty $ mockAddresses st
 
 {- | Get all UTXOs that belong to an address.
 
@@ -737,6 +751,9 @@ refScriptAt addr = gets (utxoAtStateBy mockRefScripts addr)
 -- | Reads the first UTXO by address
 withFirstUtxo :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
 withFirstUtxo = withUtxo (const True)
+
+withFirstUtxoWithoutRefScript :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
+withFirstUtxoWithoutRefScript = withUtxo (\(_oref, out) -> isNothing $ txOutReferenceScript out)
 
 {- | Reads list of UTXOs that belong to address and applies predicate to search for
  certain UTXO in that list. It proceeds with continuation if UTXO is present

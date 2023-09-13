@@ -3,9 +3,6 @@ module Cardano.Simple.PlutusLedgerApi.V1.Scripts (
   mkValidatorScript,
   mkMintingPolicyScript,
   mkStakeValidatorScript,
-  mkValidatorScriptPlutarch,
-  mkMintingPolicyScriptPlutarch,
-  mkStakeValidatorScriptPlutarch,
   Script (..),
   Validator (..),
   MintingPolicy (..),
@@ -15,47 +12,29 @@ module Cardano.Simple.PlutusLedgerApi.V1.Scripts (
   MintingPolicyHash (..),
 ) where
 
-import Prelude qualified as Haskell
+import           Codec.Serialise               (Serialise (..))
+import           Control.DeepSeq               (NFData)
+import           GHC.Generics                  (Generic)
+import           PlutusLedgerApi.Common        (SerialisedScript,
+                                                serialiseCompiledCode)
+import           PlutusTx.Builtins             as Builtins
+import           PlutusTx.Code
 
-import Codec.CBOR.Decoding as CBOR
-import Codec.Serialise (Serialise (..), serialise)
-import Control.DeepSeq (NFData)
-import Data.ByteString.Lazy qualified as BSL
-import Data.Text (Text)
-import Flat qualified
-import Flat.Decoder qualified as Flat
-import GHC.Generics (Generic)
-import Plutarch (ClosedTerm, Config, compile)
-import Plutarch.Script qualified as Plutarch
-import PlutusCore qualified as PLC
-import PlutusPrelude (over)
-import PlutusTx (CompiledCode, getPlc)
-import PlutusTx.Builtins as Builtins
-import PlutusTx.Prelude
-import UntypedPlutusCore qualified as UPLC
+-- We do not use qualified import because the whole module contains off-chain code
+import           Prelude                       as Haskell
 
 -- | A script on the chain. This is an opaque type as far as the chain is concerned.
-newtype Script = Script {unScript :: UPLC.Program UPLC.DeBruijn PLC.DefaultUni PLC.DefaultFun ()}
+newtype Script = Script {unScript :: SerialisedScript}
   deriving stock (Generic)
+  deriving newtype (Haskell.Eq, Haskell.Ord)
   deriving anyclass (NFData)
-  deriving (Serialise) via (SerialiseViaFlat (UPLC.Program UPLC.DeBruijn PLC.DefaultUni PLC.DefaultFun ()))
-
-instance Haskell.Eq Script where
-  a == b = Builtins.toBuiltin (BSL.toStrict (serialise a)) == Builtins.toBuiltin (BSL.toStrict (serialise b))
-instance Haskell.Ord Script where
-  a `compare` b = Builtins.toBuiltin (BSL.toStrict (serialise a)) `compare` Builtins.toBuiltin (BSL.toStrict (serialise b))
 
 instance Haskell.Show Script where
   showsPrec _ _ = Haskell.showString "<Script>"
 
 -- | Turn a 'CompiledCode' (usually produced by 'compile') into a 'Script' for use with this package.
 fromCompiledCode :: CompiledCode a -> Script
-fromCompiledCode = Script . toNameless . getPlc
-  where
-    toNameless ::
-      UPLC.Program UPLC.NamedDeBruijn PLC.DefaultUni PLC.DefaultFun () ->
-      UPLC.Program UPLC.DeBruijn PLC.DefaultUni PLC.DefaultFun ()
-    toNameless = over UPLC.progTerm $ UPLC.termMapNames UPLC.unNameDeBruijn
+fromCompiledCode = Script . serialiseCompiledCode
 
 mkValidatorScript :: CompiledCode (BuiltinData -> BuiltinData -> BuiltinData -> ()) -> Validator
 mkValidatorScript = Validator . fromCompiledCode
@@ -66,23 +45,11 @@ mkMintingPolicyScript = MintingPolicy . fromCompiledCode
 mkStakeValidatorScript :: CompiledCode (BuiltinData -> BuiltinData -> ()) -> StakeValidator
 mkStakeValidatorScript = StakeValidator . fromCompiledCode
 
-mkValidatorScriptPlutarch :: Config -> ClosedTerm a -> Either Text Validator
-mkValidatorScriptPlutarch conf term =
-  Validator . Script . Plutarch.unScript <$> compile conf term
-
-mkMintingPolicyScriptPlutarch :: Config -> ClosedTerm a -> Either Text MintingPolicy
-mkMintingPolicyScriptPlutarch conf term =
-  MintingPolicy . Script . Plutarch.unScript <$> compile conf term
-
-mkStakeValidatorScriptPlutarch :: Config -> ClosedTerm a -> Either Text StakeValidator
-mkStakeValidatorScriptPlutarch conf term =
-  StakeValidator . Script . Plutarch.unScript <$> compile conf term
-
 -- | 'Validator' is a wrapper around 'Script's which are used as validators in transaction outputs.
 newtype Validator = Validator {getValidator :: Script}
   deriving stock (Generic)
   deriving anyclass (NFData)
-  deriving newtype (Haskell.Eq, Haskell.Ord, Serialise)
+  deriving newtype (Haskell.Eq, Haskell.Ord)
 
 instance Haskell.Show Validator where
   show = const "Validator { <script> }"
@@ -91,7 +58,7 @@ instance Haskell.Show Validator where
 newtype MintingPolicy = MintingPolicy {getMintingPolicy :: Script}
   deriving stock (Generic)
   deriving anyclass (NFData)
-  deriving newtype (Haskell.Eq, Haskell.Ord, Serialise)
+  deriving newtype (Haskell.Eq, Haskell.Ord)
 
 instance Haskell.Show MintingPolicy where
   show = const "MintingPolicy { <script> }"
@@ -100,7 +67,7 @@ instance Haskell.Show MintingPolicy where
 newtype StakeValidator = StakeValidator {getStakeValidator :: Script}
   deriving stock (Generic)
   deriving anyclass (NFData)
-  deriving newtype (Haskell.Eq, Haskell.Ord, Serialise)
+  deriving newtype (Haskell.Eq, Haskell.Ord)
 
 instance Haskell.Show StakeValidator where
   show = const "StakeValidator { <script> }"
@@ -140,18 +107,3 @@ newtype MintingPolicyHash
   deriving stock (Generic)
   deriving anyclass (NFData)
   deriving newtype (Haskell.Eq, Haskell.Ord, Serialise)
-
-{- | Newtype to provide 'Serialise' instances for types with a 'Flat' instance that
- just encodes the flat-serialized value as a CBOR bytestring
--}
-newtype SerialiseViaFlat a = SerialiseViaFlat a
-
-instance Flat.Flat a => Serialise (SerialiseViaFlat a) where
-  encode (SerialiseViaFlat a) = encode (Flat.flat a)
-  decode = Haskell.fmap SerialiseViaFlat (decodeViaFlat Flat.decode)
-
-decodeViaFlat :: Flat.Get a -> CBOR.Decoder s a
-decodeViaFlat decoder = do
-  bs <- decodeBytes
-  -- lift any flat's failures to be cborg failures (MonadFail)
-  Haskell.either (Haskell.fail . Haskell.show) Haskell.pure (Flat.unflatWith decoder bs)

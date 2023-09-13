@@ -19,7 +19,7 @@ import Data.Map (Map)
 import Data.Map qualified as Map
 import PlutusLedgerApi.V2 qualified as P
 
-class (C.Crypto era ~ StandardCrypto) => IsCardanoTx era where
+class (C.EraCrypto era ~ StandardCrypto) => IsCardanoTx era where
   toCardanoTx ::
     Network ->
     C.PParams era ->

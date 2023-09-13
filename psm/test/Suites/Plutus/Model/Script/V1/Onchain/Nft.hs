@@ -17,6 +17,7 @@ import PlutusLedgerApi.V1.Contexts (ownCurrencySymbol)
 
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
+import PlutusCore.Version (plcVersion100)
 
 data NftParams = NftParams TxOutRef TokenName
 
@@ -52,7 +53,7 @@ nftMintingPolicy :: NftParams -> TypedPolicy ()
 nftMintingPolicy nftp =
   mkTypedPolicy $
     $$(PlutusTx.compile [||\param -> toBuiltinPolicy (nftContract param)||])
-      `PlutusTx.applyCode` PlutusTx.liftCode nftp
+      `PlutusTx.unsafeApplyCode` PlutusTx.liftCode plcVersion100 nftp
 
 nftCurrencySymbol :: NftParams -> CurrencySymbol
 nftCurrencySymbol = scriptCurrencySymbol . nftMintingPolicy

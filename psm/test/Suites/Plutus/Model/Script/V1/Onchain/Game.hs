@@ -12,14 +12,14 @@ module Suites.Plutus.Model.Script.V1.Onchain.Game (
 import PlutusLedgerApi.V1
 import PlutusTx qualified
 import PlutusTx.Prelude qualified as Plutus
-import Prelude
+import qualified Prelude
 
-newtype GameDatum = GuessHash Plutus.BuiltinByteString
-  deriving (Eq)
+newtype GameDatum = GuessHash Plutus.BuiltinByteString deriving Prelude.Eq
 
 newtype GameAct = Guess Plutus.BuiltinByteString
 
-gameContract :: GameDatum -> GameAct -> ScriptContext -> Bool
+{-# INLINEABLE gameContract #-}
+gameContract :: GameDatum -> GameAct -> ScriptContext -> Plutus.Bool
 gameContract (GuessHash h) (Guess answer) _ =
   Plutus.sha2_256 answer Plutus.== h
 

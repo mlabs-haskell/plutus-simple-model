@@ -80,7 +80,7 @@ initGame loadScript pkh prize answer = do
 guess :: PubKeyHash -> BuiltinByteString -> Run ()
 guess pkh answer =
   withFirstRefScript gameScript $ \(refScript, _) ->
-    withFirstUtxo gameScript $ \(gameRef, gameOut) -> do
+    withFirstUtxoWithoutRefScript gameScript $ \(gameRef, gameOut) -> do
       case getInlineDatum gameOut of
         Just dat -> do
           submitTx pkh $ guessTx refScript pkh gameRef (txOutValue gameOut) dat answer

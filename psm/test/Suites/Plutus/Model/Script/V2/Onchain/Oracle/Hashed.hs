@@ -10,6 +10,7 @@ import PlutusTx qualified
 import Suites.Plutus.Model.Script.V2.Onchain.Oracle
 
 import Prelude (($))
+import PlutusCore.Version (plcVersion100)
 
 type Bet = TypedValidator BetDatum BetAct
 
@@ -20,4 +21,4 @@ betScript :: BetParams -> Bet
 betScript betParams =
   mkTypedValidator $
     $$(PlutusTx.compile [||\param -> toBuiltinValidator (betContract datumOf param)||])
-      `PlutusTx.applyCode` PlutusTx.liftCode betParams
+      `PlutusTx.unsafeApplyCode` PlutusTx.liftCode plcVersion100 betParams

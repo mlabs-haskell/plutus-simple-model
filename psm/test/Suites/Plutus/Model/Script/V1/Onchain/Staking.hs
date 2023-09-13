@@ -9,6 +9,7 @@ import PlutusLedgerApi.V1.Value
 
 import PlutusTx qualified
 import PlutusTx.Prelude
+import PlutusCore.Version (plcVersion100)
 
 {-# INLINEABLE mkStakingValidator #-}
 mkStakingValidator :: Address -> () -> ScriptContext -> Bool
@@ -42,4 +43,4 @@ stakeValidator :: Address -> TypedStake ()
 stakeValidator addr =
   mkTypedStake $
     $$(PlutusTx.compile [||\param -> toBuiltinStake (mkStakingValidator param)||])
-      `PlutusTx.applyCode` PlutusTx.liftCode addr
+      `PlutusTx.unsafeApplyCode` PlutusTx.liftCode plcVersion100 addr

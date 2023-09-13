@@ -6,24 +6,24 @@ module Cardano.Simple.Cardano.Babbage (
   toBabbageTx,
 ) where
 
+import Control.Lens ((^.))
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
 import Data.Sequence.Strict qualified as Seq
 import Prelude
 
-import Cardano.Ledger.Alonzo.Data qualified as C
-import Cardano.Ledger.Alonzo.TxWitness qualified as C
-import Cardano.Ledger.Babbage (BabbageEra)
-import Cardano.Ledger.Babbage.PParams qualified as C
+import Cardano.Ledger.Alonzo.Scripts.Data qualified as C
+import Cardano.Ledger.Alonzo.TxWits qualified as C
+import Cardano.Ledger.Babbage (BabbageEra, Babbage)
 import Cardano.Ledger.Babbage.Tx qualified as C
 import Cardano.Ledger.Babbage.TxBody qualified as C
+import Cardano.Ledger.Core qualified as C
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CompactAddress qualified as C
+import Cardano.Ledger.Address qualified as C
 import Cardano.Ledger.Compactible qualified as C
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Hashes qualified as C
 import Cardano.Ledger.SafeHash
-import Cardano.Ledger.Serialization qualified as C
+import Cardano.Ledger.Binary qualified as C
 import Cardano.Ledger.Shelley.API.Types qualified as C (
   StrictMaybe (..),
  )
@@ -52,6 +52,7 @@ import Cardano.Simple.Ledger.Tx qualified as Plutus
 import Cardano.Simple.PlutusLedgerApi.V1.Scripts qualified as P
 import Cardano.Simple.TxExtra qualified as P
 import PlutusLedgerApi.V2 qualified as P
+import qualified Cardano.Ledger.Mary.Value as C
 
 type Era = BabbageEra StandardCrypto
 
@@ -62,7 +63,7 @@ instance IsCardanoTx Era where
 
 toBabbageTx ::
   Network ->
-  C.BabbagePParams Era ->
+  C.PParams Era ->
   P.Extra ->
   Plutus.Tx ->
   Either ToCardanoError (C.AlonzoTx Era)
@@ -84,15 +85,15 @@ toBabbageTx network params extra tx = do
       txcerts <-
         getDCerts
           network
-          (C._poolDeposit params)
-          (C._minPoolCost params)
+          (params ^. C.ppPoolDepositL)
+          (params ^. C.ppMinPoolCostL)
           extra
       txwdrls <- getWdrl network extra
       let txfee = getFee tx
           txvldt = getInterval tx
           txUpdates = C.SNothing
           reqSignerHashes = getSignatories tx
-      mint <- getMint tx
+      (C.MaryValue _ mint) <- getMint tx
       let scriptIntegrityHash = C.SNothing
           adHash = C.SNothing
           txNetworkId = C.SJust network
@@ -134,7 +135,7 @@ toSizedTxOut ::
   Network ->
   P.TxOut ->
   Either ToCardanoError (C.Sized (C.BabbageTxOut Era))
-toSizedTxOut scriptMap network tout = C.mkSized <$> toTxOut scriptMap network tout
+toSizedTxOut scriptMap network tout = C.mkSized (C.eraProtVerHigh @Babbage) <$> toTxOut scriptMap network tout
 
 toBabbageTxOut :: Map P.ScriptHash (C.Versioned P.Script) -> Network -> P.TxOut -> Either ToCardanoError (C.BabbageTxOut Era)
 toBabbageTxOut scriptMap network (P.TxOut addr value mdh mScriptHash) = do
@@ -209,14 +210,14 @@ toWits ::
   SafeHash StandardCrypto C.EraIndependentTxBody ->
   P.Extra ->
   Plutus.Tx ->
-  Either ToCardanoError (C.TxWitness Era)
+  Either ToCardanoError (C.AlonzoTxWits Era)
 toWits txBodyHash extra tx = do
   let bootstrapWits = mempty
   datumWits <- toDatumWitness tx
   let redeemerWits = toRedeemerWitness extra tx
   scriptWits <- toScriptWitness extra tx
   pure $
-    C.TxWitness
+    C.AlonzoTxWits
       (toKeyWitness txBodyHash tx)
       bootstrapWits
       scriptWits

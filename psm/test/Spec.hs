@@ -5,11 +5,9 @@ import Test.Tasty (TestTree, defaultMain, testGroup)
 import Plutus.Model (
   MockConfig,
   defaultAlonzo,
-  defaultBabbageV1,
-  defaultBabbageV2,
+  defaultBabbage,
  )
 
-import Suites.Plutarch as Plutarch
 import Suites.Plutus.Model.Script.V1 qualified as Script.V1
 import Suites.Plutus.Model.Script.V2 qualified as Script.V2
 import Suites.Plutus.Model.User qualified as User
@@ -20,9 +18,8 @@ main = do
     testGroup
       "Test Suites"
       [ plutusV1 "Alonzo" defaultAlonzo
-      , plutusV1 "Babbage" defaultBabbageV1
-      , plutusV2 "Babbage" defaultBabbageV2
-      , Plutarch.tests
+      , plutusV1 "Babbage" defaultBabbage
+      , plutusV2 "Babbage" defaultBabbage
       ]
 
 plutusV1 :: String -> MockConfig -> TestTree

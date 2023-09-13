@@ -21,6 +21,7 @@ import GHC.Generics (Generic)
 import Cardano.Crypto.Hash (SHA256, digest)
 import Cardano.Ledger.Crypto qualified as C (StandardCrypto)
 import Cardano.Ledger.Keys qualified as C
+import qualified Test.Cardano.Ledger.Core.KeyPair as TC
 import Codec.CBOR.Write qualified as Write
 import Codec.Serialise
 import PlutusLedgerApi.V2
@@ -54,7 +55,7 @@ data Tx = Tx
   -- ^ The 'SlotRange' during which this transaction may be validated.
   , txMintScripts :: Set.Set (Versioned MintingPolicy)
   -- ^ The scripts that must be run to check minting conditions.
-  , txSignatures :: Map.Map PubKeyHash (C.KeyPair 'C.Witness C.StandardCrypto)
+  , txSignatures :: Map.Map PubKeyHash (TC.KeyPair 'C.Witness C.StandardCrypto)
   -- ^ Signatures of this transaction.
   , txRedeemers :: Redeemers
   -- ^ Redeemers of the minting scripts.

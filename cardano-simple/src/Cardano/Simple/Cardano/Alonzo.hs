@@ -9,16 +9,17 @@ module Cardano.Simple.Cardano.Alonzo (
 
 import Prelude
 
+import Control.Lens ((^.))
 import Cardano.Ledger.Alonzo (AlonzoEra)
-import Cardano.Ledger.Alonzo.PParams qualified as C
 import Cardano.Ledger.Alonzo.Tx qualified as C
 import Cardano.Ledger.Alonzo.TxBody qualified as C
-import Cardano.Ledger.Alonzo.TxWitness qualified as C
+import Cardano.Ledger.Alonzo.TxWits qualified as C
 import Cardano.Ledger.BaseTypes
-import Cardano.Ledger.CompactAddress qualified as C
+import Cardano.Ledger.Address qualified as C
 import Cardano.Ledger.Compactible qualified as C
+import Cardano.Ledger.Core qualified as C
 import Cardano.Ledger.Crypto (StandardCrypto)
-import Cardano.Ledger.Hashes qualified as C
+import qualified Cardano.Ledger.Mary.Value as C
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.SafeHash qualified as C (hashAnnotated)
 import Cardano.Ledger.Shelley.API.Types qualified as C (
@@ -102,7 +103,7 @@ instance IsCardanoTx Era where
               Just cval -> Right cval
               Nothing -> Left "Fail to create compact value"
 
-toAlonzoTx :: Network -> C.AlonzoPParams Era -> P.Extra -> Plutus.Tx -> Either ToCardanoError (C.AlonzoTx Era)
+toAlonzoTx :: Network -> C.PParams Era -> P.Extra -> Plutus.Tx -> Either ToCardanoError (C.AlonzoTx Era)
 toAlonzoTx network params extra tx = do
   body <- toBody
   wits <- toWits (C.hashAnnotated body) extra tx
@@ -117,15 +118,15 @@ toAlonzoTx network params extra tx = do
       txcerts <-
         getDCerts
           network
-          (C._poolDeposit params)
-          (C._minPoolCost params)
+          (params ^. C.ppPoolDepositL)
+          (params ^. C.ppMinPoolCostL)
           extra
       txwdrls <- getWdrl network extra
       let txfee = getFee tx
           txvldt = getInterval tx
           txUpdates = C.SNothing
           reqSignerHashes = getSignatories tx
-      mint <- getMint tx
+      (C.MaryValue _ mint) <- getMint tx
       let scriptIntegrityHash = C.SNothing
           adHash = C.SNothing
           txnetworkid = C.SJust network
@@ -154,14 +155,14 @@ toWits ::
   SafeHash StandardCrypto C.EraIndependentTxBody ->
   P.Extra ->
   Plutus.Tx ->
-  Either ToCardanoError (C.TxWitness Era)
+  Either ToCardanoError (C.AlonzoTxWits Era)
 toWits txBodyHash extra tx = do
   let bootstrapWits = mempty
   datumWits <- toDatumWitness tx
   let redeemerWits = toRedeemerWitness extra tx
   scriptWits <- toScriptWitness extra tx
   pure $
-    C.TxWitness
+    C.AlonzoTxWits
       (toKeyWitness txBodyHash tx)
       bootstrapWits
       scriptWits

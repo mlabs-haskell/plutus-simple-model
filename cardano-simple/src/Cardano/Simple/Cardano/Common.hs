@@ -46,16 +46,17 @@ import Data.Set qualified as Set
 
 import Cardano.Crypto.Hash.Class qualified as C
 import Cardano.Crypto.Hash.Class qualified as Crypto
-import Cardano.Ledger.Alonzo.Data qualified as C
+import Cardano.Ledger.Alonzo.Scripts.Data qualified as C
 import Cardano.Ledger.Alonzo.Scripts qualified as C
 import Cardano.Ledger.Alonzo.TxInfo qualified as C
-import Cardano.Ledger.Alonzo.TxWitness qualified as C
+import Cardano.Ledger.Alonzo.TxWits qualified as C
 import Cardano.Ledger.BaseTypes
 import Cardano.Ledger.Crypto (StandardCrypto)
 import Cardano.Ledger.Era qualified as C
 import Cardano.Ledger.Hashes qualified as C
 import Cardano.Ledger.Keys qualified as C
 import Cardano.Ledger.Keys.WitVKey
+import qualified Test.Cardano.Ledger.Core.KeyPair as TC
 import Cardano.Ledger.Mary.Value qualified as C
 import Cardano.Ledger.SafeHash
 import Cardano.Ledger.Shelley.API.Types qualified as C (
@@ -67,12 +68,11 @@ import Cardano.Ledger.Shelley.API.Types qualified as C (
   RewardAcnt (..),
   StakeReference (..),
   StrictMaybe (..),
-  Wdrl (..),
+  Withdrawals (..),
  )
 import Cardano.Ledger.Shelley.API.Types qualified as Shelley (Hash)
 import Cardano.Ledger.Shelley.Delegation.Certificates qualified as C
-import Cardano.Ledger.Shelley.UTxO qualified as C
-import Cardano.Ledger.ShelleyMA.Timelocks qualified as C
+import Cardano.Ledger.Allegra.Scripts qualified as C
 import Cardano.Ledger.Slot qualified as C
 import Cardano.Ledger.TxIn qualified as C
 import Cardano.Simple.Ledger.Scripts qualified as C
@@ -121,7 +121,7 @@ getDCerts network poolDeposit minPoolCost =
     . mapM (toDCert network poolDeposit minPoolCost . P.certificate'dcert)
     . P.extra'certificates
 
-getWdrl :: Network -> P.Extra -> Either ToCardanoError (C.Wdrl StandardCrypto)
+getWdrl :: Network -> P.Extra -> Either ToCardanoError (C.Withdrawals StandardCrypto)
 getWdrl network =
   toWdrl network
     . P.extra'withdraws
@@ -129,7 +129,7 @@ getWdrl network =
 getSignatories :: Plutus.Tx -> Set.Set (C.KeyHash 'C.Witness StandardCrypto)
 getSignatories =
   Set.fromList
-    . fmap (C.hashKey . C.vKey)
+    . fmap (C.hashKey . TC.vKey)
     . Map.elems
     . Plutus.txSignatures
 
@@ -232,8 +232,8 @@ toCredential = \case
   P.PubKeyCredential pubKeyHash -> C.KeyHashObj <$> toPubKeyHash pubKeyHash
   P.ScriptCredential validatorHash -> C.ScriptHashObj <$> toScriptHash validatorHash
 
-toWdrl :: Network -> [P.Withdraw] -> Either ToCardanoError (C.Wdrl StandardCrypto)
-toWdrl network ws = C.Wdrl . Map.fromList <$> mapM to ws
+toWdrl :: Network -> [P.Withdraw] -> Either ToCardanoError (C.Withdrawals StandardCrypto)
+toWdrl network ws = C.Withdrawals . Map.fromList <$> mapM to ws
   where
     to (P.Withdraw scred amount _) =
       case scred of
@@ -284,11 +284,11 @@ toKeyWitness ::
   Set (WitVKey 'C.Witness StandardCrypto)
 toKeyWitness txBodyHash tx =
   Set.fromList $
-    fmap (C.makeWitnessVKey txBodyHash) $
+    fmap (TC.mkWitnessVKey txBodyHash) $
       Map.elems $
         Plutus.txSignatures tx
 
-toDatumWitness :: (C.Era era, C.Crypto era ~ StandardCrypto) => Plutus.Tx -> Either ToCardanoError (C.TxDats era)
+toDatumWitness :: (C.Era era, C.EraCrypto era ~ StandardCrypto) => Plutus.Tx -> Either ToCardanoError (C.TxDats era)
 toDatumWitness tx = do
   datumWits1 <- Map.fromList <$> mapM (\d -> (,toDatum d) <$> toDataHash (C.datumHash d)) validatorDatums1
   datumWits2 <- Map.fromList <$> mapM (\(dh, d) -> (,toDatum d) <$> toDataHash dh) validatorDatums2
@@ -340,7 +340,7 @@ toRedeemerWitness extra tx =
     certRedeemers = redeemersBy C.Cert (fmap P.certificate'script . P.extra'certificates)
     withdrawRedeemers = redeemersBy C.Rewrd (fmap P.withdraw'script . P.extra'withdraws)
 
-    redeemersBy :: C.Tag -> (P.Extra -> [Maybe (P.Redeemer, a)]) -> Map.Map C.RdmrPtr (C.Data era, C.ExUnits)
+    redeemersBy :: C.Era era => C.Tag -> (P.Extra -> [Maybe (P.Redeemer, a)]) -> Map.Map C.RdmrPtr (C.Data era, C.ExUnits)
     redeemersBy scriptTag extract =
       Map.fromList $
         mapMaybe toWithdraw $
@@ -354,10 +354,10 @@ toRedeemerWitness extra tx =
     addDefaultExUnits rdm = (rdm, C.ExUnits 1 1)
 
 toScriptWitness ::
-  (C.Crypto era ~ StandardCrypto) =>
+  (C.EraCrypto era ~ StandardCrypto) =>
   P.Extra ->
   Plutus.Tx ->
-  Either ToCardanoError (Map (C.ScriptHash (C.Crypto era)) (C.AlonzoScript era))
+  Either ToCardanoError (Map (C.ScriptHash (C.EraCrypto era)) (C.AlonzoScript era))
 toScriptWitness extra tx =
   Map.fromList <$> mapM (\s -> (,C.toScript s) <$> toScriptHash (C.validatorHash (fmap P.Validator s))) allScripts
   where
@@ -382,8 +382,8 @@ toScriptWitness extra tx =
         (fromInType <=< Plutus.txInType)
         (Set.toList $ Plutus.txInputs tx)
 
-toDatum :: P.Datum -> C.Data era
+toDatum :: C.Era era => P.Datum -> C.Data era
 toDatum (P.Datum (P.BuiltinData d)) = C.Data d
 
-toRedeemer :: P.Redeemer -> C.Data era
+toRedeemer :: C.Era era => P.Redeemer -> C.Data era
 toRedeemer (P.Redeemer (P.BuiltinData d)) = C.Data d
