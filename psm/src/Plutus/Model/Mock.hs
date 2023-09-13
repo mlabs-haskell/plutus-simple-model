@@ -70,6 +70,7 @@ module Plutus.Model.Mock (
   noLogInfo,
   pureFail,
   txOutRefAt,
+  txOutRefAtPaymentCred,
   getTxOut,
   withMay,
   withMayBy,
@@ -723,9 +724,18 @@ applyTx stat tid extra tx@P.Tx {..} = do
 txOutRefAt :: Address -> Run [TxOutRef]
 txOutRefAt addr = txOutRefAtState addr <$> get
 
+-- | Read all TxOutRefs that belong to given payment credential.
+txOutRefAtPaymentCred :: Credential -> Run [TxOutRef]
+txOutRefAtPaymentCred cred = txOutRefAtPaymentCredState cred <$> get
+
 -- | Read all TxOutRefs that belong to given address.
 txOutRefAtState :: Address -> Mock -> [TxOutRef]
 txOutRefAtState addr st = foldMap S.toList . M.lookup addr $ mockAddresses st
+
+-- | Read all TxOutRefs that belong to given payment credential.
+txOutRefAtPaymentCredState :: Credential -> Mock -> [TxOutRef]
+txOutRefAtPaymentCredState cred st =
+  S.toList $ M.foldrWithKey (\addr s acc -> if addressCredential addr == cred then s <> acc else acc) S.empty $ mockAddresses st
 
 {- | Get all UTXOs that belong to an address.
 
