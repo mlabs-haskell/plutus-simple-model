@@ -185,6 +185,7 @@ test-suite plutus-simple-model-test
     Suites.Plutus.Model.Util
 
   build-depends:
+    , cardano-simple
     , plutus-simple-model
     , plutus-tx-plugin
 

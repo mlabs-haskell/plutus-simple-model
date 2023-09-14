@@ -9,6 +9,8 @@ module Plutus.Model.Validator.V2 (
   toBuiltinValidator,
   toBuiltinPolicy,
   toBuiltinStake,
+  mkTypedValidatorPlutarchTypedScript,
+  mkTypedPolicyPlutarchTypedScript,
 ) where
 
 import PlutusLedgerApi.V2
@@ -17,7 +19,17 @@ import PlutusTx.Prelude (Bool, (.))
 import PlutusTx.Prelude qualified as Plutus
 
 import Cardano.Simple.Ledger.Scripts (toV2)
-import Cardano.Simple.PlutusLedgerApi.V1.Scripts
+import Cardano.Simple.PlutusLedgerApi.V1.Scripts (
+  MintingPolicy (MintingPolicy),
+  PlutarchTypedScript (getPlutarchTypedScript),
+  Validator (Validator),
+  mkMintingPolicyScript,
+  mkMintingPolicyScriptPlutarch,
+  mkStakeValidatorScript,
+  mkStakeValidatorScriptPlutarch,
+  mkValidatorScript,
+  mkValidatorScriptPlutarch,
+ )
 import Plutarch.Api.V2 (PMintingPolicy, PStakeValidator, PValidator)
 import Plutus.Model.Validator (TypedPolicy (..), TypedStake (..), TypedValidator (..))
 
@@ -48,6 +60,14 @@ mkTypedPolicyPlutarch conf term = TypedPolicy . toV2 <$> mkMintingPolicyScriptPl
 -- | Create Plutus V2 typed stake validator from a plutarch term
 mkTypedStakePlutarch :: Config -> ClosedTerm PStakeValidator -> Either Text (TypedStake redeemer)
 mkTypedStakePlutarch conf term = TypedStake . toV2 <$> mkStakeValidatorScriptPlutarch conf term
+
+mkTypedValidatorPlutarchTypedScript :: PlutarchTypedScript PValidator -> TypedValidator datum redeemer
+mkTypedValidatorPlutarchTypedScript script =
+  TypedValidator . toV2 . Validator Plutus.$ getPlutarchTypedScript script
+
+mkTypedPolicyPlutarchTypedScript :: PlutarchTypedScript PMintingPolicy -> TypedPolicy redeemer
+mkTypedPolicyPlutarchTypedScript script =
+  TypedPolicy . toV2 . MintingPolicy Plutus.$ getPlutarchTypedScript script
 
 -- | Coverts to low-level validator representation
 {-# INLINEABLE toBuiltinValidator #-}

@@ -6,6 +6,8 @@ module Cardano.Simple.PlutusLedgerApi.V1.Scripts (
   mkValidatorScriptPlutarch,
   mkMintingPolicyScriptPlutarch,
   mkStakeValidatorScriptPlutarch,
+  mkPlutarchTypedScript,
+  applyPlutarchTypedScript,
   Script (..),
   Validator (..),
   MintingPolicy (..),
@@ -13,6 +15,7 @@ module Cardano.Simple.PlutusLedgerApi.V1.Scripts (
   ValidatorHash (..),
   StakeValidatorHash (..),
   MintingPolicyHash (..),
+  PlutarchTypedScript (getPlutarchTypedScript),
 ) where
 
 import Prelude qualified as Haskell
@@ -20,12 +23,14 @@ import Prelude qualified as Haskell
 import Codec.CBOR.Decoding as CBOR
 import Codec.Serialise (Serialise (..), serialise)
 import Control.DeepSeq (NFData)
+import Control.Monad.Except (MonadError (throwError), when)
 import Data.ByteString.Lazy qualified as BSL
+import Data.Eq qualified as GHC
 import Data.Text (Text)
 import Flat qualified
 import Flat.Decoder qualified as Flat
 import GHC.Generics (Generic)
-import Plutarch (ClosedTerm, Config, compile)
+import Plutarch (ClosedTerm, Config, compile, (:-->))
 import Plutarch.Script qualified as Plutarch
 import PlutusCore qualified as PLC
 import PlutusPrelude (over)
@@ -77,6 +82,32 @@ mkMintingPolicyScriptPlutarch conf term =
 mkStakeValidatorScriptPlutarch :: Config -> ClosedTerm a -> Either Text StakeValidator
 mkStakeValidatorScriptPlutarch conf term =
   StakeValidator . Script . Plutarch.unScript <$> compile conf term
+
+mkPlutarchTypedScript :: Config -> ClosedTerm a -> Either Text (PlutarchTypedScript a)
+mkPlutarchTypedScript config term =
+  PlutarchTypedScript . Script . Plutarch.unScript <$> Plutarch.compile config term
+
+applyPlutarchTypedScript ::
+  Config ->
+  PlutarchTypedScript (a :--> b) ->
+  ClosedTerm a ->
+  Either Text (PlutarchTypedScript b)
+applyPlutarchTypedScript
+  config
+  (PlutarchTypedScript (Script (UPLC.Program _ v1 t1)))
+  term = do
+    (Plutarch.Script (UPLC.Program _ v2 t2)) <- Plutarch.compile config term
+
+    when (v1 GHC./= v2) $ throwError "Script versions differ"
+
+    pure $
+      PlutarchTypedScript $
+        Script $
+          UPLC.Program () v1 $
+            UPLC.Apply () t1 t2
+
+-- | 'PlutarchTypedScript' represents a compiled plutarch script while preserving type of the script
+newtype PlutarchTypedScript s = PlutarchTypedScript {getPlutarchTypedScript :: Script}
 
 -- | 'Validator' is a wrapper around 'Script's which are used as validators in transaction outputs.
 newtype Validator = Validator {getValidator :: Script}
