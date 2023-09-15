@@ -49,12 +49,12 @@ gameSecret = "secret"
 makeGuessGameBy :: RefScriptMode -> BuiltinByteString -> BuiltinByteString -> Run ()
 makeGuessGameBy refScriptMode secret answer = do
   users <- setupUsers
-  let [u1, u2, _] = users
-  initGame refScriptMode u1 (adaValue 100) secret
-  guess u2 answer
+  let [u1, u2, scriptRefUser] = users
+  initGame refScriptMode u1 scriptRefUser (adaValue 100) secret
+  guess scriptRefUser u2 answer
 
-initGame :: RefScriptMode -> PubKeyHash -> Value -> BuiltinByteString -> Run ()
-initGame loadScript pkh prize answer = do
+initGame :: RefScriptMode -> PubKeyHash -> PubKeyHash -> Value -> BuiltinByteString -> Run ()
+initGame loadScript pkh scriptRefUser prize answer = do
   case loadScript of
     LoadScript -> do
       sp1 <- spend pkh riderAda
@@ -66,7 +66,7 @@ initGame loadScript pkh prize answer = do
     loadGameScriptTx usp =
       mconcat
         [ userSpend usp
-        , loadRefScript gameScript riderAda
+        , loadRefScript gameScript (toAddress scriptRefUser) riderAda
         ]
 
     loadPrizeTx usp =
@@ -77,9 +77,9 @@ initGame loadScript pkh prize answer = do
 
     gameDatum = GuessHash $ Plutus.sha2_256 answer
 
-guess :: PubKeyHash -> BuiltinByteString -> Run ()
-guess pkh answer =
-  withFirstRefScript gameScript $ \(refScript, _) ->
+guess :: PubKeyHash -> PubKeyHash -> BuiltinByteString -> Run ()
+guess scriptRefUser pkh answer =
+  withFirstRefScript gameScript scriptRefUser $ \(refScript, _) ->
     withFirstUtxo gameScript $ \(gameRef, gameOut) -> do
       case getInlineDatum gameOut of
         Just dat -> do

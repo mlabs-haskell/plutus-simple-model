@@ -49,7 +49,7 @@ import Cardano.Simple.Ledger.Scripts (Versioned (..), dataHash, datumHash, isV1,
 import Cardano.Simple.Ledger.Scripts qualified as Fork
 import Cardano.Simple.PlutusLedgerApi.V1.Scripts
 import Cardano.Simple.TxExtra qualified as Fork
-import Plutus.Model.Mock (
+import Plutus.Model.Mock.Address (
   AppendStaking (..),
   HasAddress (..),
   HasStakingCredential (..),

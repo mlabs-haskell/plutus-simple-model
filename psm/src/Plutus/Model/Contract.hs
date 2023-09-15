@@ -393,24 +393,36 @@ payToScript script dat val =
     (outDatum, datumMap) = fromDatumMode dat
 
 -- | Uploads the reference script to blockchain
-loadRefScript :: (IsValidator script) => script -> Value -> Tx
-loadRefScript script = loadRefScriptBy script Nothing
+loadRefScript ::
+  (IsValidator script, HasAddress address) =>
+  script ->
+  address ->
+  Value ->
+  Tx
+loadRefScript script address = loadRefScriptBy script address Nothing
 
 -- | Uploads the reference script to blockchain
-loadRefScriptDatum :: (IsValidator script) => script -> DatumMode (DatumType script) -> Value -> Tx
-loadRefScriptDatum script dat = loadRefScriptBy script (Just dat)
+loadRefScriptDatum ::
+  (IsValidator script, HasAddress address) =>
+  script ->
+  address ->
+  DatumMode (DatumType script) ->
+  Value ->
+  Tx
+loadRefScriptDatum script address dat = loadRefScriptBy script address (Just dat)
 
 -- | Uploads the reference script to blockchain
 loadRefScriptBy ::
-  (IsValidator script) =>
+  (IsValidator script, HasAddress address) =>
   script ->
+  address ->
   Maybe (DatumMode (DatumType script)) ->
   Value ->
   Tx
-loadRefScriptBy script mDat val =
+loadRefScriptBy script address mDat val =
   toExtra $
     mempty
-      { P.txOutputs = [TxOut (toAddress script) val outDatum (Just sh)]
+      { P.txOutputs = [TxOut (toAddress address) val outDatum (Just sh)]
       , P.txData = datumMap
       , P.txScripts = M.singleton sh validator
       }
