@@ -192,6 +192,7 @@ import Plutus.Model.Mock.FailReason
 import Plutus.Model.Mock.Log
 import Plutus.Model.Mock.MockConfig
 import Plutus.Model.Mock.Stat
+import Plutus.Model.Validator (IsValidator, scriptHash)
 
 newtype User = User
   { userSignKey :: C.KeyPair 'C.Witness C.StandardCrypto
@@ -750,9 +751,9 @@ withUtxo isUtxo user = withMayBy readMsg (L.find isUtxo <$> utxoAt user)
     readMsg = do
       ("No UTxO for: " <>) <$> getPrettyAddress user
 
--- | Reads the first reference script UTXO by address
-withFirstRefScript :: HasAddress user => user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
-withFirstRefScript = withRefScript (const True)
+-- | Reads the first reference script UTXO by address that carries a validator
+withFirstRefScript :: (HasAddress user, IsValidator script) => script -> user -> ((TxOutRef, TxOut) -> Run ()) -> Run ()
+withFirstRefScript script = withRefScript (\(_, txOut) -> txOutReferenceScript txOut == Just (scriptHash script))
 
 {- | Reads list of reference script UTXOs that belong to address and applies predicate to search for
  certain UTXO in that list. It proceeds with continuation if UTXO is present
