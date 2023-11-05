@@ -46,6 +46,8 @@ module Plutus.Model.Contract (
   -- * Build TX
   signTx,
   DatumMode (..),
+  PlutarchDatum (..),
+  asPlutarchDatum,
   payToKey,
   payToKeyDatum,
   payToScript,
@@ -151,6 +153,11 @@ import Plutus.Model.Pretty
 import Plutus.Model.Stake qualified as Stake
 import Plutus.Model.Validator as X
 import Prettyprinter (Doc, indent, pretty, vcat, (<+>))
+
+import Plutarch (ClosedTerm)
+import Plutarch.Builtin (pforgetData)
+import Plutarch.Lift (PLift, PLifted)
+import Plutarch.Prelude (PIsData, pconstant, pdata, plift)
 
 ------------------------------------------------------------------------
 -- modify blockchain
@@ -338,6 +345,14 @@ data DatumMode a
   = InlineDatum a
   | HashDatum a
   deriving (Show, Eq)
+
+newtype PlutarchDatum p = PlutarchDatum (ClosedTerm p)
+
+instance PIsData p => ToData (PlutarchDatum p) where
+  toBuiltinData (PlutarchDatum t) = BuiltinData $ plift $ pforgetData $ pdata t
+
+asPlutarchDatum :: PLift p => PLifted p -> PlutarchDatum p
+asPlutarchDatum c = PlutarchDatum $ pconstant c
 
 -- | Convert DatumMode to pieces of TXs related to datum storage
 fromDatumMode :: ToData a => DatumMode a -> (OutputDatum, Map DatumHash Datum)
