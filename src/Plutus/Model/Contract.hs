@@ -339,10 +339,10 @@ fromDatumMode = \case
 -- build Tx
 
 -- | Pay to public key with datum
-payToKeyDatum :: ToData a => PubKeyHash -> DatumMode a -> Value -> Tx
+payToKeyDatum :: (ToData a, HasAddress pubKeyHash) => pubKeyHash -> DatumMode a -> Value -> Tx
 payToKeyDatum pkh dat val = toExtra $
   mempty
-    { P.txOutputs = [TxOut (pubKeyHashAddress pkh) val outDatum Nothing]
+    { P.txOutputs = [TxOut (toAddress pkh) val outDatum Nothing]
     , P.txData = datumMap
     }
   where
