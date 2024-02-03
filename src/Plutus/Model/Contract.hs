@@ -446,15 +446,18 @@ spendScript tv ref red dat = toExtra $
 
 -- | Spend script input untyped.
 spendScriptUntyped ::
-  UntypedValidator ->
+  (HasValidator script, HasLanguage script) =>
+  script ->
   TxOutRef ->
   Redeemer ->
   Datum ->
   Tx
-spendScriptUntyped v ref red dat = toExtra $
+spendScriptUntyped script ref red dat = toExtra $
   mempty
-    { P.txInputs = S.singleton $ Fork.TxIn ref (Just $ Fork.ConsumeScriptAddress (Just $ unUntypedValidator v) red dat)
+    { P.txInputs = S.singleton $ Fork.TxIn ref (Just $ Fork.ConsumeScriptAddress (Just validator) red dat)
     }
+  where
+    validator = Versioned (getLanguage script) ( toValidator script)
 
 -- | Spends script that references other script
 spendScriptRef ::
@@ -477,8 +480,9 @@ spendScriptRef refScript script refOut red dat = toExtra $
 
 -- | Spends script that references other script untyped version
 spendScriptRefUntyped :: 
+  (HasValidator script, HasLanguage script) =>
   TxOutRef -> 
-  UntypedValidator ->
+  script ->
   TxOutRef -> 
   Redeemer -> 
   Datum -> 
