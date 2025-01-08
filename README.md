@@ -1,3 +1,8 @@
+# Deprecation note
+
+PSM library has been decommissioned in favor of
+[CLB](https://github.com/mlabs-haskell/clb) emulator.
+
 Plutus simple model
 ====================================================
 
